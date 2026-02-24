@@ -1,0 +1,240 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             Int            @id @default(autoincrement())
+  email          String?        @unique
+  password       String
+  name           String
+  role           Role           @default(USER)
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  tokenVersionAt DateTime       @default(now())
+  username       String         @unique
+  purchases      Purchase[]
+  refreshToken   RefreshToken[]
+  sales          Sale[]
+}
+
+model RevokedToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Customer {
+  id        Int                   @id @default(autoincrement())
+  name      String
+  email     String?               @unique
+  phone     String?
+  active    Boolean               @default(true)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  points    LoyaltyPoint?
+  history   LoyaltyPointHistory[]
+  sales     Sale[]
+}
+
+model Barcode {
+  id        Int     @id @default(autoincrement())
+  code      String  @unique
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Product {
+  id                 Int                 @id @default(autoincrement())
+  sku                String              @unique
+  name               String
+  description        String?
+  price              Decimal             @db.Decimal(10, 2)
+  cost               Decimal             @db.Decimal(10, 2)
+  active             Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  categoryId         Int
+  barcodes           Barcode[]
+  inventoryMovements InventoryMovement[]
+  category           Category            @relation(fields: [categoryId], references: [id])
+  purchaseItems      PurchaseItem[]
+  saleItems          SaleItem[]
+}
+
+model Category {
+  id        Int        @id @default(autoincrement())
+  name      String
+  active    Boolean    @default(true)
+  parentId  Int?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime?  @updatedAt
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
+  products  Product[]
+
+  @@unique([name, parentId])
+}
+
+model InventoryMovement {
+  id          Int                   @id @default(autoincrement())
+  productId   Int
+  type        InventoryMovementType
+  quantity    Int
+  note        String?
+  createdAt   DateTime              @default(now())
+  warehouseId Int?
+  product     Product               @relation(fields: [productId], references: [id])
+  warehouse   Warehouse?            @relation(fields: [warehouseId], references: [id])
+}
+
+model Supplier {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  email     String?
+  phone     String?
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  purchases Purchase[]
+}
+
+model Purchase {
+  id          Int            @id @default(autoincrement())
+  total       Decimal        @db.Decimal(10, 2)
+  userId      Int?
+  createdAt   DateTime       @default(now())
+  supplierId  Int
+  warehouseId Int
+  supplier    Supplier       @relation(fields: [supplierId], references: [id])
+  user        User?          @relation(fields: [userId], references: [id])
+  warehouse   Warehouse      @relation(fields: [warehouseId], references: [id])
+  items       PurchaseItem[]
+}
+
+model PurchaseItem {
+  id          Int           @id @default(autoincrement())
+  purchaseId  Int
+  productId   Int
+  quantity    Int
+  cost        Decimal       @db.Decimal(10, 2)
+  expiresAt   DateTime?
+  warehouseId Int
+  product     Product       @relation(fields: [productId], references: [id])
+  purchase    Purchase      @relation(fields: [purchaseId], references: [id])
+  warehouse   Warehouse     @relation(fields: [warehouseId], references: [id])
+  saleItems   SaleItemLot[]
+}
+
+model SaleSequence {
+  id          Int       @id @default(autoincrement())
+  current     Int       @default(0)
+  warehouseId Int       @unique
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+}
+
+model SaleItemLot {
+  saleItemId     Int
+  purchaseItemId Int
+  quantity       Int
+  purchaseItem   PurchaseItem @relation(fields: [purchaseItemId], references: [id])
+  saleItem       SaleItem     @relation(fields: [saleItemId], references: [id])
+
+  @@id([saleItemId, purchaseItemId])
+}
+
+model Sale {
+  id           Int                   @id @default(autoincrement())
+  saleNumber   String                @unique
+  status       SaleStatus            @default(COMPLETED)
+  subtotal     Decimal               @db.Decimal(10, 2)
+  discount     Decimal               @default(0) @db.Decimal(10, 2)
+  total        Decimal               @db.Decimal(10, 2)
+  pointsUsed   Int                   @default(0)
+  pointsEarned Int                   @default(0)
+  customerId   Int?
+  userId       Int
+  createdAt    DateTime              @default(now())
+  warehouseId  Int
+  cogs         Decimal               @default(0) @db.Decimal(10, 2)
+  history      LoyaltyPointHistory[]
+  customer     Customer?             @relation(fields: [customerId], references: [id])
+  user         User                  @relation(fields: [userId], references: [id])
+  warehouse    Warehouse             @relation(fields: [warehouseId], references: [id])
+  items        SaleItem[]
+}
+
+model SaleItem {
+  id        Int           @id @default(autoincrement())
+  saleId    Int
+  productId Int
+  quantity  Int
+  price     Decimal       @db.Decimal(10, 2)
+  product   Product       @relation(fields: [productId], references: [id])
+  sale      Sale          @relation(fields: [saleId], references: [id])
+  lots      SaleItemLot[]
+}
+
+model LoyaltyPoint {
+  id         Int                   @id @default(autoincrement())
+  customerId Int                   @unique
+  balance    Int                   @default(0)
+  customer   Customer              @relation(fields: [customerId], references: [id])
+  history    LoyaltyPointHistory[] @relation("LoyaltyPointToLoyaltyPointHistory")
+}
+
+model LoyaltyPointHistory {
+  id          Int            @id @default(autoincrement())
+  customerId  Int
+  saleId      Int?
+  change      Int
+  description String
+  createdAt   DateTime       @default(now())
+  customer    Customer       @relation(fields: [customerId], references: [id])
+  sale        Sale?          @relation(fields: [saleId], references: [id])
+  loyalty     LoyaltyPoint[] @relation("LoyaltyPointToLoyaltyPointHistory")
+}
+
+model Warehouse {
+  id           Int                 @id @default(autoincrement())
+  name         String              @unique
+  active       Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  movements    InventoryMovement[]
+  purchase     Purchase[]
+  items        PurchaseItem[]
+  sale         Sale[]
+  saleSequence SaleSequence?
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum SaleStatus {
+  COMPLETED
+  CANCELLED
+}
+
+enum InventoryMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}

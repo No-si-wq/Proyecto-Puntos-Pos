@@ -1,0 +1,30 @@
+# Node
+node_modules/
+
+# Build
+dist/
+build/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PM2
+ecosystem.config.js
+
+# IDE
+.vscode/
+.idea/
+
+# Prisma (si aplica)
+prisma/migrations

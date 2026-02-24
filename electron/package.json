@@ -1,0 +1,75 @@
+{
+  "name": "electron",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron .",
+    "build": "electron-builder"
+  },
+  "keywords": [],
+  "author": "Owen Daniel de Jesus Lopez",
+  "license": "ISC",
+  "devDependencies": {
+    "electron-builder": "^26.7.0",
+    "electron": "^40.2.1"
+  },
+  "build": {
+    "appId": "com.empresa.puntosapp",
+    "productName": "PuntosApp",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "**/*",
+
+      {
+        "from": "../frontend/dist",
+        "to": "frontend/dist"
+      },
+
+      {
+        "from": "../backend/dist",
+        "to": "backend/dist"
+      },
+
+      {
+        "from": "../backend/prisma/migrations",
+        "to": "backend/prisma/migrations"
+      },
+
+      {
+        "from": "../backend/node_modules/.prisma",
+        "to": "backend/node_modules/.prisma"
+      },
+
+      {
+        "from": "../backend/service",
+        "to": "backend/service"
+      }
+    ],
+    "extraResources": [
+      {
+        "from": "build/node-installer.msi",
+        "to": "node-installer.msi"
+      },
+      {
+        "from": "build/postgresql-installer.exe",
+        "to": "postgresql-installer.exe"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/Sistema_POS.ico",
+      "artifactName": "PuntosApp-Setup-${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": false,
+      "include": "build/installer.nsh"
+    }
+  }
+}
