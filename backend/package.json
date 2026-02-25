@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon --exec ts-node -P tsconfig.json src/server.ts",
+    "dev": "nodemon --exec ts-node --files src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "prisma": "prisma"
