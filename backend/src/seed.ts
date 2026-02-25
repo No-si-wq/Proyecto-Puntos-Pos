@@ -1,4 +1,4 @@
-import { PrismaClient, Role, InventoryMovementType } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg"
 import bcrypt from "bcrypt";
 
