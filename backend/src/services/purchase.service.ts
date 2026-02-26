@@ -105,6 +105,7 @@ export class PurchaseService {
           total,
           warehouseId,
           userId,
+          paymentMethod: data.paymentMethod,
         },
       });
 
@@ -129,6 +130,18 @@ export class PurchaseService {
           }
         );
       }
+
+    if (data.paymentMethod === "CREDIT") {
+      await tx.accountPayable.create({
+        data: {
+          purchaseId: purchase.id,
+          supplierId: purchase.supplierId,
+          total: purchase.total,
+          balance: purchase.total,
+          dueDate: data.dueDate ?? null,
+        },
+      });
+    }
 
       return purchase;
     });

@@ -167,17 +167,18 @@ model PayablePayment {
 }
 
 model Purchase {
-  id          Int             @id @default(autoincrement())
-  total       Decimal         @db.Decimal(10, 2)
-  userId      Int?
-  createdAt   DateTime        @default(now())
-  supplierId  Int
-  warehouseId Int
-  payable     AccountPayable?
-  supplier    Supplier        @relation(fields: [supplierId], references: [id])
-  user        User?           @relation(fields: [userId], references: [id])
-  warehouse   Warehouse       @relation(fields: [warehouseId], references: [id])
-  items       PurchaseItem[]
+  id            Int             @id @default(autoincrement())
+  total         Decimal         @db.Decimal(10, 2)
+  userId        Int?
+  createdAt     DateTime        @default(now())
+  supplierId    Int
+  warehouseId   Int
+  paymentMethod PaymentMethod   @default(CASH)
+  payable       AccountPayable?
+  supplier      Supplier        @relation(fields: [supplierId], references: [id])
+  user          User?           @relation(fields: [userId], references: [id])
+  warehouse     Warehouse       @relation(fields: [warehouseId], references: [id])
+  items         PurchaseItem[]
 }
 
 model PurchaseItem {
@@ -212,25 +213,26 @@ model SaleItemLot {
 }
 
 model Sale {
-  id           Int                   @id @default(autoincrement())
-  saleNumber   String                @unique
-  status       SaleStatus            @default(COMPLETED)
-  subtotal     Decimal               @db.Decimal(10, 2)
-  discount     Decimal               @default(0) @db.Decimal(10, 2)
-  total        Decimal               @db.Decimal(10, 2)
-  pointsUsed   Int                   @default(0)
-  pointsEarned Int                   @default(0)
-  customerId   Int?
-  userId       Int
-  createdAt    DateTime              @default(now())
-  warehouseId  Int
-  cogs         Decimal               @default(0) @db.Decimal(10, 2)
-  receivable   AccountReceivable?
-  history      LoyaltyPointHistory[]
-  customer     Customer?             @relation(fields: [customerId], references: [id])
-  user         User                  @relation(fields: [userId], references: [id])
-  warehouse    Warehouse             @relation(fields: [warehouseId], references: [id])
-  items        SaleItem[]
+  id            Int                   @id @default(autoincrement())
+  saleNumber    String                @unique
+  status        SaleStatus            @default(COMPLETED)
+  subtotal      Decimal               @db.Decimal(10, 2)
+  discount      Decimal               @default(0) @db.Decimal(10, 2)
+  total         Decimal               @db.Decimal(10, 2)
+  pointsUsed    Int                   @default(0)
+  pointsEarned  Int                   @default(0)
+  customerId    Int?
+  userId        Int
+  createdAt     DateTime              @default(now())
+  warehouseId   Int
+  cogs          Decimal               @default(0) @db.Decimal(10, 2)
+  paymentMethod PaymentMethod         @default(CASH)
+  receivable    AccountReceivable?
+  history       LoyaltyPointHistory[]
+  customer      Customer?             @relation(fields: [customerId], references: [id])
+  user          User                  @relation(fields: [userId], references: [id])
+  warehouse     Warehouse             @relation(fields: [warehouseId], references: [id])
+  items         SaleItem[]
 }
 
 model SaleItem {
@@ -298,4 +300,11 @@ enum AccountStatus {
   PARTIAL
   PAID
   OVERDUE
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  CREDIT
 }

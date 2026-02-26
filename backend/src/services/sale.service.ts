@@ -131,6 +131,7 @@ export class SaleService {
           userId,
           customerId: data.customerId,
           warehouseId,
+          paymentMethod: data.paymentMethod,
           status: SaleStatus.COMPLETED,
         },
       });
@@ -165,6 +166,23 @@ export class SaleService {
           type: InventoryMovementType.OUT,
           quantity: item.quantity,
           note: `Venta ${sale.saleNumber}`,
+        });
+      }
+
+      if (data.paymentMethod === "CREDIT") {
+        if (!sale.customerId)
+          throw new Error(
+            "Venta a crédito requiere cliente"
+          );
+
+        await tx.accountReceivable.create({
+          data: {
+            saleId: sale.id,
+            customerId: sale.customerId,
+            total: sale.total,
+            balance: sale.total,
+            dueDate: data.dueDate ?? null,
+          },
         });
       }
 

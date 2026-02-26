@@ -3,11 +3,28 @@ export interface SaleItemInput {
   quantity: number;
 }
 
-export interface CreateSaleInput {
-  customerId?: number;
+interface BaseSaleInput {
   items: SaleItemInput[];
   pointsUsed?: number;
 }
+
+export interface CreateSaleCashInput
+  extends BaseSaleInput {
+  paymentMethod: "CASH" | "CARD" | "TRANSFER";
+  customerId?: number;
+  dueDate?: never;
+}
+
+export interface CreateSaleCreditInput
+  extends BaseSaleInput {
+  paymentMethod: "CREDIT";
+  customerId: number;
+  dueDate?: string;
+}
+
+export type CreateSaleInput =
+  | CreateSaleCashInput
+  | CreateSaleCreditInput;
 
 export enum SaleError {
   EMPTY_SALE = "EMPTY_SALE",

@@ -5,10 +5,26 @@ export interface PurchaseItemInput {
   expiresAt?: Date | null,
 }
 
-export interface CreatePurchaseInput {
+interface BasePurchaseInput {
   supplierId: number;
   items: PurchaseItemInput[];
 }
+
+export interface CreatePurchaseCashInput
+  extends BasePurchaseInput {
+  paymentMethod: "CASH" | "TRANSFER";
+  dueDate?: never;
+}
+
+export interface CreatePurchaseCreditInput
+  extends BasePurchaseInput {
+  paymentMethod: "CREDIT";
+  dueDate?: string;
+}
+
+export type CreatePurchaseInput =
+  | CreatePurchaseCashInput
+  | CreatePurchaseCreditInput;
 
 export enum PurchaseError {
   EMPTY_ITEMS = "EMPTY_ITEMS",

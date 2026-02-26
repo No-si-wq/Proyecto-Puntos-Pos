@@ -11,6 +11,8 @@ import categoryRoutes from "./category.routes"
 import reportRoutes from "./report.routes";
 import warehouseRoutes from "./warehouse.routes";
 import dashboardRoutes from "./dashboard.routes";
+import accountReceivableRoutes from "./accountReceivable.routes";
+import accountPayableRoutes from "./accountPayable.routes";
 
 const router = Router();
 
@@ -26,5 +28,7 @@ router.use("/categories", categoryRoutes);
 router.use("/reports", reportRoutes);
 router.use("/warehouses", warehouseRoutes);
 router.use("/dashboard", dashboardRoutes);
+router.use("/account-receivable", accountReceivableRoutes);
+router.use("/account-payable", accountPayableRoutes);
 
 export default router;
