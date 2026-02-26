@@ -113,6 +113,12 @@ export default function MainLayout() {
             visible: canAccess( user.role, "customers", "view"),
           },
           {
+            key: "/accounts-receivable",
+            label: "Credito Clientes",
+            onClick: () => navigate("/accounts-receivable"),
+            visible: canAccess( user.role, "accountsReceivable", "view"),
+          },
+          {
             key: "/products",
             label: "Productos",
             onClick: () => navigate("/products"),
@@ -153,6 +159,12 @@ export default function MainLayout() {
             label: "Proveedores",
             onClick: () => navigate("/suppliers"),
             visible: canAccess( user.role, "suppliers", "view"),
+          },
+          {
+            key: "/accounts-payable",
+            label: "Cuentas por pagar",
+            onClick: () => navigate("/accounts-payable"),
+            visible: canAccess( user.role, "accountPayable", "view"),
           },
           {
             key: "/purchases-report",

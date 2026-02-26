@@ -23,6 +23,8 @@ export type PermissionModule =
   | "salehistory"
   | "warehouse"
   | "dashboard_admin"
+  | "accountsReceivable"
+  | "accountPayable"
 
 export const PERMISSIONS: Record<
   PermissionModule,
@@ -105,6 +107,14 @@ export const PERMISSIONS: Record<
     edit: [Role.ADMIN],
     delete: [Role.ADMIN],
   },
+
+  accountsReceivable: {
+    view: [Role.ADMIN, Role.USER],
+  },
+
+  accountPayable: {
+    view: [Role.ADMIN, Role.USER],
+  }
 };
 
 export function getAllowedRoles(

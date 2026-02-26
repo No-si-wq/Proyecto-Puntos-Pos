@@ -36,7 +36,7 @@ export async function createPurchase(req: Request, res: Response) {
       });
     }
 
-    const { supplierId, items } = req.body;
+    const { supplierId, items, paymentMethod, dueDate } = req.body;
 
     if (!supplierId) {
       return res.status(400).json({
@@ -51,7 +51,7 @@ export async function createPurchase(req: Request, res: Response) {
     }
 
     const purchase = await PurchaseService.create(
-      { supplierId, items },
+      { supplierId, items, paymentMethod, dueDate },
       req.user?.id,
       warehouseId,
     );

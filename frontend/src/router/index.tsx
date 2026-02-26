@@ -21,6 +21,8 @@ import InventoryPage from "../pages/inventory/Inventory";
 import InventoryList from "../pages/inventory/InventroyList";
 import Warehouses from "../pages/warehouses/warehouses";
 import AdminDashboard from "../pages/dashboard/AdminDashboard";
+import AccountsReceivable from "../pages/accounts/AccountsReceivable";
+import AccountsPayable from "../pages/accounts/AccountsPayable";
 
 import Unauthorized from "../pages/Unauthorized";
 
@@ -70,6 +72,15 @@ export default function AppRouter() {
             element={
               <ProtectedRoute module="customers">
                 <Customers />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/accounts-receivable"
+            element={
+              <ProtectedRoute module="accountsReceivable">
+                <AccountsReceivable />
               </ProtectedRoute>
             }
           />
@@ -151,6 +162,15 @@ export default function AppRouter() {
             element={
               <ProtectedRoute module="suppliers">
                 <Suppliers />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/accounts-payable"
+            element={
+              <ProtectedRoute module="accountPayable">
+                <AccountsPayable />
               </ProtectedRoute>
             }
           />

@@ -48,7 +48,7 @@ export async function getSale(req: Request, res: Response) {
 export async function createSale(req: Request, res: Response) {
   try {
   const warehouseId = (req as any).warehouseId;
-  const { customerId, items, pointsUsed } = req.body;
+  const { customerId, items, pointsUsed, paymentMethod, dueDate } = req.body;
 
     if (!req.user) {
       return res.status(401).json({
@@ -57,7 +57,7 @@ export async function createSale(req: Request, res: Response) {
     }
 
   const sale = await SaleService.create(
-    { customerId, items, pointsUsed },
+    { customerId, items, pointsUsed, paymentMethod, dueDate },
     req.user.id,
     warehouseId,
   );

@@ -259,24 +259,63 @@ export default function Sales() {
                         </strong>
                       </div>
 
-                      <InputNumber
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        size="large"
-                        min={0}
-                        max={availablePoints}
-                        value={sale.pointsUsed}
-                        onChange={(v) =>
-                          sale.setPoints(
-                            Math.min(
-                              Number(v) || 0,
-                              availablePoints
+                      <div style={{ marginBottom: 16 }}>
+                        <InputNumber
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          size="large"
+                          min={0}
+                          max={availablePoints}
+                          value={sale.pointsUsed}
+                          onChange={(v) =>
+                            sale.setPoints(
+                              Math.min(
+                                Number(v) || 0,
+                                availablePoints
+                              )
                             )
-                          )
-                        }
-                        placeholder="Puntos a usar"
-                        style={{ width: "100%" }}
-                      />
+                          }
+                          placeholder="Puntos a usar"
+                          style={{ width: "100%" }}
+                        />
+                      </div>
+                      <div
+                        style={{ marginBottom: 16 }}>
+                        <Select
+                          value={paymentMethod}
+                          onChange={(value) => {
+                            setPaymentMethod(value);
+                            if (value !== "CREDIT") {
+                              setDueDate(undefined);
+                            }
+                          }}
+                          size={sizes.select}
+                          style={{ width: "100%" }}
+                          options={[
+                            { label: "Efectivo", value: "CASH" },
+                            { label: "Tarjeta", value: "CARD" },
+                            { label: "Transferencia", value: "TRANSFER" },
+                            { label: "Crédito", value: "CREDIT" },
+                          ]}
+                        />
+                      </div>
+
+                      {paymentMethod === "CREDIT" && (
+                        <div style={{ marginBottom: 16 }}>
+                          <Tag color="orange" style={{ marginBottom: 8 }}>
+                            Venta a crédito
+                          </Tag>
+
+                          <DatePicker
+                            style={{ width: "100%" }}
+                            size={sizes.input}
+                            placeholder="Fecha de vencimiento"
+                            onChange={(date) =>
+                              setDueDate(date?.toISOString())
+                            }
+                          />
+                        </div>
+                      )}
                     </>
                   )}
               </div>

@@ -11,7 +11,7 @@ app.use(
   cors({
     origin:
       ENV.NODE_ENV === "development"
-        ? "http://localhost:5173"
+        ? true
         : undefined,
     credentials: true,
   })
