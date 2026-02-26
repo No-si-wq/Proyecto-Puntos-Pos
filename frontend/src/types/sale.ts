@@ -1,5 +1,11 @@
 import type { BaseItem } from "./base";
 
+export type SalePaymentMethod =
+  | "CASH"
+  | "CARD"
+  | "TRANSFER"
+  | "CREDIT";
+
 export interface SaleItemDTO {
   productId: number;
   quantity: number;
@@ -9,6 +15,9 @@ export interface CreateSaleDTO {
   customerId?: number;
   pointsUsed?: number;
   items: SaleItemDTO[];
+  
+  paymentMethod: SalePaymentMethod;
+  dueDate?: string;
 }
 
 export interface SaleItem extends BaseItem {

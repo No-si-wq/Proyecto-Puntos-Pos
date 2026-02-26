@@ -9,6 +9,8 @@ import {
   Row, 
   Col,
   Button,
+  DatePicker,
+  Tag,
 } from "antd";
 
 import { useCustomers } from "../../hooks/useCustomers";
@@ -23,6 +25,7 @@ import { useDeviceType } from "../../hooks/useDeviceType";
 import { useResponsiveSizes } from "../../hooks/useResponsiveSizes";
 import { useRequiredWarehouse } from "../../hooks/useRequiredWarehouse";
 import { useWarehouseProducts } from "../../hooks/useWarehouseProducts";
+import type { SalePaymentMethod } from "../../types/sale";
 
 import PageHeader from "../../components/common/PageHeader";
 
@@ -30,6 +33,10 @@ export default function Sales() {
   const { customers, reload: reloadCustomers } = useCustomers();
   const warehouseId = useRequiredWarehouse();
   const { products, reload: reloadProducts } = useWarehouseProducts();
+  const [paymentMethod, setPaymentMethod] =
+  useState<SalePaymentMethod>("CASH");
+
+  const [dueDate, setDueDate] = useState<string>();
   const { isMobile, isTablet, device } = useDeviceType();
   const tableSpan =
     device === "desktop" ? 16 :
@@ -87,6 +94,18 @@ export default function Sales() {
       return;
     }
 
+    if (paymentMethod === "CREDIT") {
+      if (!sale.customerId) {
+        message.error("Debe seleccionar cliente para crédito");
+        return;
+      }
+
+      if (!dueDate) {
+        message.error("Debe seleccionar fecha de vencimiento");
+        return;
+      }
+    }
+
     try {
       const result = await create({
         customerId: sale.customerId,
@@ -95,6 +114,8 @@ export default function Sales() {
           productId: i.productId,
           quantity: i.quantity,
         })),
+        paymentMethod,
+        dueDate,
       });
 
       await Promise.all([
@@ -104,6 +125,8 @@ export default function Sales() {
 
       cart.clear();
       sale.reset();
+      setPaymentMethod("CASH");
+      setDueDate(undefined);
 
       message.success(
         result?.pointsEarned
@@ -364,6 +387,41 @@ export default function Sales() {
                     </>
                   )}
 
+                  <Select
+                    value={paymentMethod}
+                    onChange={(value) => {
+                      setPaymentMethod(value);
+                      if (value !== "CREDIT") {
+                        setDueDate(undefined);
+                      }
+                    }}
+                    size={sizes.select}
+                    style={{ width: "100%" }}
+                    options={[
+                      { label: "Efectivo", value: "CASH" },
+                      { label: "Tarjeta", value: "CARD" },
+                      { label: "Transferencia", value: "TRANSFER" },
+                      { label: "Crédito", value: "CREDIT" },
+                    ]}
+                  />
+
+                  {paymentMethod === "CREDIT" && (
+                    <>
+                      <Tag color="orange" style={{ marginBottom: 8 }}>
+                        Venta a crédito
+                      </Tag>
+
+                      <DatePicker
+                        style={{ width: "100%" }}
+                        size={sizes.input}
+                        placeholder="Fecha de vencimiento"
+                        onChange={(date) =>
+                          setDueDate(date?.toISOString())
+                        }
+                      />
+                    </>
+                  )}
+
                   <div
                     style={{
                       textAlign: "center",
@@ -416,7 +474,8 @@ export default function Sales() {
                     size={sizes.button}
                     block
                     disabled={
-                      cart.items.length === 0
+                      cart.items.length === 0 ||
+                      (paymentMethod === "CREDIT" && !sale.customerId)
                     }
                     loading={creating}
                     onClick={submitSale}
