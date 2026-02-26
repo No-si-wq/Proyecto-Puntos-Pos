@@ -8,6 +8,9 @@ import {
   message,
   Row,
   Col,
+  Tag,
+  DatePicker,
+  Select as AntSelect
 } from "antd";
 
 import { usePurchases } from "../../hooks/usePurchases";
@@ -19,11 +22,17 @@ import { PurchaseCartTable } from "../../components/tables/PurchaseCartTable";
 import { useBarcodeScanner } from "../../hooks/useBarcodeScanner";
 import { useResponsiveSizes } from "../../hooks/useResponsiveSizes";
 import { useWarehouseProducts } from "../../hooks/useWarehouseProducts";
+import type { PurchasePaymentMethod } from "../../types/purchase";
 
 import PageHeader from "../../components/common/PageHeader";
 
 export default function Purchases() {
   const [supplierId, setSupplierId] = useState(undefined);
+  const [paymentMethod, setPaymentMethod] =
+    useState<PurchasePaymentMethod>("CASH");
+
+  const [dueDate, setDueDate] =
+    useState<string>();
   const warehouseId = useRequiredWarehouse();
   const [selectedProduct, setSelectedProduct] =
     useState<number | null>(null);
@@ -65,9 +74,20 @@ export default function Purchases() {
       return;
     }
 
+    if (paymentMethod === "CREDIT") {
+      if (!dueDate) {
+        message.error(
+          "Debe seleccionar fecha de vencimiento"
+        );
+        return;
+      }
+    }
+
     try {
       await create({
         supplierId,
+        paymentMethod,
+        dueDate,
         items: cart.items.map((i) => ({
           productId: i.productId,
           quantity: Number(i.quantity),
@@ -78,13 +98,13 @@ export default function Purchases() {
         })),
       });
 
-      await Promise.all([ 
-        reloadProducts()
-      ]);
+      await reloadProducts();
 
       message.success("Compra registrada");
       cart.clear();
       setSupplierId(undefined);
+      setPaymentMethod("CASH");
+      setDueDate(undefined);
     } catch (err: any) {
       message.error(
         err?.response?.data?.message ??
@@ -233,6 +253,39 @@ export default function Purchases() {
                     gap: 16,
                   }}
                 >
+                <AntSelect
+                  value={paymentMethod}
+                  onChange={(value) => {
+                    setPaymentMethod(value);
+                    if (value !== "CREDIT") {
+                      setDueDate(undefined);
+                    }
+                  }}
+                  size={sizes.select}
+                  style={{ width: "100%", marginBottom: 16 }}
+                  options={[
+                    { label: "Efectivo", value: "CASH" },
+                    { label: "Transferencia", value: "TRANSFER" },
+                    { label: "Crédito", value: "CREDIT" },
+                  ]}
+                />
+
+                {paymentMethod === "CREDIT" && (
+                  <>
+                    <Tag color="orange" style={{ marginBottom: 8 }}>
+                      Compra a crédito
+                    </Tag>
+
+                    <DatePicker
+                      style={{ width: "100%", marginBottom: 16 }}
+                      size={sizes.select}
+                      placeholder="Fecha de vencimiento"
+                      onChange={(date) =>
+                        setDueDate(date?.toISOString())
+                      }
+                    />
+                  </>
+                )}
                   <div
                     style={{ 
                       fontSize: 16,
@@ -255,7 +308,10 @@ export default function Purchases() {
                   size={sizes.button}
                   block
                   loading={creating}
-                  disabled={!supplierId || cart.items.length === 0}
+                  disabled={!supplierId || 
+                    cart.items.length === 0 || 
+                    (paymentMethod === "CREDIT" && !dueDate)
+                  }
                   onClick={submitPurchase}
                 >
                   Registrar compra
