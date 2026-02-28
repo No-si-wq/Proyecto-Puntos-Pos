@@ -105,3 +105,14 @@ body {
   overflow: auto;
   height: calc(100vh - 64px);
 }
+
+html,
+body {
+  height: 100%;
+  overscroll-behavior-y: none;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+}

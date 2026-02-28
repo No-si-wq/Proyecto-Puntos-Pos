@@ -195,10 +195,9 @@ export default function MainLayout() {
 
   return (
     <Layout 
-      style={{ 
+      style={{
         minHeight: "100vh",
-        overflow: drawerOpen ? "hidden" : "auto"
-        }}
+      }}
     >
       {showSider && (
         <Sider
@@ -250,6 +249,9 @@ export default function MainLayout() {
                 : 200
               : 0,
           transition: "all 0.2s",
+          display: "flex",
+          flexDirection:"column",
+          minHeight: "100vh",
         }}
       >
       <Header
@@ -372,8 +374,10 @@ export default function MainLayout() {
       <Content
         style={{
           padding: isMobileLike ? 16 : isInstalledDesktop ? 16 : 24,
-          height: `calc(100vh - ${isInstalledDesktop ? 56 : 64}px)`,
+          height: `calc(100dvh - ${isInstalledDesktop ? 56 : 64}px)`,
           overflow: "auto",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehaviorY: "contain",
         }}
       >
             <OfflineBanner />

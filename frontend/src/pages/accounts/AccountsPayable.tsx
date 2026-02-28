@@ -1,7 +1,5 @@
 import {
   Card,
-  Tag,
-  Button,
   Modal,
   InputNumber,
   Input,
@@ -11,14 +9,11 @@ import { useState } from "react";
 import { useAccountPayable } from "../../hooks/useAccountPayable";
 import { formatCurrency } from "../../utils/formatters";
 import PageHeader from "../../components/common/PageHeader";
-import SimpleTable from "../../components/tables/SimpleTable";
-import { useResponsiveSizes } from "../../hooks/useResponsiveSizes";
+import FinancialAccountsTable from "../../components/tables/FinancialAccountsTable";
 
 export default function AccountsPayable() {
   const { data, loading, pay } =
     useAccountPayable();
-
-  const sizes = useResponsiveSizes();
 
   const [selected, setSelected] =
     useState<any>(null);
@@ -28,12 +23,6 @@ export default function AccountsPayable() {
 
   const [note, setNote] =
     useState<string>();
-
-  const isOverdue = (record: any) =>
-    record.status !== "PAID" &&
-    record.dueDate &&
-    new Date(record.dueDate) <
-      new Date();
 
   async function handlePayment() {
     if (!amount || amount <= 0) {
@@ -56,72 +45,11 @@ export default function AccountsPayable() {
       />
 
       <Card>
-        <SimpleTable
-          loading={loading}
+        <FinancialAccountsTable
           data={data}
-          columns={[
-            {
-              title: "Proveedor",
-              dataIndex: ["supplier", "name"],
-            },
-            {
-              title: "Total",
-              render: (_, r) =>
-                formatCurrency(r.total),
-            },
-            {
-              title: "Saldo",
-              render: (_, r) =>
-                formatCurrency(r.balance),
-            },
-            {
-              title: "Vence",
-              render: (_, r) =>
-                r.dueDate
-                  ? new Date(
-                      r.dueDate
-                    ).toLocaleDateString()
-                  : "-",
-            },
-            {
-              title: "Estado",
-              render: (_, r) => {
-                if (r.status === "PAID")
-                  return (
-                    <Tag color="green">
-                      PAGADA
-                    </Tag>
-                  );
-
-                if (isOverdue(r))
-                  return (
-                    <Tag color="red">
-                      VENCIDA
-                    </Tag>
-                  );
-
-                return (
-                  <Tag color="orange">
-                    {r.status}
-                  </Tag>
-                );
-              },
-            },
-            {
-              title: "Acción",
-              render: (_, r) =>
-                r.status !== "PAID" && (
-                  <Button
-                    size={sizes.button}
-                    onClick={() =>
-                      setSelected(r)
-                    }
-                  >
-                    Registrar Pago
-                  </Button>
-                ),
-            },
-          ]}
+          loading={loading}
+          type="payable"
+          onPay={(record) => setSelected(record)}
         />
       </Card>
 
