@@ -11,6 +11,7 @@ import {
   Button,
   DatePicker,
   Tag,
+  Divider
 } from "antd";
 
 import { useCustomers } from "../../hooks/useCustomers";
@@ -344,8 +345,9 @@ export default function Sales() {
             <div
               style={{
                 position: "sticky",
-                top: isTablet ? 16 : 32,
-                minHeight: isTablet ? 420 : undefined
+                display: "flex",
+                flexDirection: "column",
+                gap: sizes.gap,
               }}
             >
               <Card
@@ -359,55 +361,42 @@ export default function Sales() {
                     "0 4px 12px rgba(0,0,0,0.05)",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: sizes.gap,
-                  }}
-                >
-                <Select
-                  showSearch
-                  allowClear
-                  listHeight={sizes.selectListHeight}
-                  size={sizes.select}
-                  placeholder="Buscar cliente..."
-                  value={sale.customerId}
-                  onChange={(v) => sale.setCustomer(v ?? undefined)}
-                  style={{ width: "100%", marginBottom: isTablet ? 20 : 16 }}
-                  optionFilterProp="label"
-                  filterOption={(input, option) => {
-                    const label = option?.label as string;
-                    return label
-                      ?.toLowerCase()
-                      .includes(input.toLowerCase());
-                  }}
-                  options={customers
-                    .filter((c) => c.active)
-                    .map((c) => ({
-                      value: c.id,
-                      label: `${c.name} · ${
-                        c.points?.balance ?? 0
-                      } pts`,
-                    }))}
-                />
+                <div>
+                  <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>
+                    CLIENTE
+                  </div>
+
+                  <Select
+                    showSearch
+                    allowClear
+                    listHeight={sizes.selectListHeight}
+                    size={sizes.select}
+                    placeholder="Seleccionar cliente"
+                    value={sale.customerId}
+                    onChange={(v) => sale.setCustomer(v ?? undefined)}
+                    style={{ width: "100%" }}
+                    optionFilterProp="label"
+                    filterOption={(input, option) =>
+                      (option?.label as string)
+                        ?.toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
+                    options={customers
+                      .filter((c) => c.active)
+                      .map((c) => ({
+                        value: c.id,
+                        label: `${c.name} · ${c.points?.balance ?? 0} pts`,
+                      }))}
+                  />
 
                   {selectedCustomer && (
-                    <>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                        }}
-                      >
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ fontSize: 13, color: "#666" }}>
                         Puntos disponibles:{" "}
-                        <strong>
-                          {availablePoints}
-                        </strong>
+                        <strong>{availablePoints}</strong>
                       </div>
 
                       <InputNumber
-                        inputMode="numeric"
                         size={sizes.input}
                         min={0}
                         max={availablePoints}
@@ -421,10 +410,18 @@ export default function Sales() {
                           )
                         }
                         placeholder="Puntos a usar"
-                        style={{ width: "100%" }}
+                        style={{ width: "100%", marginTop: 6 }}
                       />
-                    </>
+                    </div>
                   )}
+                </div>
+
+                <Divider style={{ margin: 0 }} />
+
+                <div>
+                  <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>
+                    MÉTODO DE PAGO
+                  </div>
 
                   <Select
                     value={paymentMethod}
@@ -444,84 +441,93 @@ export default function Sales() {
                     ]}
                   />
 
-                  {paymentMethod === "CREDIT" && (
-                    <>
-                      <Tag color="orange" style={{ marginBottom: 8 }}>
-                        Venta a crédito
-                      </Tag>
+                  <div
+                    style={{
+                      marginTop: 10,
+                      height: 70,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {paymentMethod === "CREDIT" ? (
+                      <>
+                        <Tag color="orange" style={{ marginBottom: 6 }}>
+                          Venta a crédito
+                        </Tag>
 
-                      <DatePicker
-                        style={{ width: "100%" }}
-                        size={sizes.input}
-                        placeholder="Fecha de vencimiento"
-                        onChange={(date) =>
-                          setDueDate(date?.toISOString())
-                        }
-                      />
-                    </>
-                  )}
+                        <DatePicker
+                          style={{ width: "100%" }}
+                          size={sizes.input}
+                          placeholder="Fecha de vencimiento"
+                          onChange={(date) =>
+                            setDueDate(date?.toISOString())
+                          }
+                        />
+                      </>
+                    ) : (
+                      <div style={{ height: 32 }} />
+                    )}
+                  </div>
+                </div>
+
+                <Divider style={{ margin: 0 }} />
+
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "12px 0",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#999",
+                      letterSpacing: 1,
+                    }}
+                  >
+                    TOTAL A PAGAR
+                  </div>
 
                   <div
                     style={{
-                      textAlign: "center",
-                      marginTop: 12,
+                      fontSize: sizes.totalFontSize + 6,
+                      fontWeight: 700,
+                      marginTop: 6,
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "#888",
-                        letterSpacing: 1,
-                      }}
-                    >
-                      TOTAL A PAGAR
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: sizes.totalFontSize,
-                        fontWeight: 700,
-                        transition: "all 0.2s ease"
-                      }}
-                    >
-                      {formatCurrency(
-                        cart.total()
-                      )}
-                    </div>
+                    {formatCurrency(cart.total())}
                   </div>
 
-                  {selectedCustomer &&
-                    sale.pointsUsed > 0 && (
-                      <div
-                        style={{
-                          textAlign: "center",
-                          fontSize: 14,
-                        }}
-                      >
-                        Descuento aplicado:{" "}
-                        <strong>
-                          −
-                          {formatCurrency(
-                            sale.pointsUsed
-                          )}
-                        </strong>
-                      </div>
-                    )}
-
-                  <Button
-                    type="primary"
-                    size={sizes.button}
-                    block
-                    disabled={
-                      cart.items.length === 0 ||
-                      (paymentMethod === "CREDIT" && !sale.customerId)
-                    }
-                    loading={creating}
-                    onClick={submitSale}
-                  >
-                    Confirmar venta
-                  </Button>
+                  {selectedCustomer && sale.pointsUsed > 0 && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        fontSize: 14,
+                      }}
+                    >
+                      Descuento aplicado:{" "}
+                      <strong>
+                        −{formatCurrency(sale.pointsUsed)}
+                      </strong>
+                    </div>
+                  )}
                 </div>
+
+                <Button
+                  type="primary"
+                  size={sizes.button}
+                  block
+                  disabled={
+                    cart.items.length === 0 ||
+                    (paymentMethod === "CREDIT" &&
+                      (!sale.customerId || !dueDate))
+                  }
+                  loading={creating}
+                  onClick={submitSale}
+                >
+                  Confirmar venta
+                </Button>
               </Card>
             </div>
           </Col>
