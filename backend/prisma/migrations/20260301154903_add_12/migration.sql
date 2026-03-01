@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "SaleItem" ALTER COLUMN "price" SET DATA TYPE DECIMAL(12,2);

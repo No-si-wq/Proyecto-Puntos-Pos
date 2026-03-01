@@ -8,7 +8,9 @@ export function useCartSale() {
     addProduct: cart.addProduct,
     updateQuantity: cart.updateQuantity,
     removeProduct: cart.removeProduct,
+    updateDiscount: cart.updateDiscount,
     clear: cart.clear,
-    total: cart.total,
+    grossSubtotal: cart.grossSubtotal,
+    subtotal: cart.subtotal,
   };
 }

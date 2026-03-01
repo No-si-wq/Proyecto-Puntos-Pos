@@ -1,4 +1,5 @@
 import prisma from "../config/prisma";
+import { Prisma } from "@prisma/client";
 import { InventoryMovementType, SaleStatus } from "@prisma/client";
 import { InventoryService } from "./inventory.service";
 import { LoyaltyService } from "../modules/loyalty/loyalty.service";
@@ -67,7 +68,8 @@ export class SaleService {
         throw new Error(SaleError.EMPTY_SALE);
       }
 
-      let subtotal = 0;
+      let grossSubtotal = 0;
+      let subtotalAfterLineDiscount = 0;
 
       const products = await tx.product.findMany({
         where: {
@@ -79,6 +81,16 @@ export class SaleService {
         products.map(p => [p.id, p])
       );
 
+      const calculatedItems: {
+        productId: number;
+        quantity: number;
+        price: Prisma.Decimal;
+        discountType: any;
+        discountValue: Prisma.Decimal;
+        discountAmount: Prisma.Decimal;
+        lineSubtotal: Prisma.Decimal;
+      }[] = [];
+
       for (const item of data.items) {
         const product = productMap.get(item.productId);
 
@@ -86,23 +98,76 @@ export class SaleService {
           throw new Error(SaleError.PRODUCT_NOT_AVAILABLE);
         }
 
-        subtotal += product.price.toNumber() * item.quantity;
+        const price = product.price;
+        const quantity = item.quantity;
+
+        const grossLine = price.mul(quantity);
+
+        const discountType = item.discountType ?? "NONE";
+        const discountValue = new Prisma.Decimal(
+          item.discountValue ?? 0
+        );
+
+        let discountAmount = new Prisma.Decimal(0);
+
+        if (discountType === "PERCENTAGE") {
+          if (discountValue.gt(100)) {
+            throw new Error("Descuento porcentual inválido");
+          }
+
+          discountAmount = grossLine.mul(discountValue).div(100);
+        }
+
+        if (discountType === "FIXED") {
+          if (discountValue.gt(grossLine)) {
+            throw new Error("Descuento mayor al subtotal");
+          }
+
+          discountAmount = discountValue;
+        }
+
+        const lineSubtotal = grossLine.sub(discountAmount);
+
+        if (lineSubtotal.lt(0)) {
+          throw new Error("Subtotal negativo en línea");
+        }
+
+        grossSubtotal = grossSubtotal + grossLine.toNumber();
+        subtotalAfterLineDiscount =
+          subtotalAfterLineDiscount + lineSubtotal.toNumber();
+
+        calculatedItems.push({
+          productId: item.productId,
+          quantity,
+          price,
+          discountType,
+          discountValue,
+          discountAmount,
+          lineSubtotal,
+        });
       }
 
       const pointsUsed = data.pointsUsed ?? 0;
-      let discount = 0;
+      let globalDiscount = new Prisma.Decimal(0);
 
       if (pointsUsed > 0 && data.customerId) {
-        discount = await LoyaltyService.usePoints(
-          tx,
-          data.customerId,
-          pointsUsed
-        );
+        const discountFromPoints =
+          await LoyaltyService.usePoints(
+            tx,
+            data.customerId,
+            pointsUsed
+          );
+
+        globalDiscount = new Prisma.Decimal(discountFromPoints);
       }
 
-      const total = subtotal - discount;
+      const subtotalDecimal = new Prisma.Decimal(
+        subtotalAfterLineDiscount
+      );
 
-      if (total < 0) {
+      const total = subtotalDecimal.sub(globalDiscount);
+
+      if (total.lt(0)) {
         throw new Error(SaleError.INVALID_TOTAL);
       }
 
@@ -118,13 +183,16 @@ export class SaleService {
         select: { current: true },
       });
 
-      const saleNumber = `SALE-${warehouseId}-${String(sequence.current).padStart(6, "0")}`;
+      const saleNumber = `SALE-${warehouseId}-${String(
+        sequence.current
+      ).padStart(6, "0")}`;
 
       const sale = await tx.sale.create({
         data: {
           saleNumber,
-          subtotal,
-          discount,
+          grossSubtotal: new Prisma.Decimal(grossSubtotal),
+          subtotal: subtotalDecimal,
+          discount: globalDiscount,
           total,
           pointsUsed,
           pointsEarned: 0,
@@ -136,29 +204,32 @@ export class SaleService {
         },
       });
 
-      let totalCogs = 0;
+      let totalCogs = new Prisma.Decimal(0);
 
-      for (const item of data.items) {
-        const product = productMap.get(item.productId)!;
-
+      for (const item of calculatedItems) {
         const saleItem = await tx.saleItem.create({
           data: {
             saleId: sale.id,
             productId: item.productId,
             quantity: item.quantity,
-            price: product.price,
+            price: item.price,
+            discountType: item.discountType,
+            discountValue: item.discountValue,
+            discountAmount: item.discountAmount,
+            lineSubtotal: item.lineSubtotal,
           },
         });
 
-        const itemCogs = await InventoryService.consumeStockFIFO(
-          tx,
-          saleItem.id,
-          item.productId,
-          warehouseId,
-          item.quantity,
-        );
+        const itemCogs =
+          await InventoryService.consumeStockFIFO(
+            tx,
+            saleItem.id,
+            item.productId,
+            warehouseId,
+            item.quantity,
+          );
 
-        totalCogs += itemCogs;
+        totalCogs = totalCogs.add(itemCogs);
 
         await InventoryService.createMovementTX(tx, {
           productId: item.productId,
@@ -179,8 +250,8 @@ export class SaleService {
           data: {
             saleId: sale.id,
             customerId: sale.customerId,
-            total: sale.total,
-            balance: sale.total,
+            total: total,
+            balance: total,
             dueDate: data.dueDate ?? null,
           },
         });
@@ -189,24 +260,32 @@ export class SaleService {
       let pointsEarned = 0;
 
       if (data.customerId) {
-        pointsEarned = await LoyaltyService.earnPoints(
-          tx,
-          data.customerId,
-          total,
-          sale.id
-        );
-
-        await tx.sale.update({
-          where: { id: sale.id },
-          data: { pointsEarned, cogs: totalCogs },
-        });
+        pointsEarned =
+          await LoyaltyService.earnPoints(
+            tx,
+            data.customerId,
+            total.toNumber(),
+            sale.id
+          );
       }
+
+      await tx.sale.update({
+        where: { id: sale.id },
+        data: {
+          pointsEarned,
+          cogs: totalCogs,
+        },
+      });
 
       return {
         ...sale,
+        grossSubtotal,
+        subtotal: subtotalDecimal,
+        discount: globalDiscount,
+        total,
         pointsEarned,
         cogs: totalCogs,
-        grossProfit: total - totalCogs,
+        grossProfit: total.sub(totalCogs),
       };
     });
   }

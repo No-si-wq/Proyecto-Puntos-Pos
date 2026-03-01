@@ -1,6 +1,8 @@
 export interface SaleItemInput {
   productId: number;
   quantity: number;
+  discountType?: "NONE" | "PERCENTAGE" | "FIXED"
+  discountValue?: number
 }
 
 interface BaseSaleInput {

@@ -194,11 +194,7 @@ export default function MainLayout() {
     };
 
   return (
-    <Layout 
-      style={{
-        minHeight: "100vh",
-      }}
-    >
+    <Layout style={{ minHeight: "100dvh" }}>
       {showSider && (
         <Sider
           collapsible
@@ -251,7 +247,7 @@ export default function MainLayout() {
           transition: "all 0.2s",
           display: "flex",
           flexDirection:"column",
-          minHeight: "100vh",
+          minHeight: "100%",
         }}
       >
       <Header

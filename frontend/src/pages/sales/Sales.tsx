@@ -21,7 +21,6 @@ import { useBarcodeScanner } from "../../hooks/useBarcodeScanner";
 import { saleStore } from "../../store/sale.store";
 import { SaleCartTable } from "../../components/tables/SaleCartTable";
 import { formatCurrency } from "../../utils/formatters";
-import { MobileBottomBar } from "../ButtonBar/ButtonBar";
 import { useDeviceType } from "../../hooks/useDeviceType";
 import { useResponsiveSizes } from "../../hooks/useResponsiveSizes";
 import { useRequiredWarehouse } from "../../hooks/useRequiredWarehouse";
@@ -107,6 +106,14 @@ export default function Sales() {
       }
     }
 
+    const finalTotal =
+      cart.subtotal() - sale.pointsUsed;
+
+    if (finalTotal < 0) {
+      message.error("Total inválido");
+      return;
+    }
+
     try {
       const result = await create({
         customerId: sale.customerId,
@@ -114,6 +121,8 @@ export default function Sales() {
         items: cart.items.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
+          discountType: i.discountType,
+          discountValue: i.discountValue,
         })),
         paymentMethod,
         dueDate,
@@ -141,6 +150,207 @@ export default function Sales() {
     }
   }
 
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          height: "100dvh",
+          display: "flex",
+          flexDirection: "column",
+          background: "#fff",
+        }}
+      >
+        <PageHeader
+          title="Ventas"
+          subtitle="Punto de venta"
+        />
+
+        <div
+          style={{
+            padding: 16,
+            borderBottom: "1px solid #f0f0f0",
+            background: "#fff",
+          }}
+        >
+          <Select
+            ref={selectRef}
+            showSearch
+            allowClear
+            disabled={!warehouseId}
+            placeholder="Buscar producto"
+            size={sizes.select}
+            style={{ width: "100%", marginBottom: 12 }}
+            value={selectedProductId}
+            onChange={setSelectedProductId}
+            onSelect={(id: number) => {
+              const product = products.find(
+                (p) => p.id === id
+              );
+              if (product) cart.addProduct(product);
+              setSelectedProductId(null);
+            }}
+            filterOption={(input, option) => {
+                  const label = option?.label as string;
+                  return label
+                    ?.toLowerCase()
+                    .includes(input.toLowerCase());
+                }}
+            options={products
+              .filter((p) => p.active)
+              .map((p) => ({
+                value: p.id,
+                label: `${p.name} · ${p.stock}`,
+                disabled: p.stock <= 0,
+              }))}
+          />
+
+          <Select
+            showSearch
+            allowClear
+            size={sizes.select}
+            placeholder="Cliente"
+            value={sale.customerId}
+            onChange={(v) => sale.setCustomer(v ?? undefined)}
+            style={{ width: "100%", marginBottom: 8 }}
+            filterOption={(input, option) => {
+                  const label = option?.label as string;
+                  return label
+                    ?.toLowerCase()
+                    .includes(input.toLowerCase());
+                }}
+            options={customers
+              .filter((c) => c.active)
+              .map((c) => ({
+                value: c.id,
+                label: `${c.name} · ${c.points?.balance ?? 0} pts`,
+              }))}
+          />
+
+          <div
+            style={{
+              marginBottom: 16
+            }}
+          >
+            {selectedCustomer && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontSize: 13, color: "#666" }}>
+                  Puntos disponibles:{" "}
+                  <strong>{availablePoints}</strong>
+                </div>
+
+                <InputNumber
+                  size={sizes.input}
+                  min={0}
+                  max={availablePoints}
+                  value={sale.pointsUsed}
+                  onChange={(v) =>
+                    sale.setPoints(
+                      Math.min(
+                        Number(v) || 0,
+                        availablePoints
+                      )
+                    )
+                  }
+                  placeholder="Puntos a usar"
+                  style={{ width: "100%", marginTop: 6 }}
+                />
+              </div>
+            )}
+          </div>
+
+          <Select
+            value={paymentMethod}
+            onChange={(value) => {
+              setPaymentMethod(value);
+              if (value !== "CREDIT") {
+                setDueDate(undefined);
+              }
+            }}
+            size={sizes.select}
+            style={{ width: "100%" }}
+            options={[
+              { label: "Efectivo", value: "CASH" },
+              { label: "Tarjeta", value: "CARD" },
+              { label: "Transferencia", value: "TRANSFER" },
+              { label: "Crédito", value: "CREDIT" },
+            ]}
+          />
+
+          {paymentMethod === "CREDIT" && (
+            <DatePicker
+              style={{ width: "100%", marginTop: 8 }}
+              size={sizes.input}
+              placeholder="Fecha de vencimiento"
+              onChange={(date) =>
+                setDueDate(date?.toISOString())
+              }
+            />
+          )}
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: 16,
+            background: "#fafafa",
+          }}
+        >
+          <SaleCartTable
+            items={cart.items}
+            onQuantityChange={cart.updateQuantity}
+            onRemove={cart.removeProduct}
+            onDiscountChange={cart.updateDiscount}
+          />
+        </div>
+
+        <div
+          style={{
+            borderTop: "1px solid #eee",
+            padding: 16,
+            paddingBottom:
+              "calc(16px + env(safe-area-inset-bottom))",
+            background: "#fff",
+            boxShadow:
+              "0 -4px 12px rgba(0,0,0,0.05)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: 10,
+            }}
+          >
+            <span style={{ fontSize: 13, color: "#666" }}>
+              Total
+            </span>
+            <strong style={{ fontSize: 20 }}>
+              {formatCurrency(
+                cart.subtotal() - sale.pointsUsed
+              )}
+            </strong>
+          </div>
+
+          <Button
+            type="primary"
+            block
+            size="large"
+            disabled={
+              cart.items.length === 0 ||
+              (paymentMethod === "CREDIT" &&
+                (!sale.customerId || !dueDate))
+            }
+            loading={creating}
+            onClick={submitSale}
+          >
+            Confirmar venta
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <PageHeader
@@ -154,7 +364,7 @@ export default function Sales() {
           <Card
             title="Productos"
             bodyStyle={{ 
-              padding: sizes.cardPadding
+              padding: sizes.cardPadding,
             }}
           >
             <Input
@@ -218,127 +428,14 @@ export default function Sales() {
                   }))}
                 />
               </div>
-
-            {isMobile && (
-              <div style={{ marginBottom: 16 }}>
-                <Select
-                  showSearch
-                  virtual
-                  allowClear
-                  size={sizes.select}
-                  placeholder="Buscar cliente"
-                  value={sale.customerId}
-                  listHeight={sizes.selectListHeight}
-                  dropdownMatchSelectWidth
-                  optionFilterProp="label"
-                  onChange={(v) => sale.setCustomer(v ?? undefined)}
-                  style={{ width: "100%" }}
-                  filterOption={(input, option) => {
-                    const label = option?.label as String
-                    return label
-                      ?.toLocaleLowerCase()
-                      .includes(input.toLocaleLowerCase());
-                  }}
-                  options={customers
-                    .filter((c) => c.active)
-                    .map((c) => ({
-                      value: c.id,
-                      label: `${c.name} · ${c.points?.balance ?? 0} pts`,
-                    }))}
-                />
-                  {selectedCustomer && (
-                    <>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                        }}
-                      >
-                        Puntos disponibles:{" "}
-                        <strong>
-                          {availablePoints}
-                        </strong>
-                      </div>
-
-                      <div style={{ marginBottom: 16 }}>
-                        <InputNumber
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          size="large"
-                          min={0}
-                          max={availablePoints}
-                          value={sale.pointsUsed}
-                          onChange={(v) =>
-                            sale.setPoints(
-                              Math.min(
-                                Number(v) || 0,
-                                availablePoints
-                              )
-                            )
-                          }
-                          placeholder="Puntos a usar"
-                          style={{ width: "100%" }}
-                        />
-                      </div>
-                      <div
-                        style={{ marginBottom: 16 }}>
-                        <Select
-                          value={paymentMethod}
-                          onChange={(value) => {
-                            setPaymentMethod(value);
-                            if (value !== "CREDIT") {
-                              setDueDate(undefined);
-                            }
-                          }}
-                          size={sizes.select}
-                          style={{ width: "100%" }}
-                          options={[
-                            { label: "Efectivo", value: "CASH" },
-                            { label: "Tarjeta", value: "CARD" },
-                            { label: "Transferencia", value: "TRANSFER" },
-                            { label: "Crédito", value: "CREDIT" },
-                          ]}
-                        />
-                      </div>
-
-                      {paymentMethod === "CREDIT" && (
-                        <div style={{ marginBottom: 16 }}>
-                          <Tag color="orange" style={{ marginBottom: 8 }}>
-                            Venta a crédito
-                          </Tag>
-
-                          <DatePicker
-                            style={{ width: "100%" }}
-                            size={sizes.input}
-                            placeholder="Fecha de vencimiento"
-                            onChange={(date) =>
-                              setDueDate(date?.toISOString())
-                            }
-                          />
-                        </div>
-                      )}
-                    </>
-                  )}
-              </div>
-            )}
             <SaleCartTable
               items={cart.items}
               onQuantityChange={cart.updateQuantity}
               onRemove={cart.removeProduct}
+              onDiscountChange={cart.updateDiscount}
             />
           </Card>
         </Col>
-
-        {isMobile && (
-          <MobileBottomBar
-            subtotal={cart.total()}
-            pointsUsed={sale.pointsUsed}
-            disabled={cart.items.length === 0}
-            loading={creating}
-            onConfirm={submitSale}
-
-          />
-        )}
 
         {!isMobile && (
           <Col span={summarySpan}>
@@ -473,44 +570,46 @@ export default function Sales() {
 
                 <Divider style={{ margin: 0 }} />
 
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "12px 0",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "#999",
-                      letterSpacing: 1,
-                    }}
-                  >
-                    TOTAL A PAGAR
+                <div style={{ textAlign: "right", marginBottom: 6 }}>
+                  <div>
+                    Subtotal bruto:{" "}
+                    <strong>
+                      {formatCurrency(cart.grossSubtotal())}
+                    </strong>
                   </div>
 
-                  <div
-                    style={{
-                      fontSize: sizes.totalFontSize + 6,
-                      fontWeight: 700,
-                      marginTop: 6,
-                    }}
-                  >
-                    {formatCurrency(cart.total())}
-                  </div>
+                  {cart.grossSubtotal() !== cart.subtotal() && (
+                    <div>
+                      Descuento por productos:{" "}
+                      <strong>
+                        −
+                        {formatCurrency(
+                          cart.grossSubtotal() -
+                            cart.subtotal()
+                        )}
+                      </strong>
+                    </div>
+                  )}
 
-                  {selectedCustomer && sale.pointsUsed > 0 && (
-                    <div
-                      style={{
-                        marginTop: 8,
-                        fontSize: 14,
-                      }}
-                    >
-                      Descuento aplicado:{" "}
+                  {sale.pointsUsed > 0 && (
+                    <div>
+                      Descuento por puntos:{" "}
                       <strong>
                         −{formatCurrency(sale.pointsUsed)}
                       </strong>
                     </div>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: sizes.totalFontSize + 6,
+                    fontWeight: 700,
+                    marginTop: 6,
+                  }}
+                >
+                  {formatCurrency(
+                    cart.subtotal() - sale.pointsUsed
                   )}
                 </div>
 
