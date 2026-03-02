@@ -22,3 +22,38 @@ export async function getPurchaseLotsReport(req: Request, res: Response) {
 
   res.json(data);
 }
+
+export async function getKardex  (req: Request, res: Response) {
+  const warehouseId = (req as any).warehouseId;
+  const { productId, from, to, page, pageSize } = req.query;
+
+  if (!productId || !from || !to || !page || !pageSize) {
+    return res.status(400).json({ message: "Missing parameters" });
+  }
+
+  const result = await ReportService.getKardexRaw(warehouseId, {
+    productId: Number(productId),
+    from: new Date(from as string),
+    to: new Date(to as string),
+    page: Number(page),
+    pageSize: Number(pageSize),
+  });
+
+  res.json(result);
+};
+
+export async function getProfitReport (req: Request, res: Response) {
+  const warehouseId = (req as any).warehouseId;
+  const { from, to } = req.query;
+
+  if (!from || !to) {
+    return res.status(400).json({ message: "Missing parameters" });
+  }
+
+  const result = await ReportService.getProfitReportRaw(warehouseId, {
+    from: new Date(from as string),
+    to: new Date(to as string),
+  });
+
+  res.json(result);
+};

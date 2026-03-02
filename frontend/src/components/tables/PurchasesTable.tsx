@@ -11,6 +11,10 @@ interface Props {
 export default function PurchasesTable({ data, loading }: Props) {
   const columns: ColumnsType<Purchase> = [
     {
+      title: "Compra",
+      render: (_, r) => `#${r.id}`,
+    },
+    {
       title: "Fecha",
       dataIndex: "createdAt",
       render: (v) => formatDate(v),

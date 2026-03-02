@@ -31,7 +31,12 @@ export function errorMiddleware(
 
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     logger.error(
-      { code: err.code, meta: err.meta },
+      { 
+        code: err.code, 
+        message: err.message,
+        meta: err.meta,
+        stack: err.stack,
+      },
       "Prisma known error"
     );
 
@@ -114,7 +119,8 @@ export function errorMiddleware(
     {
       method: req.method,
       url: req.originalUrl,
-      error: err,
+      error: err.message,
+      stack: err.stack,
     },
     "Unhandled error"
   );

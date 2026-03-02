@@ -178,6 +178,18 @@ export default function MainLayout() {
             onClick: () => navigate("/category"),
             visible: canAccess( user.role, "category", "view"),
           },
+          {
+            key: "/reports/kardex",
+            label: "Kardex",
+            onClick: () => navigate("/reports/kardex"),
+            visible: canAccess( user.role, "reports", "view"),
+          },
+          {
+            key: "/reports/profit",
+            label: "Utilidad Ventas",
+            onClick: () => navigate("/reports/profit"),
+            visible: canAccess( user.role, "reports", "view"),
+          },
         ].filter((i) => i.visible),
       [navigate, user.role]
     );

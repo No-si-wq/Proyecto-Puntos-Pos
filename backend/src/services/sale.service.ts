@@ -63,7 +63,7 @@ export class SaleService {
     userId: number,
     warehouseId: number,
   ) {
-    return prisma.$transaction(async (tx) => {
+    const sale = prisma.$transaction(async (tx) => {
       if (data.items.length === 0) {
         throw new Error(SaleError.EMPTY_SALE);
       }
@@ -288,10 +288,16 @@ export class SaleService {
         grossProfit: total.sub(totalCogs),
       };
     });
+
+    await prisma.$executeRawUnsafe(`
+      REFRESH MATERIALIZED VIEW CONCURRENTLY inventory_ledger
+    `);
+
+    return sale;
   }
 
   static async cancel(id: number) {
-    return prisma.$transaction(async (tx) => {
+    const result = prisma.$transaction(async (tx) => {
       const sale = await tx.sale.findUnique({
         where: { id },
         include: { 
@@ -345,5 +351,11 @@ export class SaleService {
         },
       });
     });
+
+    await prisma.$executeRawUnsafe(`
+      REFRESH MATERIALIZED VIEW CONCURRENTLY inventory_ledger
+    `);
+
+    return result;
   }
 }

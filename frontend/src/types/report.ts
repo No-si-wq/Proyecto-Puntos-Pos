@@ -16,3 +16,32 @@ export interface PurchaseLotReportItem {
     supplier: { id: number; name: string };
   };
 }
+
+export interface KardexRow {
+  date: string;
+  type: "IN" | "OUT";
+  reference: string;
+  quantity: number;
+  unit_cost: number;
+  movement_value: number;
+  balance_qty: number;
+  balance_value: number;
+}
+
+export interface ProfitDetail {
+  saleNumber: string;
+  date: string;
+  total: number;
+  cogs: number;
+  profit: number;
+  margin: number;
+  customer: string;
+  seller: string;
+}
+
+export interface ProfitSummary {
+  totalSales: number;
+  totalCogs: number;
+  totalProfit: number;
+  margin: number;
+}

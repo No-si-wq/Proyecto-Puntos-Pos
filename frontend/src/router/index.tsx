@@ -23,6 +23,8 @@ import Warehouses from "../pages/warehouses/warehouses";
 import AdminDashboard from "../pages/dashboard/AdminDashboard";
 import AccountsReceivable from "../pages/accounts/AccountsReceivable";
 import AccountsPayable from "../pages/accounts/AccountsPayable";
+import Kardex from "../pages/reports/Kardex";
+import ProfitReport from "../pages/reports/ProfitReport";
 
 import Unauthorized from "../pages/Unauthorized";
 
@@ -189,6 +191,24 @@ export default function AppRouter() {
             element={
               <ProtectedRoute module="warehouse">
                 <Warehouses />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/reports/kardex"
+            element={
+              <ProtectedRoute module="reports">
+                <Kardex />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/reports/profit"
+            element={
+              <ProtectedRoute module="reports">
+                <ProfitReport />
               </ProtectedRoute>
             }
           />

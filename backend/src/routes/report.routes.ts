@@ -9,5 +9,7 @@ router.use(authMiddleware);
 router.use(requireWarehouse);
 
 router.get("/purchase", controller.getPurchaseLotsReport);
+router.get("/kardex", controller.getKardex);
+router.get("/profit", controller.getProfitReport);
 
 export default router;

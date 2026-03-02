@@ -25,6 +25,7 @@ export type PermissionModule =
   | "dashboard_admin"
   | "accountsReceivable"
   | "accountPayable"
+  | "reports"
 
 export const PERMISSIONS: Record<
   PermissionModule,
@@ -114,6 +115,10 @@ export const PERMISSIONS: Record<
 
   accountPayable: {
     view: [Role.ADMIN, Role.USER],
+  },
+
+  reports: {
+    view: [Role.ADMIN]
   }
 };
 

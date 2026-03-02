@@ -80,7 +80,7 @@ export class PurchaseService {
     userId: number,
     warehouseId: number,
   ) {
-    return prisma.$transaction(async (tx) => {
+    const purchase = prisma.$transaction(async (tx) => {
 
       const supplier = await tx.supplier.findUnique({
         where: { id: data.supplierId },
@@ -142,8 +142,13 @@ export class PurchaseService {
         },
       });
     }
-
       return purchase;
     });
+
+    await prisma.$executeRawUnsafe(`
+      REFRESH MATERIALIZED VIEW CONCURRENTLY inventory_ledger
+    `);
+
+    return purchase;
   }
 }
