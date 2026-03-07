@@ -212,6 +212,22 @@ model SaleItemLot {
   @@id([saleItemId, purchaseItemId])
 }
 
+model InventoryLedger {
+  id            BigInt                @id @default(autoincrement())
+  productId     Int
+  warehouseId   Int
+  type          InventoryMovementType
+  quantity      Int
+  movementValue Decimal               @db.Decimal(20, 6)
+  referenceType String?
+  referenceId   Int?
+  createdAt     DateTime              @default(now())
+  createdBy     Int?
+  note          String?
+
+  @@index([productId, warehouseId, createdAt, id], map: "idx_ledger_kardex")
+}
+
 model Sale {
   id            Int                   @id @default(autoincrement())
   saleNumber    String                @unique

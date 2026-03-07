@@ -2,9 +2,9 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { ConfigProvider } from "antd";
 
-import AppRouter from "./router";
-import theme from "./styles/theme";
-import "./styles/global.css";
+import AppRouter from "./core/router";
+import theme from "./core/styles/theme";
+import "./core/styles/global.css";
 
 import { registerSW } from "virtual:pwa-register";
 

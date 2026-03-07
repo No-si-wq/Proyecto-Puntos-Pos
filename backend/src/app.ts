@@ -1,18 +1,15 @@
 import express from "express";
 import routes from "./routes";
-import { logger } from "./config/logger";
-import { errorMiddleware } from "./middlewares/error.middleware";
-import { ENV } from "./config/env";
+import { logger } from "./core/config/logger";
+import { errorMiddleware } from "./core/middlewares/error.middleware";
+import { ENV } from "./core/config/env";
 import cors from "cors";
 
 export const app = express();
 
 app.use(
   cors({
-    origin:
-      ENV.NODE_ENV === "development"
-        ? true
-        : undefined,
+    origin: ENV.NODE_ENV === "development" ? true : undefined,
     credentials: true,
   })
 );

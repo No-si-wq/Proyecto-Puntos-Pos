@@ -1,6 +1,6 @@
 import { ConfigProvider, App as AntdApp } from "antd";
-import AppRouter from "./router";
-import theme from "./styles/theme";
+import AppRouter from "./core/router";
+import theme from "./core/styles/theme";
 
 export default function App() {
   return (

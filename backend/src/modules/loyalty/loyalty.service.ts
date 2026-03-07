@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { LoyaltyError } from "../../types/points";
+import { LoyaltyError } from "./points";
 import { LOYALTY_CONFIG } from "./loyalty.rules";
 
 type Tx = Prisma.TransactionClient;
@@ -8,7 +8,8 @@ export class LoyaltyService {
   static async usePoints(
     tx: Tx,
     customerId: number,
-    pointsRequested: number
+    saleId: number,
+    pointsRequested: number,
   ): Promise<number> {
     if (!LOYALTY_CONFIG.redeem.enabled || pointsRequested <= 0) {
       return 0;
@@ -18,11 +19,14 @@ export class LoyaltyService {
       where: { customerId },
     });
 
-    if (!loyalty || loyalty.balance < pointsRequested) {
-      throw new Error(LoyaltyError.INSUFFICIENT_POINTS);
+    if (!loyalty) {
+      throw new Error(LoyaltyError.ACCOUNT_NOT_FOUND);
     }
 
     const usablePoints = Math.min(pointsRequested, loyalty.balance);
+    if (usablePoints === 0) {
+      return 0;
+    }
     const discount = usablePoints * LOYALTY_CONFIG.redeem.pointValue;
 
     await tx.loyaltyPoint.update({
@@ -33,6 +37,7 @@ export class LoyaltyService {
     await tx.loyaltyPointHistory.create({
       data: {
         customerId,
+        saleId,
         change: -usablePoints,
         description: "Uso de puntos",
       },
@@ -81,17 +86,32 @@ export class LoyaltyService {
       where: { saleId },
     });
 
+    if (!history.length) return;
+
+    let adjustment = 0;
+
     for (const record of history) {
-      await tx.loyaltyPoint.update({
-        where: { customerId },
+      const reverse = -record.change;
+
+      adjustment += reverse;
+
+      await tx.loyaltyPointHistory.create({
         data: {
-          balance: { decrement: record.change },
+          customerId,
+          saleId,
+          change: reverse,
+          description: "Reversión por cancelación de venta",
         },
       });
     }
 
-    await tx.loyaltyPointHistory.deleteMany({
-      where: { saleId },
+    await tx.loyaltyPoint.update({
+      where: { customerId },
+      data: {
+        balance: {
+          increment: adjustment,
+        },
+      },
     });
   }
 }
