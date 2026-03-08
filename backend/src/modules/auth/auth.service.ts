@@ -18,6 +18,7 @@ export interface AuthUser {
   id: number;
   email: string | null;
   username: string;
+  name: string | null;
   role: Role;
 }
 
@@ -68,6 +69,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         role: user.role,
+        name: user.name,
         username: user.username,
       },
       accessToken,

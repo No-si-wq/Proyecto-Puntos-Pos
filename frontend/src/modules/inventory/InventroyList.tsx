@@ -76,7 +76,7 @@ export default function InventoryList() {
       render: (value) =>
         value <= 0 ? (
           <Tag color="red">{value}</Tag>
-        ) : value < 5 ? (
+        ) : value <= 5 ? (
           <Tag color="orange">{value}</Tag>
         ) : (
           <Tag color="green">{value}</Tag>
