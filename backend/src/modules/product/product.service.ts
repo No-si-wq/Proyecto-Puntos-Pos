@@ -5,6 +5,7 @@ import { CreateProductInput, UpdateProductInput, ProductError } from "./product"
 export class ProductService {
   static async listGlobal() {
     return prisma.product.findMany({
+      where: { active: true },
       include: {
         barcodes: {
           select: { code: true },
@@ -165,7 +166,7 @@ export class ProductService {
   static async update(id: number, data: UpdateProductInput) {
     if (data.categoryId) {
       const category = await prisma.category.findUnique({
-        where: { id: data.categoryId },
+        where: { id: data.categoryId, active: true },
       });
 
       if (!category || !category.active) {
@@ -198,10 +199,8 @@ export class ProductService {
         },
         include: {
           barcodes: true,
-          category: {
-            include: { parent: true },
-          }
-        }
+          category: true,
+        },
       });
     } catch (error) {
       if (

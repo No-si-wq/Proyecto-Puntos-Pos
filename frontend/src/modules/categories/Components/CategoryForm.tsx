@@ -1,23 +1,17 @@
-import { Form, Input, Switch } from "antd";
+import { Form, Input, } from "antd";
 import FormBase from "../../../core/components/forms/FormBase";
-import type { CategoryFormValues, CategoryFormProps } from "../category";
+import type { CategoryFormProps } from "../category";
 
 export default function CreateEditCategoryForm({
-  isEdit,
   initialValues,
   onSubmit,
   onCancel,
   loading,
 }: CategoryFormProps) {
-  const [form] = Form.useForm<CategoryFormValues>();
 
   return (
-    <FormBase<CategoryFormValues>
-      form={form}
-      initialValues={{
-        active: true,
-        ...initialValues,
-      }}
+    <FormBase
+      initialValues={initialValues}
       onSubmit={onSubmit}
       onCancel={onCancel}
       loading={loading}
@@ -29,16 +23,6 @@ export default function CreateEditCategoryForm({
       >
         <Input />
       </Form.Item>
-
-      {isEdit && (
-        <Form.Item
-          label="Activa"
-          name="active"
-          valuePropName="checked"
-        >
-          <Switch />
-        </Form.Item>
-      )}
     </FormBase>
   );
 }

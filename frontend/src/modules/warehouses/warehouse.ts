@@ -6,7 +6,11 @@ export interface Warehouse {
   updatedAt: string;
 }
 
-export interface WarehouseFormValues {
+export interface CreateWareHouseDTO {
   name: string;
+}
+
+export interface UpdateWareHouseDTO {
+  name?: string;
   active?: boolean;
 }

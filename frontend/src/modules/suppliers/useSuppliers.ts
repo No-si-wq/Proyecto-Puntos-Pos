@@ -40,6 +40,11 @@ export function useSuppliers() {
     await load();
   }
 
+  async function toggleActive(id: number, active: boolean) {
+    await http.patch(`/suppliers/${id}/activate`, { active });
+    await load();
+  }
+
   return {
     suppliers,
     loading,
@@ -47,5 +52,6 @@ export function useSuppliers() {
     reload: load,
     create,
     update,
+    toggleActive,
   };
 }

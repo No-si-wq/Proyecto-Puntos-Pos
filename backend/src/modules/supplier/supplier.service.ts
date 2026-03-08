@@ -8,6 +8,7 @@ import {
 export class SupplierService {
   static async list() {
     return prisma.supplier.findMany({
+      where: { active: true },
       orderBy: { name: "asc" },
     });
   }
@@ -58,7 +59,10 @@ export class SupplierService {
     });
   }
 
-  static async deactivate(id: number) {
-    return this.update(id, { active: false });
+  static async toggleActive(id: number, active: boolean) {
+    return prisma.supplier.update({
+      where: { id },
+      data: { active } 
+    });
   }
 }

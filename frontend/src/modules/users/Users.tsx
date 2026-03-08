@@ -24,6 +24,7 @@ export default function Users() {
     loading,
     create,
     update,
+    toggleActive,
     logoutAll,
   } = useUsers();
 
@@ -88,6 +89,22 @@ export default function Users() {
     }
   }
 
+  function confirmToggle(user: User) {
+    ConfirmModal({
+      title: user.active
+        ? "Desactivar proveedor"
+        : "Activar Proveedor",
+      content: `¿Seguro que deseas ${
+        user.active ? "desactivar" : "activar"
+      } a ${user.name}?`,
+      danger: user.active,
+      onConfirm: async () => {
+        await toggleActive(user.id, !user.active);
+        message.success("Estado actualizado");
+      },
+    });
+  }
+
   function confirmLogoutAll(user: User) {
     ConfirmModal({
       title: "Cerrar todas las sesiones",
@@ -119,6 +136,14 @@ export default function Users() {
             onClick={() => openEdit(record)}
           >
             Editar
+          </ProtectedButton>
+
+          <ProtectedButton
+            roles={getAllowedRoles("users", "delete")}
+            danger
+            onClick={() => confirmToggle(record)}
+          >
+            {record.active ? "Desactivar" : "Activar"}
           </ProtectedButton>
 
           <ProtectedButton

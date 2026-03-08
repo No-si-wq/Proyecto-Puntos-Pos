@@ -75,9 +75,9 @@ export function useCategories() {
     [loadTree]
   );
 
-  const remove = useCallback(
-    async (id: number) => {
-      await http.delete(`/categories/${id}`);
+  const toggleActive = useCallback(
+    async (id: number, active: boolean) => {
+      await http.patch(`/categories/${id}/activate`, { active });
       await loadTree();
     },
     [loadTree]
@@ -94,6 +94,6 @@ export function useCategories() {
     create,
     createHierarchy,
     update,
-    remove,
+    toggleActive,
   };
 }

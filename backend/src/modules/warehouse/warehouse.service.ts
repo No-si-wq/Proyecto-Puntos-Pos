@@ -5,6 +5,7 @@ export class WarehouseService {
 
   static async getAll() {
     return prisma.warehouse.findMany({
+      where: { active: true },
       orderBy: { name: "asc" },
     });
   }
@@ -28,7 +29,7 @@ export class WarehouseService {
     });
   }
 
-  static async remove(id: number) {
+  static async toggleActive(id: number, active: boolean) {
     const hasSales = await prisma.sale.count({ where: { warehouseId: id } });
 
     if (hasSales > 0) {
@@ -36,7 +37,7 @@ export class WarehouseService {
     }
     return prisma.warehouse.update({
       where: { id },
-      data: { active: false },
+      data: { active },
     });
   }
 }

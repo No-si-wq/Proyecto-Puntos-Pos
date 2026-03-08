@@ -21,15 +21,9 @@ export interface UpdateCategoryInput {
   active?: boolean;
 }
 
-export interface CategoryFormValues {
-  name: string;
-  active?: boolean;
-}
-
 export interface CategoryFormProps {
-  isEdit: boolean;
-  initialValues?: Partial<CategoryFormValues>;
-  onSubmit: (values: CategoryFormValues) => Promise<void>;
+  initialValues?: Partial<Category>;
+  onSubmit: (values: any) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
   excludeId?: number;

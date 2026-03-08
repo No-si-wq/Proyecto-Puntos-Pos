@@ -10,9 +10,10 @@ import SimpleTable from "../../core/components/table/SimpleTable";
 import FormModal from "../../core/components/forms/FormModal";
 import WarehouseForm from "./components/WarehouseForm";
 import ProtectedButton from "../../core/components/common/ProtectedButton";
+import { ConfirmModal } from "../../core/components/common/ConfirmModal";
 
 export default function Warehouses() {
-  const { warehouses, loading, create, update, remove } =
+  const { warehouses, loading, create, update, toggleActive } =
     useWarehouses();
 
   const [open, setOpen] = useState(false);
@@ -43,6 +44,22 @@ export default function Warehouses() {
     }
   }
 
+  function confirmToggle(wareHouse: Warehouse) {
+    ConfirmModal({
+      title: wareHouse.active
+        ? "Desactivar proveedor"
+        : "Activar Proveedor",
+      content: `¿Seguro que deseas ${
+        wareHouse.active ? "desactivar" : "activar"
+      } a ${wareHouse.name}?`,
+      danger: wareHouse.active,
+      onConfirm: async () => {
+        await toggleActive(wareHouse.id, !wareHouse.active);
+        message.success("Estado actualizado");
+      },
+    });
+  }
+
   const columns: ColumnsType<Warehouse> = [
     { title: "Nombre", dataIndex: "name" },
     {
@@ -64,9 +81,9 @@ export default function Warehouses() {
           <ProtectedButton
             roles={getAllowedRoles("warehouse", "delete")}
             danger
-            onClick={() => remove(record.id)}
+            onClick={() => confirmToggle(record)}
           >
-            Desactivar
+            {record.active ? "Desactivar" : "Activar"}
           </ProtectedButton>
         </>
       ),
@@ -101,6 +118,7 @@ export default function Warehouses() {
         onClose={() => setOpen(false)}
       >
         <WarehouseForm
+          isEdit={!!editing}
           initialValues={editing ?? undefined}
           onSubmit={handleSubmit}
           onCancel={() => setOpen(false)}

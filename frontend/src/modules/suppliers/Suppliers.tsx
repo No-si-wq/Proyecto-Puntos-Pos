@@ -13,11 +13,12 @@ import FormModal from "../../core/components/forms/FormModal";
 import { exportToPdf } from "../../core/utils/exportPDF";
 import { exportToExcel } from "../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
+import { ConfirmModal } from "../../core/components/common/ConfirmModal";
 
 import { getAllowedRoles } from "../../core/utils/permissions";
 
 export default function Suppliers() {
-  const { suppliers, loading, create, update } = useSuppliers();
+  const { suppliers, loading, create, update, toggleActive } = useSuppliers();
   const sizes = useResponsiveSizes();
 
   const [open, setOpen] = useState(false);
@@ -78,6 +79,22 @@ export default function Suppliers() {
     }
   }
 
+  function confirmToggle(supplier: Supplier) {
+    ConfirmModal({
+      title: supplier.active
+        ? "Desactivar proveedor"
+        : "Activar Proveedor",
+      content: `¿Seguro que deseas ${
+        supplier.active ? "desactivar" : "activar"
+      } a ${supplier.name}?`,
+      danger: supplier.active,
+      onConfirm: async () => {
+        await toggleActive(supplier.id, !supplier.active);
+        message.success("Estado actualizado");
+      },
+    });
+  }
+
   const columns: ColumnsType<Supplier> = [
     { title: "Nombre", dataIndex: "name" },
     { title: "Email", dataIndex: "email", render: (v) => v ?? "—" },
@@ -90,12 +107,22 @@ export default function Suppliers() {
     {
       title: "Acciones",
       render: (_, r) => (
-        <ProtectedButton
-          roles={getAllowedRoles("suppliers", "edit")}
-          onClick={() => openEdit(r)}
-        >
-          Editar
-        </ProtectedButton>
+        <>
+          <ProtectedButton
+            roles={getAllowedRoles("suppliers", "edit")}
+            onClick={() => openEdit(r)}
+          >
+            Editar
+          </ProtectedButton>
+
+          <ProtectedButton
+            roles={getAllowedRoles("suppliers", "delete")}
+            danger
+            onClick={() => confirmToggle(r)}
+          >
+            {r.active ? "Desactivar" : "Activar"}
+          </ProtectedButton>
+        </>
       ),
     },
   ];

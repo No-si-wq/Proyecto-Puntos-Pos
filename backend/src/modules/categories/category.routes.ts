@@ -47,10 +47,4 @@ router.patch(
   asyncHandler(controller.toggleCategoryActive),
 )
 
-router.delete(
-  "/:id",
-  roleMiddleware(Role.ADMIN),
-  asyncHandler(controller.remove)
-);
-
 export default router;

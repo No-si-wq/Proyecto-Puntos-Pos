@@ -13,7 +13,7 @@ import { ConfirmModal } from "../../core/components/common/ConfirmModal";
 import { exportToPdf } from "../../core/utils/exportPDF";
 import { exportToExcel } from "../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
-import CustomerForm, { type CustomerFormValues } from "./components/CustomerForm";
+import CustomerForm from "./components/CustomerForm";
 import SimpleTable from "../../core/components/table/SimpleTable";
 
 import { getAllowedRoles } from "../../core/utils/permissions";
@@ -73,7 +73,7 @@ export default function Customers() {
     setOpen(true);
   }
 
-  async function submit(values: CustomerFormValues) {
+  async function submit(values: any) {
     try {
       const payload = {
         ...values,

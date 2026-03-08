@@ -24,10 +24,10 @@ router.put(
   asyncHandler(controller.updateWarehouse)
 );
 
-router.delete(
-  "/:id",
+router.patch(
+  "/:id/activate",
   roleMiddleware(Role.ADMIN),
-  asyncHandler(controller.deleteWarehouse)
+  asyncHandler(controller.toggleWarehouseActive)
 );
 
 export default router;

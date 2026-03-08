@@ -2,17 +2,10 @@ import { Form, Input, Switch } from "antd";
 import type { Supplier } from "../supplier";
 import FormBase from "../../../core/components/forms/FormBase";
 
-export interface SupplierFormValues {
-  name: string;
-  email?: string;
-  phone?: string;
-  active?: boolean;
-}
-
-interface Props {
+interface SupplierFormProps {
   isEdit: boolean;
   initialValues?: Partial<Supplier>;
-  onSubmit: (values: SupplierFormValues) => Promise<void>;
+  onSubmit: (values: any) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -21,16 +14,10 @@ export default function SupplierForm({
   initialValues,
   onSubmit,
   onCancel,
-}: Props) {
-  const formInitialValues: Partial<SupplierFormValues> | undefined =
-  initialValues && {
-      ...initialValues,
-      email: initialValues.email ?? undefined,
-      phone: initialValues.phone ?? undefined,
-  };
+}: SupplierFormProps) {
   return (
-    <FormBase<SupplierFormValues>
-      initialValues={formInitialValues}
+    <FormBase
+      initialValues={initialValues}
       onSubmit={onSubmit}
       onCancel={onCancel}
     >

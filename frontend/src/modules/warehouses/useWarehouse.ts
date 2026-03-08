@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import http from "../../core/http/http";
-import type { Warehouse, WarehouseFormValues } from "./warehouse";
+import type { Warehouse, CreateWareHouseDTO, UpdateWareHouseDTO } from "./warehouse";
 
 export function useWarehouses() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -16,18 +16,18 @@ export function useWarehouses() {
     }
   }
 
-  async function create(payload: WarehouseFormValues) {
+  async function create(payload: CreateWareHouseDTO) {
     await http.post("/warehouses", payload);
     await load();
   }
 
-  async function update(id: number, payload: WarehouseFormValues) {
+  async function update(id: number, payload: UpdateWareHouseDTO) {
     await http.put(`/warehouses/${id}`, payload);
     await load();
   }
 
-  async function remove(id: number) {
-    await http.delete(`/warehouses/${id}`);
+  async function toggleActive(id: number, active: boolean) {
+    await http.patch(`/warehouses/${id}/activate`, { active });
     await load();
   }
 
@@ -40,6 +40,6 @@ export function useWarehouses() {
     loading,
     create,
     update,
-    remove,
+    toggleActive,
   };
 }

@@ -35,7 +35,7 @@ export default function Categories() {
     reload,
     create,
     update,
-    remove,
+    toggleActive,
     createHierarchy,
   } = useCategories();
 
@@ -47,7 +47,7 @@ export default function Categories() {
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const sizes = useResponsiveSizes();
-  const { isMobile } = useDeviceType()
+  const { isMobile } = useDeviceType();
 
   const [hierarchyModalOpen, setHierarchyModalOpen] =
     useState(false);
@@ -133,8 +133,8 @@ export default function Categories() {
       content:
         "¿Seguro que deseas eliminar esta categoría?",
       onOk: async () => {
-        await remove(selectedCategory.id);
-        message.success("Categoría eliminada");
+        await toggleActive(selectedCategory.id, !selectedCategory.active);
+        message.success("Categoria eliminada");
         setSelectedCategory(null);
       },
     });
@@ -307,7 +307,6 @@ export default function Categories() {
       >
         <CreateEditCategoryForm
           initialValues={editing ?? undefined}
-          isEdit={!!editing}
           onSubmit={handleSubmit}
           onCancel={() => setModalOpen(false)}
           loading={saving}

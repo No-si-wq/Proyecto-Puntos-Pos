@@ -21,23 +21,10 @@ export interface ProductWithContext extends Product {
   stock: number;
 }
 
-export interface ProductFormValues {
-  sku: string;
-  name: string;
-  description?: string;
-  price: number;
-  cost: number;
-
-  barcodes?: string[];
-
-  categoryPath: number[];
-  active?: boolean;
-}
-
 export interface ProductFormProps {
   isEdit: boolean;
-  initialValues?: Partial<ProductFormValues>;
-  onSubmit: (values: ProductFormValues) => Promise<void>;
+  initialValues?: Partial<Product>;
+  onSubmit: (values: any) => Promise<void>;
   onCancel: () => void;
 }
 

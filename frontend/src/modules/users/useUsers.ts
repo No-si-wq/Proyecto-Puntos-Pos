@@ -34,6 +34,11 @@ export function useUsers() {
     await load();
   }
 
+  async function toggleActive(id: number, active: boolean) {
+    await http.patch(`/users/${id}/activate`, { active });
+    await load();
+  }
+
   async function logoutAll(userId: number) {
     await http.post(`/users/${userId}/logout-all`);
     await load();
@@ -46,6 +51,7 @@ export function useUsers() {
     reload: load,
     create,
     update,
+    toggleActive,
     logoutAll,
   };
 }

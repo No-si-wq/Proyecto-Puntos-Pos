@@ -2,17 +2,10 @@ import { Form, Input, Switch } from "antd";
 import type { Customer } from "../customer";
 import FormBase from "../../../core/components/forms/FormBase";
 
-export interface CustomerFormValues {
-  name: string;
-  email?: string;
-  phone?: string;
-  active?: boolean;
-}
-
 interface CustomerFormProps {
   isEdit: boolean;
   initialValues?: Partial<Customer>;
-  onSubmit: (values: CustomerFormValues) => Promise<void>;
+  onSubmit: (values: any) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -23,7 +16,7 @@ export default function CustomerForm({
   onCancel,
 }: CustomerFormProps) {
   return (
-    <FormBase<CustomerFormValues>
+    <FormBase
       initialValues={initialValues}
       onSubmit={onSubmit}
       onCancel={onCancel}

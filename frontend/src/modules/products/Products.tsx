@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { message, Tooltip, Form, Button, Row, Col, Upload } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
-import type { Product, ProductFormValues } from "./product";
+import type { Product } from "./product";
 
 import { useProducts } from "./useProducts";
 import FormModal from "../../core/components/forms/FormModal";
@@ -31,7 +31,7 @@ export default function Products() {
   } = useProducts();
 
   const [open, setOpen] = useState(false);
-  const [form] = Form.useForm<ProductFormValues>();
+  const [form] = Form.useForm<Product>();
   const [editing, setEditing] = useState<Product | null>(null);
   const sizes = useResponsiveSizes();
   const { categoryTree } = useCategories();
@@ -94,8 +94,8 @@ export default function Products() {
     setOpen(true);
   }
 
-  const formInitialValues = useMemo<ProductFormValues | undefined>(() => {
-    if (!editing || !categoryTree.length) return undefined
+  const formInitialValues = useMemo<Partial<Product> | undefined>(() => {
+    if (!editing || !categoryTree.length) return undefined;
 
     const path = buildCategoryPath(categoryTree, editing.categoryId);
 
@@ -120,9 +120,9 @@ export default function Products() {
     setOpen(true);
   }
 
-  async function submit(values: ProductFormValues) {
+  async function submit(values: any) {
     if (!values.categoryPath || values.categoryPath.length === 0) {
-      message.error("Debes seleccionar una categoría");
+      message.error("Debes seleccionar una categoria");
       return;
     }
 
@@ -134,6 +134,7 @@ export default function Products() {
         description: values.description,
         price: values.price,
         cost: values.cost,
+        active: values.active,
         categoryId,
         ...(values.barcodes !== undefined && {
           barcodes: values.barcodes,
@@ -141,7 +142,7 @@ export default function Products() {
       };
 
       if (editing) {
-        await update(editing.id, { ...payload, active: values.active });
+        await update(editing.id, payload );
         message.success("Producto actualizado");
       } else {
         await create(payload);

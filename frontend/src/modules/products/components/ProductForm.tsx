@@ -1,5 +1,5 @@
 import { Form, Input, InputNumber, Switch, Button, Space } from "antd";
-import type { ProductFormProps, ProductFormValues } from "../product";
+import type { ProductFormProps } from "../product";
 import FormBase from "../../../core/components/forms/FormBase";
 import { CategoryCascader } from "../../categories/Components/CategoryCascader";
 
@@ -10,14 +10,14 @@ export default function ProductForm({
   onCancel,
 }: ProductFormProps) {
   return (
-    <FormBase<ProductFormValues>
+    <FormBase
       initialValues={initialValues}
       onSubmit={onSubmit}
       onCancel={onCancel}
     >
       <Form.Item
         name="sku"
-        label="SKU"
+        label="Codigo Interno"
         rules={[
           { required: true, message: "Codigo requerido" },
           { min: 3, message: "Codigo muy corto" },
@@ -62,7 +62,7 @@ export default function ProductForm({
 
       <Form.Item
         name="categoryPath"
-        label="Categoría"
+        label="Categoria"
         rules={[
           { required: true, message: "Categoría requerida" },
         ]}
@@ -73,7 +73,7 @@ export default function ProductForm({
       <Form.List name="barcodes">
         {(fields, { add, remove }) => (
           <>
-            <label>Códigos de barras</label>
+            <label>Codigos de barras</label>
 
             {fields.map(({ key, name, ...restField }) => (
               <Space

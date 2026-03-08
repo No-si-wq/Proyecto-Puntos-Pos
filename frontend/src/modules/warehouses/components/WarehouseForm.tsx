@@ -1,26 +1,25 @@
 import { Form, Input, Switch } from "antd";
 import FormBase from "../../../core/components/forms/FormBase";
-import type { WarehouseFormValues } from "../warehouse";
+import type { Warehouse } from "../warehouse";
 
 interface Props {
-  initialValues?: WarehouseFormValues;
-  onSubmit: (values: WarehouseFormValues) => Promise<void> | void;
+  isEdit: boolean;
+  initialValues?: Partial<Warehouse>;
+  onSubmit: (values: any) => Promise<void> | void;
   onCancel?: () => void;
   loading?: boolean;
 }
 
 export default function WarehouseForm({
+  isEdit,
   initialValues,
   onSubmit,
   onCancel,
   loading,
 }: Props) {
   return (
-    <FormBase<WarehouseFormValues>
-      initialValues={{
-        active: true,
-        ...initialValues,
-      }}
+    <FormBase
+      initialValues={initialValues}
       onSubmit={onSubmit}
       onCancel={onCancel}
       loading={loading}
@@ -36,13 +35,16 @@ export default function WarehouseForm({
         <Input placeholder="Nombre del almacén" />
       </Form.Item>
 
-      <Form.Item
-        name="active"
-        label="Activo"
-        valuePropName="checked"
-      >
-        <Switch />
-      </Form.Item>
+
+      {isEdit && (
+        <Form.Item
+          name="active"
+          label="Activo"
+          valuePropName="checked"
+        >
+          <Switch />
+        </Form.Item>
+      )}
     </FormBase>
   );
 }

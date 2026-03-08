@@ -16,3 +16,9 @@ export const updateSupplierSchema = z.object({
     active: z.boolean().optional(),
   }),
 });
+
+export const toggleSupplierSchema = z.object({
+  body: z.object({
+    active: z.boolean(),
+  }),
+});

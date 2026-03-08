@@ -1,11 +1,9 @@
 import prisma from "../../core/prisma";
+import { Prisma } from "@prisma/client";
 
 export class CategoryRepository {
-  static create(data: {
-    name: string;
-    parentId?: number | null;
-    active?: boolean;
-  }) {
+
+  static create(data: Prisma.CategoryCreateInput) {
     return prisma.category.create({ data });
   }
 
@@ -41,51 +39,10 @@ export class CategoryRepository {
     });
   }
 
-  static update(id: number, data: any) {
+  static update(id: number, data: Prisma.CategoryUpdateInput) {
     return prisma.category.update({
       where: { id },
       data,
-    });
-  }
-
-  static async importFromPaths(paths: string[][]) {
-    return prisma.$transaction(async (tx) => {
-      for (const row of paths) {
-        if (!row.length) continue;
-
-        const [rootName, ...levels] = row;
-
-        let root = await tx.category.findFirst({
-          where: { name: rootName, parentId: null, active: true },
-        });
-
-        if (!root) {
-          root = await tx.category.create({
-            data: {
-              name: rootName,
-              parentId: null,
-              active: true,
-            },
-          });
-        }
-
-        let parentId = root.id;
-
-        for (const name of levels) {
-          const existing = await tx.category.findFirst({
-            where: { name, parentId, active: true },
-          });
-
-          if (existing) {
-            parentId = existing.id;
-          } else {
-            const created = await tx.category.create({
-              data: { name, parentId, active: true },
-            });
-            parentId = created.id;
-          }
-        }
-      }
     });
   }
 

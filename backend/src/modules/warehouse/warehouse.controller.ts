@@ -23,8 +23,9 @@ export async function updateWarehouse(req: Request, res: Response) {
   res.json(data);
 }
 
-export async function deleteWarehouse(req: Request, res: Response) {
+export async function toggleWarehouseActive(req: Request, res: Response) {
   const id = Number(req.params.id);
-  await WarehouseService.remove(id);
+  const { active } = req.body;
+  await WarehouseService.toggleActive(id, Boolean(active));
   res.status(204).send();
 }

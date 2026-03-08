@@ -21,6 +21,7 @@ interface UpdateUserInput {
 export class UserService {
   static async list() {
     return prisma.user.findMany({
+      where: { active: true },
       select: {
         id: true,
         email: true,

@@ -28,3 +28,12 @@ export async function updateSupplier(req: Request, res: Response) {
   );
   res.json(supplier);
 }
+
+export async function toggleSupplierActive(req: Request, res: Response) {
+  const id = Number(req.params.id);
+  const { active } = req.body;
+
+  await SupplierService.toggleActive(id, Boolean(active));
+
+  res.json({ message: "Estado actualizado" });
+}

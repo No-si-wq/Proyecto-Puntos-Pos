@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { CategoryService } from "./category.service";
-import { CategoryRepository } from "./category.repository";
 
 export async function create(req: Request, res: Response) {
   const { name, parentId, active } = req.body;
@@ -49,7 +48,8 @@ export async function getSubtree(req: Request, res: Response) {
 
 export async function getById(req: Request, res: Response) {
   const id = Number(req.params.id);
-  const category = await CategoryRepository.findById(id);
+
+  const category = await CategoryService.findById(id);
 
   if (!category) {
     return res
@@ -63,20 +63,12 @@ export async function getById(req: Request, res: Response) {
 export async function update(req: Request, res: Response) {
   const id = Number(req.params.id);
 
-  const updated = await CategoryRepository.update(
+  const updated = await CategoryService.update(
     id,
     req.body
   );
 
   res.json(updated);
-}
-
-export async function remove(req: Request, res: Response) {
-  const id = Number(req.params.id);
-
-  await CategoryService.remove(id);
-
-  res.status(204).send();
 }
 
 export async function toggleCategoryActive(req: Request, res: Response) {
@@ -94,7 +86,9 @@ export async function toggleCategoryActive(req: Request, res: Response) {
 export async function importCategories(req: Request, res: Response) {
   const { paths } = req.body;
 
-  await CategoryRepository.importFromPaths(paths);
+  await CategoryService.importFromPaths(paths);
 
-  res.status(201).json({ message: "Importación exitosa" });
+  res.status(201).json({
+    message: "Importación exitosa",
+  });
 }
