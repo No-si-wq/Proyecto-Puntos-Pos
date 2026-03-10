@@ -31,7 +31,6 @@ export async function importProducts(req: Request, res: Response) {
 
   } finally {
 
-    // siempre eliminar el archivo temporal
     await fs.unlink(filePath).catch(() => {});
 
   }
@@ -95,6 +94,32 @@ export async function getProductByBarcode(req: Request, res: Response) {
   }
 
   return res.json(product);
+}
+
+export async function ProductPrices(req: Request, res: Response) {
+  const id = Number(req.params.id);
+
+  const prices = await ProductService.getPrices(id);
+  res.json(prices);
+}
+
+export async function getProductPrices(req: Request, res: Response) {
+  const data = await ProductService.getPrices(Number(req.params.id));
+  res.json(data);
+}
+
+export async function upsertProductPrice(req: Request, res: Response) {
+  const productId   = Number(req.params.id);
+  const { priceListId, price } = req.body;
+  const data = await ProductService.upsertPrice(productId, { priceListId, price });
+  res.json(data);
+}
+
+export async function removeProductPrice(req: Request, res: Response) {
+  const productId   = Number(req.params.id);
+  const priceListId = Number(req.params.priceListId);
+  await ProductService.removePrice(productId, priceListId);
+  res.status(204).send();
 }
 
 export async function toggleProductActive(req: Request, res: Response) {

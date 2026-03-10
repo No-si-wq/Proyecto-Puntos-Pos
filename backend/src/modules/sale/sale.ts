@@ -7,6 +7,7 @@ export interface SaleItemInput {
 
 interface BaseSaleInput {
   items: SaleItemInput[];
+  priceListId?: number;
   pointsUsed?: number;
 }
 
@@ -34,4 +35,5 @@ export enum SaleError {
   PRODUCT_NOT_AVAILABLE = "PRODUCT_NOT_AVAILABLE",
   INVALID_TOTAL = "INVALID_TOTAL",
   SALE_NOT_FOUND = "SALE_NOT_FOUND",
+  INVALID_PRICE_LIST = "INVALID_PRICE_LIST",
 }

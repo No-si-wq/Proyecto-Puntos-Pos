@@ -14,12 +14,19 @@ import {
 import { Role } from "../user/roles";
 
 const upload = multer({ dest: "uploads/" });
-
 const router = Router();
 
 router.use(authMiddleware);
 
 router.get("/", asyncHandler(controller.listProducts));
+
+router.get(
+  "/by-warehouse",
+  requireWarehouse,
+  asyncHandler(controller.getProductsByWarehouse)
+);
+
+router.get("/by-barcode/:code", asyncHandler(controller.getProductByBarcode));
 
 router.post(
   "/import",
@@ -27,26 +34,17 @@ router.post(
   asyncHandler(controller.importProducts)
 );
 
-router.get(
-  "/by-warehouse",
-  requireWarehouse,
-  asyncHandler(controller.getProductsByWarehouse),
-);
-
-router.get(
-  "/:id",
-  roleMiddleware(Role.ADMIN, Role.USER),
-  validate(productIdParamSchema),
-  asyncHandler(controller.getProduct),
-);
-
-router.get("/by-barcode/:code", asyncHandler(controller.getProductByBarcode));
-
 router.post(
   "/",
   roleMiddleware(Role.ADMIN, Role.USER),
   validate(createProductSchema),
-  controller.createProduct
+  asyncHandler(controller.createProduct)
+);
+
+router.get(
+  "/:id",
+  validate(productIdParamSchema),
+  asyncHandler(controller.getProduct)
 );
 
 router.put(
@@ -61,6 +59,23 @@ router.patch(
   roleMiddleware(Role.ADMIN),
   validate(productIdParamSchema),
   asyncHandler(controller.toggleProductActive)
+);
+
+router.get(
+  "/:id/prices",
+  asyncHandler(controller.getProductPrices)
+);
+
+router.put(
+  "/:id/prices",
+  roleMiddleware(Role.ADMIN),
+  asyncHandler(controller.upsertProductPrice)
+);
+
+router.delete(
+  "/:id/prices/:priceListId",
+  roleMiddleware(Role.ADMIN),
+  asyncHandler(controller.removeProductPrice)
 );
 
 export default router;

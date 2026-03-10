@@ -6,9 +6,13 @@ export type SalePaymentMethod =
   | "TRANSFER"
   | "CREDIT";
 
+export type DiscountType = "NONE" | "PERCENTAGE" | "FIXED";
+
 export interface SaleItemDTO {
   productId: number;
   quantity: number;
+  discountType?: DiscountType;
+  discountValue?: number;
 }
 
 export interface SaleItems {
@@ -20,19 +24,23 @@ export interface SaleItems {
   lineSubtotal: number;
   quantity: number;
   discountAmount: number;
+  discountType?: DiscountType;
+  discountValue?: number;
+  commissionPercent?: number;
+  commissionAmount?: number;
 }
 
 export interface CreateSaleDTO {
   customerId?: number;
   pointsUsed?: number;
+  priceListId?: number;
   items: SaleItemDTO[];
-  
   paymentMethod: SalePaymentMethod;
   dueDate?: string;
 }
 
 export interface SaleItem extends BaseItem {
-  id: number
+  id: number;
 }
 
 export type SaleStatus = "COMPLETED" | "CANCELLED";
@@ -41,8 +49,14 @@ export interface Sale {
   id: number;
   saleNumber: string;
   total: number;
+  subtotal: number;
+  discount: number;
+  grossSubtotal?: number;
+  totalCommission?: number;
   createdAt: string;
   status: SaleStatus;
+  paymentMethod: SalePaymentMethod;
+  priceListId?: number | null;
 
   customer?: {
     id: number;
@@ -54,12 +68,14 @@ export interface Sale {
     name: string;
   };
 
+  priceList?: {
+    id: number;
+    name: string;
+  };
+
   pointsEarned: number;
   pointsUsed: number;
 
   itemsCount?: number;
   items: SaleItems[];
-
-  subtotal: number;
-  discount: number;
 }

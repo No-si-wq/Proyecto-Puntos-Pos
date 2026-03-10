@@ -27,6 +27,8 @@ import Kardex from "../../modules/reports/Kardex";
 import ProfitReport from "../../modules/reports/ProfitReport";
 import SaleDetail from "../../modules/sales/SaleDetail";
 import PurchaseDetail from "../../modules/purchases/PurchaseDetail";
+import PriceLists from "../../modules/priceLists/PriceLists";
+import Commissions from "../../modules/commissions/Commissions";
 
 import Unauthorized from "../../modules/Unauthorized";
 
@@ -215,6 +217,24 @@ export default function AppRouter() {
             element={
               <ProtectedRoute module="reports">
                 <ProfitReport />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/price-lists"
+            element={
+              <ProtectedRoute module="priceList">
+                <PriceLists />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/commissions"
+            element={
+              <ProtectedRoute module="commission">
+                <Commissions />
               </ProtectedRoute>
             }
           />

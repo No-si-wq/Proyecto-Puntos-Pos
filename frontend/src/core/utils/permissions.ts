@@ -26,6 +26,8 @@ export type PermissionModule =
   | "accountsReceivable"
   | "accountPayable"
   | "reports"
+  | "priceList"
+  | "commission"
 
 export const PERMISSIONS: Record<
   PermissionModule,
@@ -120,7 +122,21 @@ export const PERMISSIONS: Record<
 
   reports: {
     view: [Role.ADMIN]
-  }
+  },
+
+  priceList: {
+    view: [Role.ADMIN, Role.USER],
+    create: [Role.ADMIN, Role.USER],
+    edit: [Role.ADMIN],
+    delete: [Role.ADMIN]
+  },
+
+  commission: {
+    view: [Role.ADMIN, Role.USER],
+    create: [Role.ADMIN, Role.USER],
+    edit: [Role.ADMIN],
+    delete: [Role.ADMIN],
+  },
 };
 
 export function getAllowedRoles(

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { message, Tooltip, Form, Button, Row, Col, Upload } from "antd";
+import { TagsOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
 import type { Product } from "./product";
@@ -11,6 +12,7 @@ import PageHeader from "../../core/components/common/PageHeader";
 import ProtectedButton from "../../core/components/common/ProtectedButton";
 import { ConfirmModal } from "../../core/components/common/ConfirmModal";
 import ProductForm from "./components/ProductForm";
+import ProductPricesModal from "./components/ProductPricesModal";
 import SimpleTable from "../../core/components/table/SimpleTable";
 import { buildCategoryPath, buildCategoryBreadcrumb } from "../../core/utils/category";
 
@@ -35,7 +37,9 @@ export default function Products() {
   const [editing, setEditing] = useState<Product | null>(null);
   const sizes = useResponsiveSizes();
   const { categoryTree } = useCategories();
-    useState<Product | null>(null);
+
+  const [pricesOpen, setPricesOpen] = useState(false);
+  const [pricingProduct, setPricingProduct] = useState<Product | null>(null);
 
   function buildBreadcrumbFromId(categoryId: number) {
     const path = buildCategoryPath(categoryTree, categoryId);
@@ -49,7 +53,6 @@ export default function Products() {
     } catch {
       message.error("Error importando productos");
     }
-
     return false;
   }
 
@@ -57,20 +60,17 @@ export default function Products() {
     return data
       .filter(p => p.active)
       .map((p) => ({
-      Codigo: p.sku,
-      Nombre: p.name,
-      Descripcion: p.description ?? "-",
-      Precio: p.price,
-      Costo: p.cost,
-      Categorias: buildBreadcrumbFromId(p.categoryId),
+        Codigo: p.sku,
+        Nombre: p.name,
+        Descripcion: p.description ?? "-",
+        Precio: p.price,
+        Costo: p.cost,
+        Categorias: buildBreadcrumbFromId(p.categoryId),
       }));
   }
 
   function handleExportExcel() {
-    exportToExcel(
-      buildExportRows(products),
-      "Productos"
-    );
+    exportToExcel(buildExportRows(products), "Productos");
   }
 
   function handleExportPdf() {
@@ -120,6 +120,11 @@ export default function Products() {
     setOpen(true);
   }
 
+  function openPrices(product: Product) {
+    setPricingProduct(product);
+    setPricesOpen(true);
+  }
+
   async function submit(values: any) {
     if (!values.categoryPath || values.categoryPath.length === 0) {
       message.error("Debes seleccionar una categoria");
@@ -142,7 +147,7 @@ export default function Products() {
       };
 
       if (editing) {
-        await update(editing.id, payload );
+        await update(editing.id, payload);
         message.success("Producto actualizado");
       } else {
         await create(payload);
@@ -176,9 +181,7 @@ export default function Products() {
 
   function confirmToggle(product: Product) {
     ConfirmModal({
-      title: product.active
-        ? "Desactivar producto"
-        : "Activar producto",
+      title: product.active ? "Desactivar producto" : "Activar producto",
       content: `¿Seguro que deseas ${
         product.active ? "desactivar" : "activar"
       } ${product.name}?`,
@@ -204,7 +207,7 @@ export default function Products() {
             <span>{text}</span>
           </Tooltip>
         );
-      }
+      },
     },
     {
       title: "Activo",
@@ -221,6 +224,16 @@ export default function Products() {
           >
             Editar
           </ProtectedButton>
+
+          <Tooltip title="Listas de precios">
+            <ProtectedButton
+              roles={getAllowedRoles("products", "edit")}
+              icon={<TagsOutlined />}
+              onClick={() => openPrices(record)}
+            >
+              Editar
+            </ProtectedButton>
+          </Tooltip>
 
           <ProtectedButton
             roles={getAllowedRoles("products", "delete")}
@@ -250,71 +263,55 @@ export default function Products() {
         }
       />
 
-      <Row
-        justify="space-between"
-        align="middle"
-        style={{ marginBottom: 16 }}
-      >
+      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
         <Col>
           <Row gutter={12}>
             <Col>
-              <Button
-                type="default"
-                onClick={handleExportExcel}
-                size={sizes.button}
-              >
+              <Button type="default" onClick={handleExportExcel} size={sizes.button}>
                 Exportar Excel
               </Button>
             </Col>
-
             <Col>
-              <Button
-                type="default"
-                onClick={handleExportPdf}
-                size={sizes.button}
-              >
+              <Button type="default" onClick={handleExportPdf} size={sizes.button}>
                 Exportar PDF
               </Button>
             </Col>
             <Col>
-              <Upload
-                beforeUpload={handleImport}
-                showUploadList={false}
-                accept=".xlsx,.xls"
-              >
-                <Button size={sizes.button}>
-                  Importar Excel
-                </Button>
+              <Upload beforeUpload={handleImport} showUploadList={false} accept=".xlsx,.xls">
+                <Button size={sizes.button}>Importar Excel</Button>
               </Upload>
             </Col>
           </Row>
         </Col>
 
         <Col>
-          <strong>
-            Activos: {products.filter(p => p.active).length}
-          </strong>
+          <strong>Activos: {products.filter(p => p.active).length}</strong>
         </Col>
       </Row>
 
-      <SimpleTable<Product>
-        data={products}
-        columns={columns}
-        loading={loading}
-      />
+      <SimpleTable<Product> data={products} columns={columns} loading={loading} />
 
       <FormModal
         open={open}
         title={editing ? "Editar producto" : "Nuevo producto"}
         onClose={() => setOpen(false)}
       >
-        <ProductForm 
+        <ProductForm
           isEdit={!!editing}
           initialValues={formInitialValues}
           onSubmit={submit}
           onCancel={() => setOpen(false)}
         />
       </FormModal>
+
+      {pricingProduct && (
+        <ProductPricesModal
+          open={pricesOpen}
+          onClose={() => { setPricesOpen(false); setPricingProduct(null); }}
+          productId={pricingProduct.id}
+          productName={pricingProduct.name}
+        />
+      )}
     </>
   );
 }

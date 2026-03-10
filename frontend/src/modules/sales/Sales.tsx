@@ -11,7 +11,7 @@ import {
   Button,
   DatePicker,
   Tag,
-  Divider
+  Divider,
 } from "antd";
 
 import { useCustomers } from "../customers/useCustomers";
@@ -25,6 +25,7 @@ import { useDeviceType } from "../../core/hooks/useDeviceType";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
 import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
 import { useWarehouseProducts } from "../warehouses/useWarehouseProducts";
+import { usePriceLists } from "../priceLists/usePriceList";
 import type { SalePaymentMethod } from "./sale";
 
 import PageHeader from "../../core/components/common/PageHeader";
@@ -33,24 +34,19 @@ export default function Sales() {
   const { customers, reload: reloadCustomers } = useCustomers();
   const warehouseId = useRequiredWarehouse();
   const { products, reload: reloadProducts } = useWarehouseProducts();
-  const [paymentMethod, setPaymentMethod] =
-  useState<SalePaymentMethod>("CASH");
+  const { priceLists = [] } = usePriceLists();
 
+  const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>("CASH");
   const [dueDate, setDueDate] = useState<string>();
-  const { isMobile, isTablet, device } = useDeviceType();
-  const tableSpan =
-    device === "desktop" ? 16 :
-    device === "tablet" ? 14 :
-    24;
+  const [priceListId, setPriceListId] = useState<number | undefined>();
 
-  const summarySpan =
-    device === "desktop" ? 8 :
-    device === "tablet" ? 10 :
-    24;
+  const { isMobile, isTablet, device } = useDeviceType();
+  const tableSpan   = device === "desktop" ? 16 : device === "tablet" ? 14 : 24;
+  const summarySpan = device === "desktop" ? 8  : device === "tablet" ? 10 : 24;
   const sizes = useResponsiveSizes();
+
   const { create, creating } = useSales();
-  const [selectedProductId, setSelectedProductId] =
-  useState<number | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const selectRef = useRef<any>(null);
   const cart = useCartSale();
 
@@ -58,30 +54,50 @@ export default function Sales() {
     cart.clear();
   }, [warehouseId]);
 
+  useEffect(() => {
+    const snapshot = cart.items;
+    snapshot.forEach((item) => {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product) return;
+
+      const customPrice = priceListId
+        ? product.prices?.find((pp: any) => pp.priceListId === priceListId)?.price
+        : undefined;
+
+      const resolvedPrice = customPrice !== undefined
+        ? Number(customPrice)
+        : Number(product.price);
+
+      cart.updatePrice(item.productId, resolvedPrice);
+    });
+  }, [priceListId, products]);
+
   const { onKey } = useBarcodeScanner({
     onProductFound: (product) => {
-      const item = cart.items.find(
-        (i) => i.productId === product.id
-      );
-
+      const item = cart.items.find((i) => i.productId === product.id);
       if (item) {
-        cart.updateQuantity(
-          product.id,
-          item.quantity + 1
-        );
-        return; 
+        cart.updateQuantity(product.id, item.quantity + 1);
+        return;
       }
-
-      cart.addProduct(product)
-    }
-  })
+      const customPrice = priceListId
+        ? product.prices?.find((pp: any) => pp.priceListId === priceListId)?.price
+        : undefined;
+      cart.addProduct(product, customPrice !== undefined ? Number(customPrice) : undefined);
+    },
+  });
 
   const sale = saleStore();
-  const selectedCustomer = customers.find(
-    (c) => c.id === sale.customerId
-  );
-
+  const selectedCustomer = customers.find((c) => c.id === sale.customerId);
   const availablePoints = selectedCustomer?.points?.balance ?? 0;
+
+  const estimatedCommission = cart.totalCommission();
+
+  function resolveProductPrice(productId: number): number | undefined {
+    if (!priceListId) return undefined;
+    const product = products.find((p) => p.id === productId);
+    const customPrice = product?.prices?.find((pp: any) => pp.priceListId === priceListId)?.price;
+    return customPrice !== undefined ? Number(customPrice) : undefined;
+  }
 
   async function submitSale() {
     if (cart.items.length === 0) {
@@ -99,16 +115,13 @@ export default function Sales() {
         message.error("Debe seleccionar cliente para crédito");
         return;
       }
-
       if (!dueDate) {
         message.error("Debe seleccionar fecha de vencimiento");
         return;
       }
     }
 
-    const finalTotal =
-      cart.subtotal() - sale.pointsUsed;
-
+    const finalTotal = cart.subtotal() - sale.pointsUsed;
     if (finalTotal < 0) {
       message.error("Total inválido");
       return;
@@ -118,6 +131,7 @@ export default function Sales() {
       const result = await create({
         customerId: sale.customerId,
         pointsUsed: sale.pointsUsed,
+        priceListId,                         
         items: cart.items.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -128,15 +142,13 @@ export default function Sales() {
         dueDate,
       });
 
-      await Promise.all([
-        reloadProducts(),
-        reloadCustomers(),
-      ]);
+      await Promise.all([reloadProducts(), reloadCustomers()]);
 
       cart.clear();
       sale.reset();
       setPaymentMethod("CASH");
       setDueDate(undefined);
+      setPriceListId(undefined);
 
       message.success(
         result?.pointsEarned
@@ -144,34 +156,37 @@ export default function Sales() {
           : "Venta realizada"
       );
     } catch (err: any) {
-      message.error(
-        err?.response?.data?.message ?? "Error creando venta"
-      );
+      message.error(err?.response?.data?.message ?? "Error creando venta");
     }
   }
 
+  const priceListSelector = (
+    <Select
+      allowClear
+      placeholder="Sin lista de precios"
+      size={sizes.select}
+      style={{ width: "100%" }}
+      value={priceListId}
+      onChange={(v) => setPriceListId(v ?? undefined)}
+      options={priceLists
+        .filter((pl) => pl.active)
+        .map((pl) => ({ value: pl.id, label: pl.name }))}
+    />
+  );
+
+  const commissionLine = estimatedCommission > 0 && (
+    <div style={{ color: "#52c41a", fontSize: 13 }}>
+      Comisión estimada:{" "}
+      <strong>{formatCurrency(estimatedCommission)}</strong>
+    </div>
+  );
+
   if (isMobile) {
     return (
-      <div
-        style={{
-          height: "100dvh",
-          display: "flex",
-          flexDirection: "column",
-          background: "#fff",
-        }}
-      >
-        <PageHeader
-          title="Ventas"
-          subtitle="Punto de venta"
-        />
+      <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "#fff" }}>
+        <PageHeader title="Ventas" subtitle="Punto de venta" />
 
-        <div
-          style={{
-            padding: 16,
-            borderBottom: "1px solid #f0f0f0",
-            background: "#fff",
-          }}
-        >
+        <div style={{ padding: 16, borderBottom: "1px solid #f0f0f0", background: "#fff" }}>
           <Select
             ref={selectRef}
             showSearch
@@ -183,18 +198,14 @@ export default function Sales() {
             value={selectedProductId}
             onChange={setSelectedProductId}
             onSelect={(id: number) => {
-              const product = products.find(
-                (p) => p.id === id
-              );
-              if (product) cart.addProduct(product);
+              const product = products.find((p) => p.id === id);
+              if (product) cart.addProduct(product, resolveProductPrice(id));
               setSelectedProductId(null);
             }}
             filterOption={(input, option) => {
-                  const label = option?.label as string;
-                  return label
-                    ?.toLowerCase()
-                    .includes(input.toLowerCase());
-                }}
+              const label = option?.label as string;
+              return label?.toLowerCase().includes(input.toLowerCase());
+            }}
             options={products
               .filter((p) => p.active)
               .map((p) => ({
@@ -203,6 +214,11 @@ export default function Sales() {
                 disabled: p.stock <= 0,
               }))}
           />
+
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>LISTA DE PRECIOS</div>
+            {priceListSelector}
+          </div>
 
           <Select
             showSearch
@@ -213,11 +229,9 @@ export default function Sales() {
             onChange={(v) => sale.setCustomer(v ?? undefined)}
             style={{ width: "100%", marginBottom: 8 }}
             filterOption={(input, option) => {
-                  const label = option?.label as string;
-                  return label
-                    ?.toLowerCase()
-                    .includes(input.toLowerCase());
-                }}
+              const label = option?.label as string;
+              return label?.toLowerCase().includes(input.toLowerCase());
+            }}
             options={customers
               .filter((c) => c.active)
               .map((c) => ({
@@ -226,31 +240,18 @@ export default function Sales() {
               }))}
           />
 
-          <div
-            style={{
-              marginBottom: 16
-            }}
-          >
+          <div style={{ marginBottom: 16 }}>
             {selectedCustomer && (
               <div style={{ marginTop: 8 }}>
                 <div style={{ fontSize: 13, color: "#666" }}>
-                  Puntos disponibles:{" "}
-                  <strong>{availablePoints}</strong>
+                  Puntos disponibles: <strong>{availablePoints}</strong>
                 </div>
-
                 <InputNumber
                   size={sizes.input}
                   min={0}
                   max={availablePoints}
                   value={sale.pointsUsed}
-                  onChange={(v) =>
-                    sale.setPoints(
-                      Math.min(
-                        Number(v) || 0,
-                        availablePoints
-                      )
-                    )
-                  }
+                  onChange={(v) => sale.setPoints(Math.min(Number(v) || 0, availablePoints))}
                   placeholder="Puntos a usar"
                   style={{ width: "100%", marginTop: 6 }}
                 />
@@ -262,17 +263,15 @@ export default function Sales() {
             value={paymentMethod}
             onChange={(value) => {
               setPaymentMethod(value);
-              if (value !== "CREDIT") {
-                setDueDate(undefined);
-              }
+              if (value !== "CREDIT") setDueDate(undefined);
             }}
             size={sizes.select}
             style={{ width: "100%" }}
             options={[
-              { label: "Efectivo", value: "CASH" },
-              { label: "Tarjeta", value: "CARD" },
+              { label: "Efectivo",      value: "CASH"     },
+              { label: "Tarjeta",       value: "CARD"     },
               { label: "Transferencia", value: "TRANSFER" },
-              { label: "Crédito", value: "CREDIT" },
+              { label: "Crédito",       value: "CREDIT"   },
             ]}
           />
 
@@ -281,21 +280,12 @@ export default function Sales() {
               style={{ width: "100%", marginTop: 8 }}
               size={sizes.input}
               placeholder="Fecha de vencimiento"
-              onChange={(date) =>
-                setDueDate(date?.toISOString())
-              }
+              onChange={(date) => setDueDate(date?.toISOString())}
             />
           )}
         </div>
 
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: 16,
-            background: "#fafafa",
-          }}
-        >
+        <div style={{ flex: 1, overflowY: "auto", padding: 16, background: "#fafafa" }}>
           <SaleCartTable
             items={cart.items}
             onQuantityChange={cart.updateQuantity}
@@ -308,27 +298,16 @@ export default function Sales() {
           style={{
             borderTop: "1px solid #eee",
             padding: 16,
-            paddingBottom:
-              "calc(16px + env(safe-area-inset-bottom))",
+            paddingBottom: "calc(16px + env(safe-area-inset-bottom))",
             background: "#fff",
-            boxShadow:
-              "0 -4px 12px rgba(0,0,0,0.05)",
+            boxShadow: "0 -4px 12px rgba(0,0,0,0.05)",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: 10,
-            }}
-          >
-            <span style={{ fontSize: 13, color: "#666" }}>
-              Total
-            </span>
+          {commissionLine}
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, marginTop: 6 }}>
+            <span style={{ fontSize: 13, color: "#666" }}>Total</span>
             <strong style={{ fontSize: 20 }}>
-              {formatCurrency(
-                cart.subtotal() - sale.pointsUsed
-              )}
+              {formatCurrency(cart.subtotal() - sale.pointsUsed)}
             </strong>
           </div>
 
@@ -338,8 +317,7 @@ export default function Sales() {
             size="large"
             disabled={
               cart.items.length === 0 ||
-              (paymentMethod === "CREDIT" &&
-                (!sale.customerId || !dueDate))
+              (paymentMethod === "CREDIT" && (!sale.customerId || !dueDate))
             }
             loading={creating}
             onClick={submitSale}
@@ -353,35 +331,19 @@ export default function Sales() {
 
   return (
     <>
-      <PageHeader
-        title="Ventas"
-        subtitle="Punto de venta"
-      />
+      <PageHeader title="Ventas" subtitle="Punto de venta" />
 
       <Row gutter={sizes.gutter} align="top">
-        
         <Col span={tableSpan}>
-          <Card
-            title="Productos"
-            bodyStyle={{ 
-              padding: sizes.cardPadding,
-            }}
-          >
+          <Card title="Productos" bodyStyle={{ padding: sizes.cardPadding }}>
             <Input
               autoFocus
               onChange={(e) => {
                 const value = e.target.value;
-                if (value) {
-                  onKey(value[value.length - 1]);
-                }
+                if (value) onKey(value[value.length - 1]);
                 e.target.value = "";
               }}
-              style={{
-                position: "absolute",
-                opacity: 0,
-                height: 0,
-                width: 0,
-              }}
+              style={{ position: "absolute", opacity: 0, height: 0, width: 0 }}
             />
 
             <div style={{ marginBottom: 20 }}>
@@ -400,24 +362,15 @@ export default function Sales() {
                 value={selectedProductId}
                 onChange={setSelectedProductId}
                 onSelect={(id: number) => {
-                  const product = products.find(
-                    (p) => p.id === id
-                  );
-                  if (product) {
-                    cart.addProduct(product);
-                  }
-
+                  const product = products.find((p) => p.id === id);
+                  if (product) cart.addProduct(product, resolveProductPrice(id));
                   setSelectedProductId(null);
                   selectRef.current?.blur();
-                  setTimeout(() => {
-                    selectRef.current?.focus();
-                  }, 0);
+                  setTimeout(() => selectRef.current?.focus(), 0);
                 }}
                 filterOption={(input, option) => {
                   const label = option?.label as string;
-                  return label
-                    ?.toLowerCase()
-                    .includes(input.toLowerCase());
+                  return label?.toLowerCase().includes(input.toLowerCase());
                 }}
                 options={products
                   .filter((p) => p.active)
@@ -426,8 +379,9 @@ export default function Sales() {
                     label: `${p.name} · Existencia: ${p.stock}`,
                     disabled: p.stock <= 0,
                   }))}
-                />
-              </div>
+              />
+            </div>
+
             <SaleCartTable
               items={cart.items}
               onQuantityChange={cart.updateQuantity}
@@ -439,178 +393,152 @@ export default function Sales() {
 
         {!isMobile && (
           <Col span={summarySpan}>
-            <div
-              style={{
-                position: "sticky",
-                display: "flex",
-                flexDirection: "column",
-                gap: sizes.gap,
-              }}
-            >
+            <div style={{ position: "sticky", top: 0, display: "flex", flexDirection: "column", gap: sizes.gap }}>
+
+              {/* ── Configuración de la venta ── */}
               <Card
-                title="Resumen de la venta"
-                bodyStyle={{
-                  padding: sizes.cardPadding,
-                }}
-                style={{
-                  borderRadius: 8,
-                  boxShadow:
-                    "0 4px 12px rgba(0,0,0,0.05)",
-                }}
+                size="small"
+                bodyStyle={{ padding: sizes.cardPadding }}
+                style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
               >
-                <div>
-                  <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>
-                    CLIENTE
-                  </div>
-
-                  <Select
-                    showSearch
-                    allowClear
-                    listHeight={sizes.selectListHeight}
-                    size={sizes.select}
-                    placeholder="Seleccionar cliente"
-                    value={sale.customerId}
-                    onChange={(v) => sale.setCustomer(v ?? undefined)}
-                    style={{ width: "100%" }}
-                    optionFilterProp="label"
-                    filterOption={(input, option) =>
-                      (option?.label as string)
-                        ?.toLowerCase()
-                        .includes(input.toLowerCase())
-                    }
-                    options={customers
-                      .filter((c) => c.active)
-                      .map((c) => ({
-                        value: c.id,
-                        label: `${c.name} · ${c.points?.balance ?? 0} pts`,
-                      }))}
-                  />
-
-                  {selectedCustomer && (
-                    <div style={{ marginTop: 8 }}>
-                      <div style={{ fontSize: 13, color: "#666" }}>
-                        Puntos disponibles:{" "}
-                        <strong>{availablePoints}</strong>
-                      </div>
-
-                      <InputNumber
-                        size={sizes.input}
-                        min={0}
-                        max={availablePoints}
-                        value={sale.pointsUsed}
-                        onChange={(v) =>
-                          sale.setPoints(
-                            Math.min(
-                              Number(v) || 0,
-                              availablePoints
-                            )
-                          )
-                        }
-                        placeholder="Puntos a usar"
-                        style={{ width: "100%", marginTop: 6 }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <Divider style={{ margin: 0 }} />
-
-                <div>
-                  <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>
-                    MÉTODO DE PAGO
-                  </div>
-
-                  <Select
-                    value={paymentMethod}
-                    onChange={(value) => {
-                      setPaymentMethod(value);
-                      if (value !== "CREDIT") {
-                        setDueDate(undefined);
+                {/* Fila 1: Lista de precios + Cliente */}
+                <Row gutter={12}>
+                  <Col span={12}>
+                    <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>LISTA DE PRECIOS</div>
+                    {priceListSelector}
+                  </Col>
+                  <Col span={12}>
+                    <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>CLIENTE</div>
+                    <Select
+                      showSearch
+                      allowClear
+                      listHeight={sizes.selectListHeight}
+                      size={sizes.select}
+                      placeholder="Seleccionar cliente"
+                      value={sale.customerId}
+                      onChange={(v) => sale.setCustomer(v ?? undefined)}
+                      style={{ width: "100%" }}
+                      optionFilterProp="label"
+                      filterOption={(input, option) =>
+                        (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
                       }
-                    }}
-                    size={sizes.select}
-                    style={{ width: "100%" }}
-                    options={[
-                      { label: "Efectivo", value: "CASH" },
-                      { label: "Tarjeta", value: "CARD" },
-                      { label: "Transferencia", value: "TRANSFER" },
-                      { label: "Crédito", value: "CREDIT" },
-                    ]}
-                  />
+                      options={customers
+                        .filter((c) => c.active)
+                        .map((c) => ({
+                          value: c.id,
+                          label: `${c.name} · ${c.points?.balance ?? 0} pts`,
+                        }))}
+                    />
+                  </Col>
+                </Row>
 
-                  <div
-                    style={{
-                      marginTop: 10,
-                      height: 70,
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {paymentMethod === "CREDIT" ? (
-                      <>
-                        <Tag color="orange" style={{ marginBottom: 6 }}>
-                          Venta a crédito
-                        </Tag>
-
-                        <DatePicker
-                          style={{ width: "100%" }}
-                          size={sizes.input}
-                          placeholder="Fecha de vencimiento"
-                          onChange={(date) =>
-                            setDueDate(date?.toISOString())
-                          }
+                {/* Puntos — solo si hay cliente seleccionado */}
+                {selectedCustomer && (
+                  <div style={{ marginTop: 10, padding: "8px 10px", background: "#f6ffed", borderRadius: 6, border: "1px solid #b7eb8f" }}>
+                    <Row align="middle" gutter={8}>
+                      <Col flex={1}>
+                        <span style={{ fontSize: 12, color: "#52c41a" }}>
+                          Puntos disponibles: <strong>{availablePoints}</strong>
+                        </span>
+                      </Col>
+                      <Col>
+                        <InputNumber
+                          size="small"
+                          min={0}
+                          max={availablePoints}
+                          value={sale.pointsUsed}
+                          onChange={(v) => sale.setPoints(Math.min(Number(v) || 0, availablePoints))}
+                          placeholder="Usar puntos"
+                          style={{ width: 110 }}
                         />
-                      </>
-                    ) : (
-                      <div style={{ height: 32 }} />
-                    )}
+                      </Col>
+                    </Row>
                   </div>
-                </div>
+                )}
 
-                <Divider style={{ margin: 0 }} />
+                <Divider style={{ margin: "10px 0" }} />
 
-                <div style={{ textAlign: "right", marginBottom: 6 }}>
-                  <div>
-                    Subtotal bruto:{" "}
-                    <strong>
-                      {formatCurrency(cart.grossSubtotal())}
-                    </strong>
+                {/* Fila 2: Método de pago + fecha vencimiento si es crédito */}
+                <Row gutter={12} align="bottom">
+                  <Col span={paymentMethod === "CREDIT" ? 12 : 24}>
+                    <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>MÉTODO DE PAGO</div>
+                    <Select
+                      value={paymentMethod}
+                      onChange={(value) => {
+                        setPaymentMethod(value);
+                        if (value !== "CREDIT") setDueDate(undefined);
+                      }}
+                      size={sizes.select}
+                      style={{ width: "100%" }}
+                      options={[
+                        { label: "Efectivo",      value: "CASH"     },
+                        { label: "Tarjeta",       value: "CARD"     },
+                        { label: "Transferencia", value: "TRANSFER" },
+                        { label: "Crédito",       value: "CREDIT"   },
+                      ]}
+                    />
+                  </Col>
+                  {paymentMethod === "CREDIT" && (
+                    <Col span={12}>
+                      <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>VENCIMIENTO</div>
+                      <DatePicker
+                        style={{ width: "100%" }}
+                        size={sizes.input}
+                        placeholder="Fecha"
+                        onChange={(date) => setDueDate(date?.toISOString())}
+                      />
+                    </Col>
+                  )}
+                </Row>
+
+                {paymentMethod === "CREDIT" && (
+                  <Tag color="orange" style={{ marginTop: 8 }}>Venta a crédito</Tag>
+                )}
+              </Card>
+
+              {/* ── Totales y confirmar ── */}
+              <Card
+                size="small"
+                bodyStyle={{ padding: sizes.cardPadding }}
+                style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+              >
+                <div style={{ fontSize: 12, color: "#888", marginBottom: 8 }}>RESUMEN</div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#666" }}>Subtotal bruto</span>
+                    <strong>{formatCurrency(cart.grossSubtotal())}</strong>
                   </div>
 
                   {cart.grossSubtotal() !== cart.subtotal() && (
-                    <div>
-                      Descuento por productos:{" "}
-                      <strong>
-                        −
-                        {formatCurrency(
-                          cart.grossSubtotal() -
-                            cart.subtotal()
-                        )}
-                      </strong>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#666" }}>Descuento productos</span>
+                      <strong style={{ color: "#ff4d4f" }}>−{formatCurrency(cart.grossSubtotal() - cart.subtotal())}</strong>
                     </div>
                   )}
 
                   {sale.pointsUsed > 0 && (
-                    <div>
-                      Descuento por puntos:{" "}
-                      <strong>
-                        −{formatCurrency(sale.pointsUsed)}
-                      </strong>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#666" }}>Descuento puntos</span>
+                      <strong style={{ color: "#ff4d4f" }}>−{formatCurrency(sale.pointsUsed)}</strong>
+                    </div>
+                  )}
+
+                  {estimatedCommission > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#52c41a" }}>Comisión estimada</span>
+                      <strong style={{ color: "#52c41a" }}>{formatCurrency(estimatedCommission)}</strong>
                     </div>
                   )}
                 </div>
 
-                <div
-                  style={{
-                    fontSize: sizes.totalFontSize + 6,
-                    fontWeight: 700,
-                    marginTop: 6,
-                  }}
-                >
-                  {formatCurrency(
-                    cart.subtotal() - sale.pointsUsed
-                  )}
+                <Divider style={{ margin: "0 0 10px" }} />
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+                  <span style={{ color: "#888", fontSize: 13 }}>Total</span>
+                  <span style={{ fontSize: sizes.totalFontSize + 6, fontWeight: 700 }}>
+                    {formatCurrency(cart.subtotal() - sale.pointsUsed)}
+                  </span>
                 </div>
 
                 <Button
@@ -619,8 +547,7 @@ export default function Sales() {
                   block
                   disabled={
                     cart.items.length === 0 ||
-                    (paymentMethod === "CREDIT" &&
-                      (!sale.customerId || !dueDate))
+                    (paymentMethod === "CREDIT" && (!sale.customerId || !dueDate))
                   }
                   loading={creating}
                   onClick={submitSale}
@@ -628,6 +555,7 @@ export default function Sales() {
                   Confirmar venta
                 </Button>
               </Card>
+
             </div>
           </Col>
         )}

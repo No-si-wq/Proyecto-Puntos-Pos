@@ -119,6 +119,12 @@ export default function MainLayout() {
             visible: canAccess( user.role, "accountsReceivable", "view"),
           },
           {
+            key: "/price-lists",
+            label: "Lista de precios",
+            onClick: () => navigate("/price-lists"),
+            visible: canAccess( user.role, "priceList", "view"),
+          },
+          {
             key: "/products",
             label: "Productos",
             onClick: () => navigate("/products"),
@@ -141,6 +147,12 @@ export default function MainLayout() {
             label: "Reporte de Compras",
             onClick: () => navigate("/purchases/history"),
             visible: canAccess( user.role, "purchasehistory", "view"),
+          },
+          {
+            key: "/commissions",
+            label: "Comisiones",
+            onClick: () => navigate("/commissions"),
+            visible: canAccess( user.role, "commission", "view"),
           },
           {
             key: "/sales",

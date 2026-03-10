@@ -2,13 +2,19 @@ export type SKU = string;
 export type Barcode = string;
 export type CategoryId = number;
 
+export interface ProductPriceInput {
+  priceListId: number;
+  price: number;
+}
+
 export interface ProductBase {
   sku: SKU;
   name: string;
   description?: string;
-  price: number;
   cost: number;
+  price: number;
   categoryId: CategoryId;
+  prices: ProductPriceInput[];
   barcodes?: Barcode[];
 }
 
@@ -23,4 +29,5 @@ export enum ProductError {
   INVALID_CATEGORY = "INVALID_CATEGORY",
   DUPLICATE_BARCODE = "DUPLICATE_BARCODE",
   CATEGORY_NOT_LEAF = "CATEGORY_NOT_LEAF",
+  INVALID_PRICE_LIST = "INVALID_PRICE_LIST",
 }

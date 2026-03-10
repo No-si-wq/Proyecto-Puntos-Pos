@@ -32,20 +32,19 @@ export async function getSale(req: Request, res: Response) {
 }
 
 export async function createSale(req: Request, res: Response) {
-  const warehouseId = (req as any).warehouseId;
-  const { customerId, items, pointsUsed, paymentMethod, dueDate } = req.body;
+  if (!req.user) {
+    return res.status(401).json({ message: "Usuario no autenticado" });
+  }
 
-    if (!req.user) {
-      return res.status(401).json({
-        message: "Usuario no autenticado",
-      });
-    }
+  const warehouseId = (req as any).warehouseId;
+  const { customerId, items, pointsUsed, priceListId, paymentMethod, dueDate } = req.body;
 
   const sale = await SaleService.create(
-    { customerId, items, pointsUsed, paymentMethod, dueDate },
+    { customerId, items, pointsUsed, priceListId, paymentMethod, dueDate },
     req.user.id,
     warehouseId,
   );
+
   res.status(201).json(sale);
 }
 

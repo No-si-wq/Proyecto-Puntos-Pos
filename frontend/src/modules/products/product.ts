@@ -1,4 +1,6 @@
 import type { Category } from "../categories/category";
+import type { ProductPrice } from "../priceLists/pricelist";
+
 
 export interface Product {
   id: number;
@@ -13,6 +15,8 @@ export interface Product {
 
   categoryId: number;
   category: Category;
+
+  prices: ProductPrice[];
 
   active: boolean;
 }

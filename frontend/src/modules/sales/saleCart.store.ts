@@ -22,8 +22,9 @@ export interface SaleCartItem {
 
 interface SaleCartState {
   items: SaleCartItem[];
+  commissionPercent: number | undefined;
 
-  addProduct: (product: Product) => void;
+  addProduct: (product: Product, overridePrice?: number) => void;
 
   updateQuantity: (
     productId: number,
@@ -36,13 +37,17 @@ interface SaleCartState {
     discountValue: number
   ) => void;
 
+  updatePrice: (productId: number, price: number) => void;
+
   removeProduct: (productId: number) => void;
 
   clear: () => void;
 
-  grossSubtotal: () => number;
+  setCommissionPercent: (percent: number | undefined) => void;
 
+  grossSubtotal: () => number;
   subtotal: () => number;
+  totalCommission: () => number;
 }
 
 function calculateItem(
@@ -56,8 +61,7 @@ function calculateItem(
   let discountAmount = 0;
 
   if (item.discountType === "PERCENTAGE") {
-    discountAmount =
-      grossLine * (item.discountValue / 100);
+    discountAmount = grossLine * (item.discountValue / 100);
   }
 
   if (item.discountType === "FIXED") {
@@ -78,96 +82,92 @@ function calculateItem(
   };
 }
 
-export const saleCartStore =
-  create<SaleCartState>((set, get) => ({
-    items: [],
+export const saleCartStore = create<SaleCartState>((set, get) => ({
+  items: [],
+  commissionPercent: undefined,
 
-    addProduct: (product) =>
-      set((state) => {
-        const existing = state.items.find(
-          (i) => i.productId === product.id
-        );
+  addProduct: (product, overridePrice) =>
+    set((state) => {
+      const price = overridePrice ?? Number(product.price);
+      const existing = state.items.find((i) => i.productId === product.id);
 
-        if (existing) {
-          const updated = calculateItem({
-            ...existing,
-            quantity: existing.quantity + 1,
-          });
-
-          return {
-            items: state.items.map((i) =>
-              i.productId === product.id
-                ? updated
-                : i
-            ),
-          };
-        }
-
-        const newItem = calculateItem({
-          productId: product.id,
-          name: product.name,
-          price: product.price,
-          quantity: 1,
-          discountType: "NONE",
-          discountValue: 0,
+      if (existing) {
+        const updated = calculateItem({
+          ...existing,
+          price,
+          quantity: existing.quantity + 1,
         });
-
         return {
-          items: [...state.items, newItem],
+          items: state.items.map((i) =>
+            i.productId === product.id ? updated : i
+          ),
         };
-      }),
+      }
 
-    updateQuantity: (productId, quantity) =>
-      set((state) => ({
-        items: state.items.map((i) =>
-          i.productId === productId
-            ? calculateItem({
-                ...i,
-                quantity:
-                  quantity > 0 ? quantity : 1,
-              })
-            : i
-        ),
-      })),
+      const newItem = calculateItem({
+        productId: product.id,
+        name: product.name,
+        price,
+        quantity: 1,
+        discountType: "NONE",
+        discountValue: 0,
+      });
 
-    updateDiscount: (
-      productId,
-      discountType,
-      discountValue
-    ) =>
-      set((state) => ({
-        items: state.items.map((i) =>
-          i.productId === productId
-            ? calculateItem({
-                ...i,
-                discountType,
-                discountValue:
-                  discountValue >= 0
-                    ? discountValue
-                    : 0,
-              })
-            : i
-        ),
-      })),
+      return { items: [...state.items, newItem] };
+    }),
 
-    removeProduct: (productId) =>
-      set((state) => ({
-        items: state.items.filter(
-          (i) => i.productId !== productId
-        ),
-      })),
-
-    clear: () => set({ items: [] }),
-
-    grossSubtotal: () =>
-      get().items.reduce(
-        (sum, i) => sum + i.grossLine,
-        0
+  updateQuantity: (productId, quantity) =>
+    set((state) => ({
+      items: state.items.map((i) =>
+        i.productId === productId
+          ? calculateItem({ ...i, quantity: quantity > 0 ? quantity : 1 })
+          : i
       ),
+    })),
 
-    subtotal: () =>
-      get().items.reduce(
-        (sum, i) => sum + i.lineSubtotal,
-        0
+  updateDiscount: (productId, discountType, discountValue) =>
+    set((state) => ({
+      items: state.items.map((i) =>
+        i.productId === productId
+          ? calculateItem({
+              ...i,
+              discountType,
+              discountValue: discountValue >= 0 ? discountValue : 0,
+            })
+          : i
       ),
-  }));
+    })),
+
+  updatePrice: (productId, price) =>
+    set((state) => ({
+      items: state.items.map((i) =>
+        i.productId === productId
+          ? calculateItem({ ...i, price })
+          : i
+      ),
+    })),
+
+  removeProduct: (productId) =>
+    set((state) => ({
+      items: state.items.filter((i) => i.productId !== productId),
+    })),
+
+  clear: () => set({ items: [] }),
+
+  setCommissionPercent: (percent) => set({ commissionPercent: percent }),
+
+  grossSubtotal: () =>
+    get().items.reduce((sum, i) => sum + i.grossLine, 0),
+
+  subtotal: () =>
+    get().items.reduce((sum, i) => sum + i.lineSubtotal, 0),
+
+  totalCommission: () => {
+    const percent = get().commissionPercent;
+    if (!percent) return 0;
+    return get().items.reduce(
+      (sum, i) => sum + (i.lineSubtotal * percent) / 100,
+      0
+    );
+  },
+}));
