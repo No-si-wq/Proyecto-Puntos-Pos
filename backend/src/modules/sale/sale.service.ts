@@ -1,23 +1,17 @@
 import prisma from "../../core/prisma";
 import { Prisma } from "@prisma/client";
-import { InventoryMovementType, SaleStatus } from "@prisma/client";
+import { CommissionType, InventoryMovementType, SaleStatus } from "@prisma/client";
 import { InventoryService } from "../inventory/inventory.service";
 import { LoyaltyService } from "../loyalty/loyalty.service";
 import { CreateSaleInput, SaleError } from "./sale";
 
 export class SaleService {
-  static async list(
-    warehouseId: number,
-    params?: { from?: Date; to?: Date }
-  ) {
+  static async list(warehouseId: number, params?: { from?: Date; to?: Date }) {
     let dataFilter = {};
 
     if (params?.from && params?.to) {
       dataFilter = {
-        createdAt: {
-          gte: params.from,
-          lte: params.to,
-        },
+        createdAt: { gte: params.from, lte: params.to },
       };
     }
 
@@ -75,6 +69,16 @@ export class SaleService {
             lots: { select: { purchaseItemId: true, quantity: true } },
           },
         },
+        commissions: {
+          select: {
+            id: true,
+            saleItemId: true,
+            percent: true,
+            amount: true,
+            type: true,
+            createdAt: true,
+          },
+        },
         receivable: { select: { id: true, total: true, balance: true, dueDate: true } },
       },
     });
@@ -86,7 +90,7 @@ export class SaleService {
   static async create(
     data: CreateSaleInput,
     userId: number,
-    warehouseId: number,
+    warehouseId: number
   ) {
     return await prisma.$transaction(async (tx) => {
       if (data.items.length === 0) {
@@ -108,9 +112,7 @@ export class SaleService {
         where: { id: { in: data.items.map((i) => i.productId) } },
         include: {
           prices: {
-            where: priceListId
-              ? { priceListId, active: true }
-              : { id: -1 },          
+            where: priceListId ? { priceListId, active: true } : { id: -1 },
           },
         },
       });
@@ -149,9 +151,10 @@ export class SaleService {
         }
 
         const customPrice = product.prices?.[0]?.price;
-        const price: Prisma.Decimal = customPrice !== undefined
-          ? new Prisma.Decimal(customPrice)
-          : product.price;
+        const price: Prisma.Decimal =
+          customPrice !== undefined
+            ? new Prisma.Decimal(customPrice)
+            : product.price;
 
         const quantity = item.quantity;
         const grossLine = price.mul(quantity);
@@ -171,7 +174,6 @@ export class SaleService {
         }
 
         const lineSubtotal = grossLine.sub(discountAmount);
-
         if (lineSubtotal.lt(0)) throw new Error("Subtotal negativo en línea");
 
         const commissionAmount = commissionPercent
@@ -219,7 +221,7 @@ export class SaleService {
           warehouseId,
           paymentMethod: data.paymentMethod,
           status: SaleStatus.COMPLETED,
-          priceListId,                         
+          priceListId,
         },
       });
 
@@ -236,7 +238,6 @@ export class SaleService {
       }
 
       const total = subtotalDecimal.sub(globalDiscount);
-
       if (total.lt(0)) throw new Error(SaleError.INVALID_TOTAL);
 
       await tx.sale.update({
@@ -257,10 +258,23 @@ export class SaleService {
             discountValue: item.discountValue,
             discountAmount: item.discountAmount,
             lineSubtotal: item.lineSubtotal,
-            commissionPercent: item.commissionPercent,   
-            commissionAmount: item.commissionAmount,     
+            commissionPercent: item.commissionPercent,
+            commissionAmount: item.commissionAmount,
           },
         });
+
+        if (item.commissionPercent !== null && item.commissionAmount !== null) {
+          await tx.commission.create({
+            data: {
+              userId,
+              saleId: sale.id,
+              saleItemId: saleItem.id,
+              percent: item.commissionPercent,
+              amount: item.commissionAmount,
+              type: CommissionType.SALE,
+            },
+          });
+        }
 
         const itemCogs = await InventoryService.consumeStockFIFO(
           tx,
@@ -298,7 +312,6 @@ export class SaleService {
       }
 
       let pointsEarned = 0;
-
       if (data.customerId) {
         pointsEarned = await LoyaltyService.earnPoints(
           tx,
@@ -328,7 +341,7 @@ export class SaleService {
         pointsEarned,
         cogs: totalCogs,
         grossProfit: total.sub(totalCogs),
-        totalCommission,                        
+        totalCommission,
       };
     });
   }
@@ -337,7 +350,9 @@ export class SaleService {
     return prisma.$transaction(async (tx) => {
       const sale = await tx.sale.findUnique({
         where: { id },
-        include: { items: { include: { lots: true } } },
+        include: {
+          items: { include: { lots: true } },
+        },
       });
 
       if (!sale || sale.status === SaleStatus.CANCELLED) {
@@ -355,7 +370,11 @@ export class SaleService {
       }
 
       const originalMovements = await tx.inventoryLedger.findMany({
-        where: { referenceType: "SALE", referenceId: sale.id, type: InventoryMovementType.OUT },
+        where: {
+          referenceType: "SALE",
+          referenceId: sale.id,
+          type: InventoryMovementType.OUT,
+        },
       });
 
       for (const movement of originalMovements) {
@@ -377,6 +396,23 @@ export class SaleService {
 
       if (sale.customerId) {
         await LoyaltyService.rollbackPoints(tx, sale.customerId, sale.id);
+      }
+
+      const originalCommissions = await tx.commission.findMany({
+        where: { saleId: sale.id, type: CommissionType.SALE },
+      });
+
+      for (const commission of originalCommissions) {
+        await tx.commission.create({
+          data: {
+            userId: commission.userId,
+            saleId: commission.saleId,
+            saleItemId: commission.saleItemId,
+            percent: commission.percent,
+            amount: commission.amount.neg(),
+            type: CommissionType.REVERSAL,
+          },
+        });
       }
 
       return tx.sale.update({

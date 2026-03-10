@@ -16,7 +16,6 @@ router.get("/:id", asyncHandler(controller.getById));
 
 router.post(
   "/",
-  roleMiddleware(Role.ADMIN),
   validate(createPriceListSchema),
   asyncHandler(controller.create)
 );
@@ -36,13 +35,11 @@ router.patch(
 
 router.put(
   "/:id/products",
-  roleMiddleware(Role.ADMIN),
   asyncHandler(controller.upsertProductPrice)
 );
 
 router.delete(
   "/:id/products/:productId",
-  roleMiddleware(Role.ADMIN),
   asyncHandler(controller.removeProductPrice)
 );
 

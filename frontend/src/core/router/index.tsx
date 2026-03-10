@@ -29,6 +29,7 @@ import SaleDetail from "../../modules/sales/SaleDetail";
 import PurchaseDetail from "../../modules/purchases/PurchaseDetail";
 import PriceLists from "../../modules/priceLists/PriceLists";
 import Commissions from "../../modules/commissions/Commissions";
+import CommissionReport from "../../modules/CommissionReport/CommissionReport";
 
 import Unauthorized from "../../modules/Unauthorized";
 
@@ -69,6 +70,15 @@ export default function AppRouter() {
             element={
               <ProtectedRoute module="users">
                 <Users />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/commissionReports"
+            element={
+              <ProtectedRoute module="commissionReport">
+                <CommissionReport />
               </ProtectedRoute>
             }
           />

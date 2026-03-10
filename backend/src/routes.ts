@@ -16,6 +16,7 @@ import accountReceivableRoutes from "./modules/accounts-receivable/accountReceiv
 import accountPayableRoutes from "./modules/accounts-payable/accountPayable.routes";
 import priceListRoutes from "./modules/price-list/Pricelist.routes";
 import commissionRoutes from "./modules/commission/Commission.routes";
+import commissionReportRoutes from "./modules/CommissionReport/commission-report.routes";
 
 const router = Router();
 
@@ -35,5 +36,6 @@ router.use("/account-receivable", accountReceivableRoutes);
 router.use("/account-payable", accountPayableRoutes);
 router.use("/priceLists", priceListRoutes);
 router.use("/commissions", commissionRoutes);
+router.use("/commission-report", commissionReportRoutes);
 
 export default router;

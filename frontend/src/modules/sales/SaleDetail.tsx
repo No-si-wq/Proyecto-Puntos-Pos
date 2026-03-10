@@ -95,7 +95,15 @@ export default function SaleDetail() {
       title: "Subtotal",
       dataIndex: "lineSubtotal",
       render: (v: number) => formatCurrency(v)
-    }
+    },
+    {
+      title: "Comisión",
+      dataIndex: "commissionAmount",
+      render: (v: number) =>
+        v > 0
+          ? <span style={{ color: "#52c41a" }}>{formatCurrency(v)}</span>
+          : <span>0</span>,
+    },
   ];
 
   return (
@@ -142,6 +150,7 @@ export default function SaleDetail() {
           <p><b>Fecha:</b> {sale && formatDate(sale.createdAt)}</p>
           <p><b>Cliente:</b> {sale?.customer?.name || "Consumidor final"}</p>
           <p><b>Vendedor:</b> {sale?.user?.name}</p>
+          <p><b>Método de pago:</b> {sale?.paymentMethod}</p>
         </Card>
 
         <Table
@@ -156,6 +165,14 @@ export default function SaleDetail() {
           <p><b>Subtotal:</b> {formatCurrency(sale?.subtotal ?? 0)}</p>
           <p><b>Descuento:</b> {formatCurrency(sale?.discount ?? 0)}</p>
           <p><b>Total:</b> {formatCurrency(sale?.total ?? 0)}</p>
+          {(sale?.totalCommission ?? 0) > 0 && (
+            <p style={{ color: "#52c41a" }}>
+              <b>Comisión total:</b> {formatCurrency(sale?.totalCommission ?? 0)}
+            </p>
+          )}
+          {sale?.priceList && (
+            <p><b>Lista de precios:</b> {sale.priceList.name}</p>
+          )}
         </Card>
       </div>
     </>

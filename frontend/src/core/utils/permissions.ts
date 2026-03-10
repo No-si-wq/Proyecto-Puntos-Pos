@@ -28,6 +28,7 @@ export type PermissionModule =
   | "reports"
   | "priceList"
   | "commission"
+  | "commissionReport"
 
 export const PERMISSIONS: Record<
   PermissionModule,
@@ -136,6 +137,10 @@ export const PERMISSIONS: Record<
     create: [Role.ADMIN, Role.USER],
     edit: [Role.ADMIN],
     delete: [Role.ADMIN],
+  },
+
+  commissionReport: {
+    view: [Role.ADMIN]
   },
 };
 

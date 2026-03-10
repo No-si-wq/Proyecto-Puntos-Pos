@@ -107,6 +107,12 @@ export default function MainLayout() {
             visible: canAccess( user.role, "users", "view"),
           },
           {
+            key: "/commissionReports",
+            label: "Comision de vendedores",
+            onClick: () => navigate("/commissionReports"),
+            visible: canAccess( user.role, "commissionReport", "view"),
+          },
+          {
             key: "/customers",
             label: "Clientes",
             onClick: () => navigate("/customers"),
