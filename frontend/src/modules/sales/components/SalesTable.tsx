@@ -25,20 +25,24 @@ export default function SalesTable({ data, loading, onView }: Props) {
     },
     {
       title: "Puntos",
-      render: (_, r) => (
-        <>
-          {r.pointsEarned > 0 && (
-            <span style={{ color: "green" }}>
-              +{r.pointsEarned}
-            </span>
-          )}
-          {r.pointsUsed > 0 && (
-            <span style={{ color: "red", marginLeft: 6 }}>
-              −{r.pointsUsed}
-            </span>
-          )}
-        </>
-      ),
+      render: (_, r) => {
+        const isCancelled = r.status === "CANCELLED";
+
+        return (
+          <>
+            {r.pointsEarned > 0 && (
+              <span style={{ color: isCancelled ? "red" : "green" }}>
+                {isCancelled ? "−" : "+"}{r.pointsEarned}
+              </span>
+            )}
+            {r.pointsUsed > 0 && (
+              <span style={{ color: isCancelled ? "green" : "red", marginLeft: 6 }}>
+                {isCancelled ? "+" : "−"}{r.pointsUsed}
+              </span>
+            )}
+          </>
+        );
+      },
     },
     {
       title: "Estado",

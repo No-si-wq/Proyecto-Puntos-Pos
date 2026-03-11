@@ -417,7 +417,7 @@ export class SaleService {
 
       return tx.sale.update({
         where: { id },
-        data: { status: SaleStatus.CANCELLED, pointsEarned: 0 },
+        data: { status: SaleStatus.CANCELLED },
       });
     });
   }
