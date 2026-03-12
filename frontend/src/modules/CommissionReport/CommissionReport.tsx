@@ -10,13 +10,21 @@ import {
   Row,
   Col,
   Tag,
+  Drawer,
+  Divider,
 } from "antd";
-import { FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
+import {
+  FileExcelOutlined,
+  FilePdfOutlined,
+  FilterOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import { Dayjs } from "dayjs";
 import http from "../../core/http/http";
 import { formatCurrency } from "../../core/utils/formatters";
 import PageHeader from "../../core/components/common/PageHeader";
 import { exportToPdf } from "../../core/utils/exportPDF";
+import { useDeviceType } from "../../core/hooks/useDeviceType";
 import * as XLSX from "xlsx";
 
 const { RangePicker } = DatePicker;
@@ -35,6 +43,10 @@ export default function CommissionReport() {
   const [data, setData] = useState<CommissionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [dates, setDates] = useState<[Dayjs, Dayjs] | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  const { isMobile, isTablet } = useDeviceType();
+  const isCompact = isMobile || isTablet;
 
   async function load() {
     setLoading(true);
@@ -48,6 +60,7 @@ export default function CommissionReport() {
       setData(rows);
     } finally {
       setLoading(false);
+      if (isMobile) setFilterOpen(false);
     }
   }
 
@@ -55,7 +68,6 @@ export default function CommissionReport() {
     load();
   }, []);
 
-  // Totales para las estadísticas del header
   const totalEarned = data.reduce((acc, r) => acc + Number(r.earned), 0);
   const totalReversed = data.reduce((acc, r) => acc + Number(r.reversed), 0);
   const totalNet = data.reduce((acc, r) => acc + Number(r.net), 0);
@@ -68,7 +80,6 @@ export default function CommissionReport() {
       Revertido: formatCurrency(r.reversed),
       Neto: formatCurrency(r.net),
     }));
-
     exportToPdf(
       "Reporte de Comisiones",
       [
@@ -91,14 +102,13 @@ export default function CommissionReport() {
       "Comisión revertida": Number(r.reversed),
       "Comisión neta": Number(r.net),
     }));
-
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Comisiones");
     XLSX.writeFile(wb, "reporte_comisiones.xlsx");
   }
 
-  const columns = [
+  const desktopColumns = [
     {
       title: "Vendedor",
       dataIndex: "userName",
@@ -109,7 +119,8 @@ export default function CommissionReport() {
       title: "Ventas",
       dataIndex: "totalSales",
       align: "right" as const,
-      sorter: (a: CommissionRow, b: CommissionRow) => a.totalSales - b.totalSales,
+      sorter: (a: CommissionRow, b: CommissionRow) =>
+        a.totalSales - b.totalSales,
     },
     {
       title: "Devengado",
@@ -146,62 +157,195 @@ export default function CommissionReport() {
     },
   ];
 
+  const mobileColumns = [
+    {
+      title: "Vendedor",
+      dataIndex: "userName",
+      sorter: (a: CommissionRow, b: CommissionRow) =>
+        a.userName.localeCompare(b.userName),
+      render: (name: string, record: CommissionRow) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{name}</div>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.totalSales} venta{record.totalSales !== 1 ? "s" : ""}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      title: "Neto",
+      dataIndex: "net",
+      align: "right" as const,
+      render: (v: number, record: CommissionRow) => (
+        <div style={{ textAlign: "right" }}>
+          <Tag color={Number(v) > 0 ? "green" : "default"}>
+            {formatCurrency(v)}
+          </Tag>
+          {Number(record.reversed) > 0 && (
+            <div style={{ marginTop: 4 }}>
+              <Text type="danger" style={{ fontSize: 11 }}>
+                - {formatCurrency(record.reversed)}
+              </Text>
+            </div>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const expandedRowRender = (record: CommissionRow) => (
+    <div style={{ padding: "8px 0" }}>
+      <Row gutter={8}>
+        <Col span={8}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Devengado
+          </Text>
+          <div style={{ fontWeight: 500 }}>{formatCurrency(record.earned)}</div>
+        </Col>
+        <Col span={8}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Revertido
+          </Text>
+          <div>
+            {Number(record.reversed) > 0 ? (
+              <Text type="danger">- {formatCurrency(record.reversed)}</Text>
+            ) : (
+              <Text type="secondary">—</Text>
+            )}
+          </div>
+        </Col>
+        <Col span={8}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Ventas
+          </Text>
+          <div style={{ fontWeight: 500 }}>{record.totalSales}</div>
+        </Col>
+      </Row>
+    </div>
+  );
+
+  const filterContent = (
+    <Space direction="vertical" style={{ width: "100%" }} size="middle">
+      <div>
+        <Text type="secondary" style={{ display: "block", marginBottom: 8 }}>
+          Rango de fechas
+        </Text>
+        <RangePicker
+          value={dates}
+          onChange={(val) => setDates(val as [Dayjs, Dayjs] | null)}
+          format="DD/MM/YYYY"
+          style={{ width: "100%" }}
+        />
+      </div>
+      <Button
+        type="primary"
+        block
+        onClick={load}
+        loading={loading}
+        icon={<ReloadOutlined />}
+      >
+        Consultar
+      </Button>
+      <Divider style={{ margin: "8px 0" }} />
+      <Text type="secondary" style={{ fontSize: 12 }}>
+        Exportar
+      </Text>
+      <Space style={{ width: "100%" }}>
+        <Button
+          icon={<FilePdfOutlined />}
+          onClick={handleExportPdf}
+          style={{ flex: 1 }}
+        >
+          PDF
+        </Button>
+        <Button
+          icon={<FileExcelOutlined />}
+          onClick={handleExportExcel}
+          style={{ flex: 1 }}
+        >
+          Excel
+        </Button>
+      </Space>
+    </Space>
+  );
+
+  const headerExtra = isMobile ? (
+    <Button
+      icon={<FilterOutlined />}
+      onClick={() => setFilterOpen(true)}
+      type={dates ? "primary" : "default"}
+    >
+      Filtrar
+    </Button>
+  ) : (
+    <Space wrap>
+      <RangePicker
+        value={dates}
+        onChange={(val) => setDates(val as [Dayjs, Dayjs] | null)}
+        format="DD/MM/YYYY"
+      />
+      <Button type="primary" onClick={load} loading={loading}>
+        Consultar
+      </Button>
+      <Button icon={<FilePdfOutlined />} onClick={handleExportPdf}>
+        PDF
+      </Button>
+      <Button icon={<FileExcelOutlined />} onClick={handleExportExcel}>
+        Excel
+      </Button>
+    </Space>
+  );
+
   return (
     <>
       <PageHeader
         title="Reporte de comisiones"
         subtitle="Comisiones netas por vendedor"
-        extra={
-          <Space>
-            <RangePicker
-              value={dates}
-              onChange={(val) => setDates(val as [Dayjs, Dayjs] | null)}
-              format="DD/MM/YYYY"
-            />
-            <Button type="primary" onClick={load} loading={loading}>
-              Consultar
-            </Button>
-            <Button icon={<FilePdfOutlined />} onClick={handleExportPdf}>
-              PDF
-            </Button>
-            <Button icon={<FileExcelOutlined />} onClick={handleExportExcel}>
-              Excel
-            </Button>
-          </Space>
-        }
+        extra={headerExtra}
       />
 
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={8}>
-          <Card>
+      <Drawer
+        title="Filtros"
+        placement="bottom"
+        height="auto"
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        styles={{ body: { paddingBottom: 32 } }}
+      >
+        {filterContent}
+      </Drawer>
+
+      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={8}>
+          <Card size={isCompact ? "small" : "default"}>
             <Statistic
               title="Total devengado"
               value={totalEarned}
               precision={2}
               prefix="$"
-              valueStyle={{ color: "#52c41a" }}
+              valueStyle={{ color: "#52c41a", fontSize: isMobile ? 18 : undefined }}
             />
           </Card>
         </Col>
-        <Col span={8}>
-          <Card>
+        <Col xs={24} sm={8}>
+          <Card size={isCompact ? "small" : "default"}>
             <Statistic
               title="Total revertido"
               value={totalReversed}
               precision={2}
               prefix="$"
-              valueStyle={{ color: "#ff4d4f" }}
+              valueStyle={{ color: "#ff4d4f", fontSize: isMobile ? 18 : undefined }}
             />
           </Card>
         </Col>
-        <Col span={8}>
-          <Card>
+        <Col xs={24} sm={8}>
+          <Card size={isCompact ? "small" : "default"}>
             <Statistic
               title="Comisión neta total"
               value={totalNet}
               precision={2}
               prefix="$"
-              valueStyle={{ color: "#1677ff" }}
+              valueStyle={{ color: "#1677ff", fontSize: isMobile ? 18 : undefined }}
             />
           </Card>
         </Col>
@@ -209,35 +353,49 @@ export default function CommissionReport() {
 
       <Table
         dataSource={data}
-        columns={columns}
+        columns={isMobile ? mobileColumns : desktopColumns}
         rowKey="userId"
         loading={loading}
         pagination={false}
-        summary={() => (
-          <Table.Summary.Row>
-            <Table.Summary.Cell index={0}>
-              <Text strong>Total</Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={1} align="right">
-              <Text strong>
-                {data.reduce((acc, r) => acc + r.totalSales, 0)}
-              </Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={2} align="right">
-              <Text strong>{formatCurrency(totalEarned)}</Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={3} align="right">
-              <Text strong type="danger">
-                - {formatCurrency(totalReversed)}
-              </Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={4} align="right">
-              <Text strong style={{ color: "#1677ff" }}>
-                {formatCurrency(totalNet)}
-              </Text>
-            </Table.Summary.Cell>
-          </Table.Summary.Row>
-        )}
+        size={isCompact ? "small" : "middle"}
+        scroll={isCompact ? { x: true } : undefined}
+        expandable={
+          isMobile
+            ? {
+                expandedRowRender,
+                rowExpandable: () => true,
+              }
+            : undefined
+        }
+        summary={
+          isMobile
+            ? undefined
+            : () => (
+                <Table.Summary.Row>
+                  <Table.Summary.Cell index={0}>
+                    <Text strong>Total</Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} align="right">
+                    <Text strong>
+                      {data.reduce((acc, r) => acc + r.totalSales, 0)}
+                    </Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={2} align="right">
+                    <Text strong>{formatCurrency(totalEarned)}</Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={3} align="right">
+                    <Text strong type="danger">
+                      - {formatCurrency(totalReversed)}
+                    </Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={4} align="right">
+                    <Text strong style={{ color: "#1677ff" }}>
+                      {formatCurrency(totalNet)}
+                    </Text>
+                  </Table.Summary.Cell>
+                </Table.Summary.Row>
+              )
+        }
       />
     </>
   );

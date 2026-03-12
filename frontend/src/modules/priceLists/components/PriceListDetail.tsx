@@ -1,7 +1,9 @@
-import { Table, Button, Space, Popconfirm, Typography, Skeleton } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Table, Button, Space, Popconfirm, Typography, Skeleton, Dropdown } from "antd";
+import { EditOutlined, DeleteOutlined, MoreOutlined } from "@ant-design/icons";
+import type { MenuProps } from "antd";
 import type { PriceListDetail as PriceListDetailType, ProductPrice } from "../pricelist";
 import { formatCurrency } from "../../../core/utils/formatters";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
 
 const { Text } = Typography;
 
@@ -13,10 +15,35 @@ interface Props {
 }
 
 export function PriceListDetail({ detail, loading, onEditPrice, onRemovePrice }: Props) {
+  const { isMobile, isTablet } = useDeviceType();
+  const isCompact = isMobile || isTablet;
+
   if (loading) return <Skeleton active />;
   if (!detail) return null;
 
-  const columns = [
+  const getActionMenu = (record: ProductPrice): MenuProps => ({
+    items: [
+      {
+        key: "edit",
+        label: "Editar precio",
+        icon: <EditOutlined />,
+        onClick: () => onEditPrice(record),
+      },
+      {
+        key: "delete",
+        label: "Eliminar",
+        icon: <DeleteOutlined />,
+        danger: true,
+        onClick: () => {
+          if (window.confirm("¿Eliminar este precio?")) {
+            onRemovePrice(record.productId);
+          }
+        },
+      },
+    ],
+  });
+
+  const desktopColumns = [
     {
       title: "SKU",
       key: "sku",
@@ -68,13 +95,66 @@ export function PriceListDetail({ detail, loading, onEditPrice, onRemovePrice }:
     },
   ];
 
+  const mobileColumns = [
+    {
+      title: "Producto",
+      key: "product",
+      render: (_: any, record: ProductPrice) => (
+        <div>
+          <Text strong style={{ display: "block" }}>
+            {record.product?.name ?? "—"}
+          </Text>
+          <Text code style={{ fontSize: 11 }}>
+            {record.product?.sku ?? "—"}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      title: "Precios",
+      key: "prices",
+      render: (_: any, record: ProductPrice) => (
+        <div style={{ textAlign: "right" }}>
+          <Text strong style={{ color: "#1677ff", display: "block" }}>
+            {formatCurrency(record.price)}
+          </Text>
+          {record.product && (
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              Base: {formatCurrency(record.product.price)}
+            </Text>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: "",
+      key: "actions",
+      width: 48,
+      render: (_: any, record: ProductPrice) => (
+        <Dropdown
+          menu={getActionMenu(record)}
+          trigger={["click"]}
+          placement="bottomRight"
+        >
+          <Button
+            icon={<MoreOutlined />}
+            shape="circle"
+            size="middle"
+            style={{ border: "none", boxShadow: "none" }}
+          />
+        </Dropdown>
+      ),
+    },
+  ];
+
   return (
     <Table
       rowKey="id"
-      columns={columns}
+      columns={isCompact ? mobileColumns : desktopColumns}
       dataSource={detail.prices}
-      pagination={{ pageSize: 20 }}
+      pagination={{ pageSize: 20, simple: isCompact }}
       size="small"
+      scroll={isTablet ? { x: true } : undefined}
     />
   );
 }

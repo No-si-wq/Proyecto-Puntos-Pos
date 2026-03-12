@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Tabs, Table, Tag, Space, Typography } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Tabs, Table, Tag, Space, Typography, Dropdown } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from "@ant-design/icons";
+import type { MenuProps } from "antd";
 import PageHeader from "../../core/components/common/PageHeader";
 import ProtectedButton from "../../core/components/common/ProtectedButton";
 import FormModal from "../../core/components/forms/FormModal";
@@ -10,41 +11,85 @@ import { useCommissionLevels, useCommissions } from "./useCommissions";
 import { getAllowedRoles } from "../../core/utils/permissions";
 import type { CommissionLevel, SalesCommission } from "./commission";
 import { useUsers } from "../users/useUsers";
+import { useDeviceType } from "../../core/hooks/useDeviceType";
 
 const { Text } = Typography;
 
 export default function Commissions() {
-  const { levels, loading: levelsLoading, create: createLevel, update: updateLevel, remove: removeLevel } =
-    useCommissionLevels();
-  const { commissions, loading: commissionsLoading, assign, update: updateCommission, remove: removeCommission } =
-    useCommissions();
+  const {
+    levels,
+    loading: levelsLoading,
+    create: createLevel,
+    update: updateLevel,
+    remove: removeLevel,
+  } = useCommissionLevels();
+
+  const {
+    commissions,
+    loading: commissionsLoading,
+    assign,
+    update: updateCommission,
+    remove: removeCommission,
+  } = useCommissions();
+
   const { users } = useUsers();
+  const { isMobile, isTablet } = useDeviceType();
+  const isCompact = isMobile || isTablet;
 
-  const [levelFormOpen, setLevelFormOpen] = useState(false);
-  const [editLevel, setEditLevel] = useState<CommissionLevel | null>(null);
-
-  const [assignFormOpen, setAssignFormOpen] = useState(false);
-  const [editCommission, setEditCommission] = useState<SalesCommission | null>(null);
+  const [levelFormOpen, setLevelFormOpen]     = useState(false);
+  const [editLevel, setEditLevel]             = useState<CommissionLevel | null>(null);
+  const [assignFormOpen, setAssignFormOpen]   = useState(false);
+  const [editCommission, setEditCommission]   = useState<SalesCommission | null>(null);
 
   const handleLevelSubmit = async (values: any) => {
-    if (editLevel) {
-      await updateLevel(editLevel.id, values);
-    } else {
-      await createLevel(values);
-    }
+    if (editLevel) await updateLevel(editLevel.id, values);
+    else await createLevel(values);
     setLevelFormOpen(false);
   };
 
   const handleAssignSubmit = async (values: any) => {
-    if (editCommission) {
-      await updateCommission(editCommission.id, values);
-    } else {
-      await assign(values);
-    }
+    if (editCommission) await updateCommission(editCommission.id, values);
+    else await assign(values);
     setAssignFormOpen(false);
   };
 
-  const levelColumns = [
+  const getLevelMenu = (record: CommissionLevel): MenuProps => ({
+    items: [
+      {
+        key: "edit",
+        label: "Editar",
+        icon: <EditOutlined />,
+        onClick: () => { setEditLevel(record); setLevelFormOpen(true); },
+      },
+      {
+        key: "delete",
+        label: "Eliminar",
+        icon: <DeleteOutlined />,
+        danger: true,
+        onClick: () => removeLevel(record.id),
+      },
+    ],
+  });
+
+  const getCommissionMenu = (record: SalesCommission): MenuProps => ({
+    items: [
+      {
+        key: "edit",
+        label: "Editar",
+        icon: <EditOutlined />,
+        onClick: () => { setEditCommission(record); setAssignFormOpen(true); },
+      },
+      {
+        key: "delete",
+        label: "Eliminar",
+        icon: <DeleteOutlined />,
+        danger: true,
+        onClick: () => removeCommission(record.id, record.level.active),
+      },
+    ],
+  });
+
+  const levelColumnsDesktop = [
     {
       title: "Nombre",
       dataIndex: "name",
@@ -74,7 +119,7 @@ export default function Commissions() {
             icon={<EditOutlined />}
             size="small"
             onClick={() => { setEditLevel(record); setLevelFormOpen(true); }}
-          > 
+          >
             Editar
           </ProtectedButton>
           <ProtectedButton
@@ -91,7 +136,37 @@ export default function Commissions() {
     },
   ];
 
-  const commissionColumns = [
+  const levelColumnsMobile = [
+    {
+      title: "Nivel",
+      key: "info",
+      render: (_: any, r: CommissionLevel) => (
+        <div>
+          <Text strong style={{ display: "block" }}>{r.name}</Text>
+          {r.description && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {r.description}
+            </Text>
+          )}
+          <div style={{ marginTop: 4 }}>
+            <Tag>{r._count?.commissions ?? 0} vendedores</Tag>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "",
+      key: "actions",
+      width: 48,
+      render: (_: any, record: CommissionLevel) => (
+        <Dropdown menu={getLevelMenu(record)} trigger={["click"]} placement="bottomRight">
+          <MoreOutlined style={{ fontSize: 20, padding: 8 }} />
+        </Dropdown>
+      ),
+    },
+  ];
+
+  const commissionColumnsDesktop = [
     {
       title: "Vendedor",
       key: "user",
@@ -140,34 +215,85 @@ export default function Commissions() {
     },
   ];
 
+  const commissionColumnsMobile = [
+    {
+      title: "Vendedor",
+      key: "info",
+      render: (_: any, r: SalesCommission) => (
+        <div>
+          <Text strong style={{ display: "block" }}>
+            {r.user?.name ?? r.user?.username ?? `Usuario #${r.userId}`}
+          </Text>
+          <div style={{ marginTop: 4 }}>
+            <Tag color="blue" style={{ marginRight: 4 }}>
+              {r.level?.name ?? `Nivel #${r.levelId}`}
+            </Tag>
+            <Text strong style={{ color: "#52c41a", fontSize: 13 }}>
+              {Number(r.percent).toFixed(2)}%
+            </Text>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "",
+      key: "actions",
+      width: 48,
+      render: (_: any, record: SalesCommission) => (
+        <Dropdown menu={getCommissionMenu(record)} trigger={["click"]} placement="bottomRight">
+          <MoreOutlined style={{ fontSize: 20, padding: 8 }} />
+        </Dropdown>
+      ),
+    },
+  ];
+
+  const addLevelBtn = (
+    <ProtectedButton
+      roles={getAllowedRoles("commission", "create")}
+      type="primary"
+      icon={<PlusOutlined />}
+      size={isMobile ? "small" : "middle"}
+      onClick={() => { setEditLevel(null); setLevelFormOpen(true); }}
+    >
+      {isMobile ? "Nuevo" : "Nuevo nivel"}
+    </ProtectedButton>
+  );
+
+  const assignBtn = (
+    <ProtectedButton
+      roles={getAllowedRoles("commission", "create")}
+      type="primary"
+      icon={<PlusOutlined />}
+      size={isMobile ? "small" : "middle"}
+      onClick={() => { setEditCommission(null); setAssignFormOpen(true); }}
+    >
+      {isMobile ? "Asignar" : "Asignar comisión"}
+    </ProtectedButton>
+  );
+
   return (
     <>
       <PageHeader title="Comisiones de venta" />
 
       <Tabs
         defaultActiveKey="assignments"
+        size={isCompact ? "small" : "middle"}
         items={[
           {
             key: "assignments",
             label: "Asignaciones",
             children: (
               <>
-                <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
-                  <ProtectedButton
-                    roles={getAllowedRoles("commission", "create")}
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => { setEditCommission(null); setAssignFormOpen(true); }}
-                  >
-                    Asignar comisión
-                  </ProtectedButton>
+                <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end" }}>
+                  {assignBtn}
                 </div>
                 <Table
                   rowKey="id"
-                  columns={commissionColumns}
+                  columns={isCompact ? commissionColumnsMobile : commissionColumnsDesktop}
                   dataSource={commissions}
                   loading={commissionsLoading}
-                  pagination={{ pageSize: 15 }}
+                  pagination={{ pageSize: 15, simple: isCompact }}
+                  size={isCompact ? "small" : "middle"}
                 />
               </>
             ),
@@ -177,22 +303,16 @@ export default function Commissions() {
             label: "Niveles",
             children: (
               <>
-                <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
-                  <ProtectedButton
-                    roles={getAllowedRoles("commission", "create")}
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => { setEditLevel(null); setLevelFormOpen(true); }}
-                  >
-                    Nuevo nivel
-                  </ProtectedButton>
+                <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end" }}>
+                  {addLevelBtn}
                 </div>
                 <Table
                   rowKey="id"
-                  columns={levelColumns}
+                  columns={isCompact ? levelColumnsMobile : levelColumnsDesktop}
                   dataSource={levels}
                   loading={levelsLoading}
-                  pagination={{ pageSize: 15 }}
+                  pagination={{ pageSize: 15, simple: isCompact }}
+                  size={isCompact ? "small" : "middle"}
                 />
               </>
             ),

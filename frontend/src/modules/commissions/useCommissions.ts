@@ -99,6 +99,7 @@ export function useCommissions() {
           : [...prev, data];
       });
       message.success("Comisión asignada");
+      await fetchAll();
       return data;
     } catch {
       message.error("Error al asignar comisión");
@@ -111,6 +112,7 @@ export function useCommissions() {
       const { data } = await http.put<SalesCommission>(`${BASE}/${id}`, dto);
       setCommissions((prev) => prev.map((c) => (c.id === id ? data : c)));
       message.success("Comisión actualizada");
+      await fetchAll();
       return data;
     } catch {
       message.error("Error al actualizar comisión");
@@ -123,6 +125,7 @@ export function useCommissions() {
       await http.patch(`${BASE}/${id}/activate`, {active});
       setCommissions((prev) => prev.filter((c) => c.id !== id));
       message.success("Comisión eliminada");
+      await fetchAll();
     } catch {
       message.error("Error al eliminar comisión");
     }

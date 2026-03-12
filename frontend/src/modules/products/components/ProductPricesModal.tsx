@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Table, Tag, Space, Typography, Skeleton, Empty } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Table, Tag, Space, Typography, Skeleton, Empty, Dropdown } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from "@ant-design/icons";
+import type { MenuProps } from "antd";
 import FormModal from "../../../core/components/forms/FormModal";
 import ProtectedButton from "../../../core/components/common/ProtectedButton";
 import { ConfirmModal } from "../../../core/components/common/ConfirmModal";
@@ -9,6 +10,7 @@ import { useProductPrices } from "../useProducts";
 import { usePriceLists } from "../../priceLists/usePriceList";
 import ProductPriceForm from "./ProductPriceForm";
 import type { ProductPrice } from "../../priceLists/pricelist";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
 
 const { Text } = Typography;
 
@@ -22,9 +24,11 @@ interface Props {
 export default function ProductPricesModal({ open, onClose, productId, productName }: Props) {
   const { prices = [], loading, upsertPrice, removePrice } = useProductPrices(productId, open);
   const { priceLists = [] } = usePriceLists();
+  const { isMobile, isTablet } = useDeviceType();
+  const isCompact = isMobile || isTablet;
 
   const [priceFormOpen, setPriceFormOpen] = useState(false);
-  const [editingPrice, setEditingPrice] = useState<ProductPrice | null>(null);
+  const [editingPrice, setEditingPrice]   = useState<ProductPrice | null>(null);
 
   function openAdd() {
     setEditingPrice(null);
@@ -50,7 +54,25 @@ export default function ProductPricesModal({ open, onClose, productId, productNa
     setPriceFormOpen(false);
   }
 
-  const columns = [
+  const getActionMenu = (record: ProductPrice): MenuProps => ({
+    items: [
+      {
+        key: "edit",
+        label: "Editar precio",
+        icon: <EditOutlined />,
+        onClick: () => openEdit(record),
+      },
+      {
+        key: "delete",
+        label: "Eliminar",
+        icon: <DeleteOutlined />,
+        danger: true,
+        onClick: () => confirmRemove(record),
+      },
+    ],
+  });
+
+  const desktopColumns = [
     {
       title: "Lista de precios",
       key: "priceList",
@@ -95,6 +117,33 @@ export default function ProductPricesModal({ open, onClose, productId, productNa
     },
   ];
 
+  const mobileColumns = [
+    {
+      title: "Lista / Precio",
+      key: "info",
+      render: (_: any, record: ProductPrice) => (
+        <div>
+          <Tag color={record.priceList?.active ? "blue" : "default"} style={{ marginBottom: 2 }}>
+            {record.priceList?.name ?? `Lista #${record.priceListId}`}
+          </Tag>
+          <Text strong style={{ display: "block", fontSize: 15 }}>
+            L {Number(record.price).toFixed(2)}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      title: "",
+      key: "actions",
+      width: 48,
+      render: (_: any, record: ProductPrice) => (
+        <Dropdown menu={getActionMenu(record)} trigger={["click"]} placement="bottomRight">
+          <MoreOutlined style={{ fontSize: 20, padding: 8 }} />
+        </Dropdown>
+      ),
+    },
+  ];
+
   return (
     <>
       <FormModal
@@ -102,7 +151,7 @@ export default function ProductPricesModal({ open, onClose, productId, productNa
         title={`Precios — ${productName}`}
         onClose={onClose}
       >
-        <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
+        <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end" }}>
           <ProtectedButton
             roles={getAllowedRoles("products", "edit")}
             type="primary"
@@ -110,7 +159,7 @@ export default function ProductPricesModal({ open, onClose, productId, productNa
             icon={<PlusOutlined />}
             onClick={openAdd}
           >
-            Agregar precio
+            {isMobile ? "Agregar" : "Agregar precio"}
           </ProtectedButton>
         </div>
 
@@ -121,7 +170,7 @@ export default function ProductPricesModal({ open, onClose, productId, productNa
         ) : (
           <Table
             rowKey="priceListId"
-            columns={columns}
+            columns={isCompact ? mobileColumns : desktopColumns}
             dataSource={prices}
             pagination={false}
             size="small"

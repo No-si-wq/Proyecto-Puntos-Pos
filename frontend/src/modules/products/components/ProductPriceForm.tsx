@@ -23,7 +23,6 @@ export default function ProductPriceForm({
   const isEdit = !!initial;
   const safePriceLists = Array.isArray(priceLists) ? priceLists : [];
 
-  // Filter out already-assigned lists when adding (allow all when editing)
   const availableLists = isEdit
     ? safePriceLists
     : safePriceLists.filter(

@@ -99,6 +99,7 @@ export function usePriceListDetail(id: number | null) {
         return { ...prev, prices };
       });
       message.success("Precio actualizado");
+      await fetchDetail();
     } catch {
       message.error("Error al actualizar precio");
     }
@@ -112,6 +113,7 @@ export function usePriceListDetail(id: number | null) {
         prev ? { ...prev, prices: prev.prices.filter((p) => p.productId !== productId) } : prev
       );
       message.success("Precio eliminado");
+      await fetchDetail();
     } catch {
       message.error("Error al eliminar precio");
     }

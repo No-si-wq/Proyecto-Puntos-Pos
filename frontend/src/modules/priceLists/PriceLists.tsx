@@ -1,11 +1,22 @@
 import { useState } from "react";
-import { Table, Button, Tag, Space, Drawer, Typography, Tooltip } from "antd";
+import {
+  Table,
+  Button,
+  Tag,
+  Space,
+  Drawer,
+  Typography,
+  Tooltip,
+  Dropdown,
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   UnorderedListOutlined,
+  MoreOutlined,
 } from "@ant-design/icons";
+import type { MenuProps } from "antd";
 import PageHeader from "../../core/components/common/PageHeader";
 import ProtectedButton from "../../core/components/common/ProtectedButton";
 import FormModal from "../../core/components/forms/FormModal";
@@ -16,21 +27,23 @@ import { usePriceLists, usePriceListDetail } from "./usePriceList";
 import type { PriceList, ProductPrice } from "./pricelist";
 import { useProducts } from "../products/useProducts";
 import { getAllowedRoles } from "../../core/utils/permissions";
+import { useDeviceType } from "../../core/hooks/useDeviceType";
 
 const { Text } = Typography;
 
 export default function PriceLists() {
   const { priceLists, loading, create, update, remove } = usePriceLists();
-
   const { products } = useProducts();
+  const { isMobile, isTablet } = useDeviceType();
+  const isCompact = isMobile || isTablet;
 
-  const [formOpen, setFormOpen]     = useState(false);
-  const [editTarget, setEditTarget] = useState<PriceList | null>(null);
+  const [formOpen, setFormOpen]       = useState(false);
+  const [editTarget, setEditTarget]   = useState<PriceList | null>(null);
 
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [detailOpen, setDetailOpen]   = useState(false);
+  const [selectedId, setSelectedId]   = useState<number | null>(null);
 
-  const [editPrice, setEditPrice]       = useState<ProductPrice | null>(null);
+  const [editPrice, setEditPrice]         = useState<ProductPrice | null>(null);
   const [priceFormOpen, setPriceFormOpen] = useState(false);
 
   const { detail, loading: detailLoading, upsertPrice, removePrice } =
@@ -60,7 +73,31 @@ export default function PriceLists() {
 
   const allAssigned = products.filter((p) => p.active).length === assignedIds.size;
 
-  const columns = [
+  const getActionMenu = (record: PriceList): MenuProps => ({
+    items: [
+      {
+        key: "detail",
+        label: "Ver productos",
+        icon: <UnorderedListOutlined />,
+        onClick: () => openDetail(record.id),
+      },
+      {
+        key: "edit",
+        label: "Editar",
+        icon: <EditOutlined />,
+        onClick: () => openEdit(record),
+      },
+      {
+        key: "delete",
+        label: "Eliminar",
+        icon: <DeleteOutlined />,
+        danger: true,
+        onClick: () => remove(record.id, record.active),
+      },
+    ],
+  });
+
+  const desktopColumns = [
     {
       title: "Nombre",
       dataIndex: "name",
@@ -85,7 +122,9 @@ export default function PriceLists() {
       dataIndex: "active",
       key: "active",
       render: (active: boolean) =>
-        active ? <Tag color="green">Activa</Tag> : <Tag color="default">Inactiva</Tag>,
+        active
+          ? <Tag color="green">Activa</Tag>
+          : <Tag color="default">Inactiva</Tag>,
     },
     {
       title: "Acciones",
@@ -121,6 +160,47 @@ export default function PriceLists() {
     },
   ];
 
+  const mobileColumns = [
+    {
+      title: "Lista",
+      key: "info",
+      render: (_: any, record: PriceList) => (
+        <div>
+          <Text strong style={{ display: "block" }}>{record.name}</Text>
+          {record.description && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {record.description}
+            </Text>
+          )}
+          <div style={{ marginTop: 6 }}>
+            <Tag style={{ marginRight: 4 }}>
+              {record._count?.prices ?? 0} productos
+            </Tag>
+            {record.active
+              ? <Tag color="green">Activa</Tag>
+              : <Tag color="default">Inactiva</Tag>
+            }
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "",
+      key: "actions",
+      width: 48,
+      render: (_: any, record: PriceList) => (
+        <Dropdown menu={getActionMenu(record)} trigger={["click"]} placement="bottomRight">
+          <Button
+            icon={<MoreOutlined />}
+            shape="circle"
+            size="middle"
+            style={{ border: "none", boxShadow: "none" }}
+          />
+        </Dropdown>
+      ),
+    },
+  ];
+
   return (
     <>
       <PageHeader
@@ -132,17 +212,19 @@ export default function PriceLists() {
             icon={<PlusOutlined />}
             onClick={openCreate}
           >
-            Nueva lista
+            {isMobile ? "Nueva" : "Nueva lista"}
           </ProtectedButton>
         }
       />
 
       <Table
         rowKey="id"
-        columns={columns}
+        columns={isMobile ? mobileColumns : desktopColumns}
         dataSource={priceLists}
         loading={loading}
-        pagination={{ pageSize: 15 }}
+        pagination={{ pageSize: 15, simple: isCompact }}
+        size={isCompact ? "small" : "middle"}
+        scroll={isTablet ? { x: true } : undefined}
       />
 
       <FormModal
@@ -151,6 +233,7 @@ export default function PriceLists() {
         onClose={() => setFormOpen(false)}
       >
         <PriceListForm
+          isEdit={!!editTarget}
           onSubmit={handleSubmit}
           onCancel={() => setFormOpen(false)}
           initial={editTarget}
@@ -161,7 +244,10 @@ export default function PriceLists() {
         title={detail?.name ?? "Lista de precios"}
         open={detailOpen}
         onClose={closeDetail}
-        width={680}
+        width={isMobile ? "100%" : isTablet ? "80%" : 680}
+        placement={isMobile ? "bottom" : "right"}
+        height={isMobile ? "85vh" : undefined}
+        styles={isMobile ? { body: { overflowY: "auto" } } : undefined}
         extra={
           <ProtectedButton
             roles={getAllowedRoles("priceList", "create")}
@@ -169,8 +255,9 @@ export default function PriceLists() {
             icon={<PlusOutlined />}
             onClick={openAddPrice}
             disabled={allAssigned}
+            size={isMobile ? "small" : "middle"}
           >
-            Agregar precio
+            {isMobile ? "Agregar" : "Agregar precio"}
           </ProtectedButton>
         }
       >

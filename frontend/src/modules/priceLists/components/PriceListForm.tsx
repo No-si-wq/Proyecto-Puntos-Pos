@@ -3,13 +3,14 @@ import FormBase from "../../../core/components/forms/FormBase";
 import type { PriceList, CreatePriceListDto, UpdatePriceListDto } from "../pricelist";
 
 interface Props {
+  isEdit: boolean;
   onSubmit: (data: CreatePriceListDto | UpdatePriceListDto) => Promise<void>;
   onCancel: () => void;
   initial?: PriceList | null;
   loading?: boolean;
 }
 
-export function PriceListForm({ onSubmit, onCancel, initial, loading }: Props) {
+export function PriceListForm({ isEdit, onSubmit, onCancel, initial, loading }: Props) {
   const initialValues = initial
     ? { name: initial.name, description: initial.description ?? "", active: initial.active }
     : { name: "", description: "", active: true };
@@ -34,9 +35,11 @@ export function PriceListForm({ onSubmit, onCancel, initial, loading }: Props) {
         <Input.TextArea rows={2} placeholder="Descripción opcional" />
       </Form.Item>
 
-      <Form.Item name="active" label="Activa" valuePropName="checked">
-        <Switch />
-      </Form.Item>
+      {isEdit && (
+        <Form.Item name="active" label="Activa" valuePropName="checked">
+          <Switch />
+        </Form.Item>
+      )}
     </FormBase>
   );
 }
