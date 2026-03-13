@@ -97,6 +97,14 @@ export default function Commissions() {
       render: (name: string) => <Text strong>{name}</Text>,
     },
     {
+      title: "Lista de precios",
+      key: "priceList",
+      render: (_: any, r: CommissionLevel) =>
+        r.priceList
+          ? <Tag color="blue">{r.priceList.name}</Tag>
+          : <Text type="secondary">Precio base</Text>,
+    },
+    {
       title: "Descripción",
       dataIndex: "description",
       key: "description",
@@ -143,14 +151,18 @@ export default function Commissions() {
       render: (_: any, r: CommissionLevel) => (
         <div>
           <Text strong style={{ display: "block" }}>{r.name}</Text>
+          <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {r.priceList
+              ? <Tag color="blue">{r.priceList.name}</Tag>
+              : <Tag>Precio base</Tag>
+            }
+            <Tag>{r._count?.commissions ?? 0} vendedores</Tag>
+          </div>
           {r.description && (
             <Text type="secondary" style={{ fontSize: 12 }}>
               {r.description}
             </Text>
           )}
-          <div style={{ marginTop: 4 }}>
-            <Tag>{r._count?.commissions ?? 0} vendedores</Tag>
-          </div>
         </div>
       ),
     },

@@ -11,6 +11,7 @@ export interface SaleCartItem {
   name: string;
   price: number;
   quantity: number;
+  priceListId?: number;
 
   discountType: DiscountType;
   discountValue: number;
@@ -38,6 +39,8 @@ interface SaleCartState {
   ) => void;
 
   updatePrice: (productId: number, price: number) => void;
+
+  updatePriceList: (productId: number, priceListId: number | undefined) => void;
 
   removeProduct: (productId: number) => void;
 
@@ -109,6 +112,7 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
         name: product.name,
         price,
         quantity: 1,
+        priceListId: undefined,
         discountType: "NONE",
         discountValue: 0,
       });
@@ -143,6 +147,15 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
       items: state.items.map((i) =>
         i.productId === productId
           ? calculateItem({ ...i, price })
+          : i
+      ),
+    })),
+
+  updatePriceList: (productId, priceListId) =>
+    set((state) => ({
+      items: state.items.map((i) =>
+        i.productId === productId
+          ? { ...i, priceListId }
           : i
       ),
     })),

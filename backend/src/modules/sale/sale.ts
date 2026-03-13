@@ -1,13 +1,13 @@
 export interface SaleItemInput {
   productId: number;
   quantity: number;
+  priceListId?: number;
   discountType?: "NONE" | "PERCENTAGE" | "FIXED"
   discountValue?: number
 }
 
 interface BaseSaleInput {
   items: SaleItemInput[];
-  priceListId?: number;
   pointsUsed?: number;
 }
 

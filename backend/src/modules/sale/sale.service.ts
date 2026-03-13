@@ -96,44 +96,56 @@ export class SaleService {
       if (data.items.length === 0) {
         throw new Error(SaleError.EMPTY_SALE);
       }
-
-      let priceListId: number | null = data.priceListId ?? null;
-
-      if (priceListId !== null) {
-        const priceList = await tx.priceList.findUnique({
-          where: { id: priceListId },
+ 
+      const priceListIds = [
+        ...new Set(
+          data.items
+            .map((i) => i.priceListId)
+            .filter((id): id is number => id !== undefined)
+        ),
+      ];
+ 
+      if (priceListIds.length > 0) {
+        const priceLists = await tx.priceList.findMany({
+          where: { id: { in: priceListIds }, active: true },
+          select: { id: true },
         });
-        if (!priceList || !priceList.active) {
-          throw new Error(SaleError.INVALID_PRICE_LIST);
+        const validIds = new Set(priceLists.map((pl) => pl.id));
+        for (const id of priceListIds) {
+          if (!validIds.has(id)) throw new Error(SaleError.INVALID_PRICE_LIST);
         }
       }
-
+ 
       const products = await tx.product.findMany({
         where: { id: { in: data.items.map((i) => i.productId) } },
         include: {
           prices: {
-            where: priceListId ? { priceListId, active: true } : { id: -1 },
+            where:
+              priceListIds.length > 0
+                ? { priceListId: { in: priceListIds }, active: true }
+                : { id: -1 },
           },
         },
       });
-
+ 
       const productMap = new Map(products.map((p) => [p.id, p]));
-
+ 
       const sellerCommission = await tx.salesCommission.findFirst({
         where: { userId },
         select: { percent: true },
       });
-
+ 
       const commissionPercent: Prisma.Decimal | null = sellerCommission
         ? new Prisma.Decimal(sellerCommission.percent)
         : null;
-
+ 
       let grossSubtotal = 0;
       let subtotalAfterLineDiscount = 0;
-
+ 
       const calculatedItems: {
         productId: number;
         quantity: number;
+        priceListId: number | null;
         price: Prisma.Decimal;
         discountType: any;
         discountValue: Prisma.Decimal;
@@ -142,50 +154,53 @@ export class SaleService {
         commissionPercent: Prisma.Decimal | null;
         commissionAmount: Prisma.Decimal | null;
       }[] = [];
-
+ 
       for (const item of data.items) {
         const product = productMap.get(item.productId);
-
+ 
         if (!product || !product.active) {
           throw new Error(SaleError.PRODUCT_NOT_AVAILABLE);
         }
-
-        const customPrice = product.prices?.[0]?.price;
+ 
+        const customPrice = item.priceListId
+          ? product.prices?.find((pp) => pp.priceListId === item.priceListId)?.price
+          : undefined;
         const price: Prisma.Decimal =
           customPrice !== undefined
             ? new Prisma.Decimal(customPrice)
             : product.price;
-
+ 
         const quantity = item.quantity;
         const grossLine = price.mul(quantity);
-
+ 
         const discountType = item.discountType ?? "NONE";
         const discountValue = new Prisma.Decimal(item.discountValue ?? 0);
         let discountAmount = new Prisma.Decimal(0);
-
+ 
         if (discountType === "PERCENTAGE") {
           if (discountValue.gt(100)) throw new Error("Descuento porcentual inválido");
           discountAmount = grossLine.mul(discountValue).div(100);
         }
-
+ 
         if (discountType === "FIXED") {
           if (discountValue.gt(grossLine)) throw new Error("Descuento mayor al subtotal");
           discountAmount = discountValue;
         }
-
+ 
         const lineSubtotal = grossLine.sub(discountAmount);
         if (lineSubtotal.lt(0)) throw new Error("Subtotal negativo en línea");
-
+ 
         const commissionAmount = commissionPercent
           ? lineSubtotal.mul(commissionPercent).div(100).toDecimalPlaces(2)
           : null;
-
+ 
         grossSubtotal += grossLine.toNumber();
         subtotalAfterLineDiscount += lineSubtotal.toNumber();
-
+ 
         calculatedItems.push({
           productId: item.productId,
           quantity,
+          priceListId: item.priceListId ?? null,
           price,
           discountType,
           discountValue,
@@ -195,18 +210,18 @@ export class SaleService {
           commissionAmount,
         });
       }
-
+ 
       const sequence = await tx.saleSequence.upsert({
         where: { warehouseId },
         create: { warehouseId, current: 1 },
         update: { current: { increment: 1 } },
         select: { current: true },
       });
-
+ 
       const saleNumber = `SALE-${warehouseId}-${String(sequence.current).padStart(6, "0")}`;
       const subtotalDecimal = new Prisma.Decimal(subtotalAfterLineDiscount);
       const pointsUsed = data.pointsUsed ?? 0;
-
+ 
       const sale = await tx.sale.create({
         data: {
           saleNumber,
@@ -221,12 +236,11 @@ export class SaleService {
           warehouseId,
           paymentMethod: data.paymentMethod,
           status: SaleStatus.COMPLETED,
-          priceListId,
         },
       });
-
+ 
       let globalDiscount = new Prisma.Decimal(0);
-
+ 
       if (pointsUsed > 0 && data.customerId) {
         const discountFromPoints = await LoyaltyService.usePoints(
           tx,
@@ -236,23 +250,24 @@ export class SaleService {
         );
         globalDiscount = new Prisma.Decimal(discountFromPoints);
       }
-
+ 
       const total = subtotalDecimal.sub(globalDiscount);
       if (total.lt(0)) throw new Error(SaleError.INVALID_TOTAL);
-
+ 
       await tx.sale.update({
         where: { id: sale.id },
         data: { discount: globalDiscount, total },
       });
-
+ 
       let totalCogs = new Prisma.Decimal(0);
-
+ 
       for (const item of calculatedItems) {
         const saleItem = await tx.saleItem.create({
           data: {
             saleId: sale.id,
             productId: item.productId,
             quantity: item.quantity,
+            priceListId: item.priceListId,
             price: item.price,
             discountType: item.discountType,
             discountValue: item.discountValue,
@@ -262,7 +277,7 @@ export class SaleService {
             commissionAmount: item.commissionAmount,
           },
         });
-
+ 
         if (item.commissionPercent !== null && item.commissionAmount !== null) {
           await tx.commission.create({
             data: {
@@ -275,7 +290,7 @@ export class SaleService {
             },
           });
         }
-
+ 
         const itemCogs = await InventoryService.consumeStockFIFO(
           tx,
           saleItem.id,
@@ -283,9 +298,9 @@ export class SaleService {
           warehouseId,
           item.quantity
         );
-
+ 
         totalCogs = totalCogs.add(itemCogs);
-
+ 
         await InventoryService.createMovementTX(tx, {
           productId: item.productId,
           warehouseId,
@@ -297,7 +312,7 @@ export class SaleService {
           note: `Venta ${sale.saleNumber}`,
         });
       }
-
+ 
       if (data.paymentMethod === "CREDIT") {
         if (!sale.customerId) throw new Error("Venta a crédito requiere cliente");
         await tx.accountReceivable.create({
@@ -310,7 +325,7 @@ export class SaleService {
           },
         });
       }
-
+ 
       let pointsEarned = 0;
       if (data.customerId) {
         pointsEarned = await LoyaltyService.earnPoints(
@@ -320,20 +335,19 @@ export class SaleService {
           sale.id
         );
       }
-
+ 
       await tx.sale.update({
         where: { id: sale.id },
         data: { pointsEarned, cogs: totalCogs },
       });
-
+ 
       const totalCommission = calculatedItems.reduce(
         (acc, i) => acc.add(i.commissionAmount ?? 0),
         new Prisma.Decimal(0)
       );
-
+ 
       return {
         ...sale,
-        priceListId,
         grossSubtotal,
         subtotal: subtotalDecimal,
         discount: globalDiscount,

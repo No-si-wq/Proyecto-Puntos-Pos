@@ -38,7 +38,6 @@ export default function Sales() {
 
   const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>("CASH");
   const [dueDate, setDueDate] = useState<string>();
-  const [priceListId, setPriceListId] = useState<number | undefined>();
 
   const { isMobile, isTablet, device } = useDeviceType();
   const tableSpan   = device === "desktop" ? 16 : device === "tablet" ? 14 : 24;
@@ -54,24 +53,6 @@ export default function Sales() {
     cart.clear();
   }, [warehouseId]);
 
-  useEffect(() => {
-    const snapshot = cart.items;
-    snapshot.forEach((item) => {
-      const product = products.find((p) => p.id === item.productId);
-      if (!product) return;
-
-      const customPrice = priceListId
-        ? product.prices?.find((pp: any) => pp.priceListId === priceListId)?.price
-        : undefined;
-
-      const resolvedPrice = customPrice !== undefined
-        ? Number(customPrice)
-        : Number(product.price);
-
-      cart.updatePrice(item.productId, resolvedPrice);
-    });
-  }, [priceListId, products]);
-
   const { onKey } = useBarcodeScanner({
     onProductFound: (product) => {
       const item = cart.items.find((i) => i.productId === product.id);
@@ -79,10 +60,7 @@ export default function Sales() {
         cart.updateQuantity(product.id, item.quantity + 1);
         return;
       }
-      const customPrice = priceListId
-        ? product.prices?.find((pp: any) => pp.priceListId === priceListId)?.price
-        : undefined;
-      cart.addProduct(product, customPrice !== undefined ? Number(customPrice) : undefined);
+      cart.addProduct(product, undefined);
     },
   });
 
@@ -91,13 +69,6 @@ export default function Sales() {
   const availablePoints = selectedCustomer?.points?.balance ?? 0;
 
   const estimatedCommission = cart.totalCommission();
-
-  function resolveProductPrice(productId: number): number | undefined {
-    if (!priceListId) return undefined;
-    const product = products.find((p) => p.id === productId);
-    const customPrice = product?.prices?.find((pp: any) => pp.priceListId === priceListId)?.price;
-    return customPrice !== undefined ? Number(customPrice) : undefined;
-  }
 
   async function submitSale() {
     if (cart.items.length === 0) {
@@ -131,12 +102,12 @@ export default function Sales() {
       const result = await create({
         customerId: sale.customerId,
         pointsUsed: sale.pointsUsed,
-        priceListId,                         
         items: cart.items.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
           discountType: i.discountType,
           discountValue: i.discountValue,
+          priceListId: i.priceListId,
         })),
         paymentMethod,
         dueDate,
@@ -148,7 +119,6 @@ export default function Sales() {
       sale.reset();
       setPaymentMethod("CASH");
       setDueDate(undefined);
-      setPriceListId(undefined);
 
       message.success(
         result?.pointsEarned
@@ -159,20 +129,6 @@ export default function Sales() {
       message.error(err?.response?.data?.message ?? "Error creando venta");
     }
   }
-
-  const priceListSelector = (
-    <Select
-      allowClear
-      placeholder="Sin lista de precios"
-      size={sizes.select}
-      style={{ width: "100%" }}
-      value={priceListId}
-      onChange={(v) => setPriceListId(v ?? undefined)}
-      options={priceLists
-        .filter((pl) => pl.active)
-        .map((pl) => ({ value: pl.id, label: pl.name }))}
-    />
-  );
 
   const commissionLine = estimatedCommission > 0 && (
     <div style={{ color: "#52c41a", fontSize: 13 }}>
@@ -199,7 +155,7 @@ export default function Sales() {
             onChange={setSelectedProductId}
             onSelect={(id: number) => {
               const product = products.find((p) => p.id === id);
-              if (product) cart.addProduct(product, resolveProductPrice(id));
+              if (product) cart.addProduct(product, undefined);
               setSelectedProductId(null);
             }}
             filterOption={(input, option) => {
@@ -214,11 +170,6 @@ export default function Sales() {
                 disabled: p.stock <= 0,
               }))}
           />
-
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>LISTA DE PRECIOS</div>
-            {priceListSelector}
-          </div>
 
           <Select
             showSearch
@@ -291,6 +242,12 @@ export default function Sales() {
             onQuantityChange={cart.updateQuantity}
             onRemove={cart.removeProduct}
             onDiscountChange={cart.updateDiscount}
+            onPriceListChange={(productId, priceListId, resolvedPrice) => {
+              cart.updatePriceList(productId, priceListId);
+              cart.updatePrice(productId, resolvedPrice);
+            }}
+            priceLists={priceLists}
+            products={products}
           />
         </div>
 
@@ -363,7 +320,7 @@ export default function Sales() {
                 onChange={setSelectedProductId}
                 onSelect={(id: number) => {
                   const product = products.find((p) => p.id === id);
-                  if (product) cart.addProduct(product, resolveProductPrice(id));
+                  if (product) cart.addProduct(product, undefined);
                   setSelectedProductId(null);
                   selectRef.current?.blur();
                   setTimeout(() => selectRef.current?.focus(), 0);
@@ -387,6 +344,12 @@ export default function Sales() {
               onQuantityChange={cart.updateQuantity}
               onRemove={cart.removeProduct}
               onDiscountChange={cart.updateDiscount}
+              onPriceListChange={(productId, priceListId, resolvedPrice) => {
+                cart.updatePriceList(productId, priceListId);
+                cart.updatePrice(productId, resolvedPrice);
+              }}
+              priceLists={priceLists}
+              products={products}
             />
           </Card>
         </Col>
@@ -395,19 +358,13 @@ export default function Sales() {
           <Col span={summarySpan}>
             <div style={{ position: "sticky", top: 0, display: "flex", flexDirection: "column", gap: sizes.gap }}>
 
-              {/* ── Configuración de la venta ── */}
               <Card
                 size="small"
                 bodyStyle={{ padding: sizes.cardPadding }}
                 style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
               >
-                {/* Fila 1: Lista de precios + Cliente */}
                 <Row gutter={12}>
-                  <Col span={12}>
-                    <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>LISTA DE PRECIOS</div>
-                    {priceListSelector}
-                  </Col>
-                  <Col span={12}>
+                  <Col span={24}>
                     <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>CLIENTE</div>
                     <Select
                       showSearch
@@ -432,7 +389,6 @@ export default function Sales() {
                   </Col>
                 </Row>
 
-                {/* Puntos — solo si hay cliente seleccionado */}
                 {selectedCustomer && (
                   <div style={{ marginTop: 10, padding: "8px 10px", background: "#f6ffed", borderRadius: 6, border: "1px solid #b7eb8f" }}>
                     <Row align="middle" gutter={8}>
@@ -458,7 +414,6 @@ export default function Sales() {
 
                 <Divider style={{ margin: "10px 0" }} />
 
-                {/* Fila 2: Método de pago + fecha vencimiento si es crédito */}
                 <Row gutter={12} align="bottom">
                   <Col span={paymentMethod === "CREDIT" ? 12 : 24}>
                     <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>MÉTODO DE PAGO</div>
@@ -496,7 +451,6 @@ export default function Sales() {
                 )}
               </Card>
 
-              {/* ── Totales y confirmar ── */}
               <Card
                 size="small"
                 bodyStyle={{ padding: sizes.cardPadding }}

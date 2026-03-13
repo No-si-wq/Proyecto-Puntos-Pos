@@ -29,6 +29,8 @@ model CommissionLevel {
   name        String            @unique
   description String?
   active      Boolean           @default(true)
+  priceListId Int?
+  priceList   PriceList?        @relation(fields: [priceListId], references: [id])
   commissions SalesCommission[]
 }
 
@@ -146,12 +148,13 @@ model Product {
 }
 
 model PriceList {
-  id          Int            @id @default(autoincrement())
-  name        String         @unique
-  description String?
-  active      Boolean        @default(true)
-  prices      ProductPrice[]
-  sale        Sale[]
+  id               Int               @id @default(autoincrement())
+  name             String            @unique
+  description      String?
+  active           Boolean           @default(true)
+  commissionLevels CommissionLevel[]
+  prices           ProductPrice[]
+  sale             Sale[]
 }
 
 model ProductPrice {
@@ -332,6 +335,7 @@ model SaleItem {
   lineSubtotal      Decimal       @db.Decimal(12, 2)
   commissionAmount  Decimal?      @db.Decimal(10, 2)
   commissionPercent Decimal?      @db.Decimal(5, 2)
+  priceListId       Int?
   commissions       Commission[]
   product           Product       @relation(fields: [productId], references: [id])
   sale              Sale          @relation(fields: [saleId], references: [id])

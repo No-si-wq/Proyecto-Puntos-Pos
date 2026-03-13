@@ -3,7 +3,10 @@ export interface CommissionLevel {
   name: string;
   active: boolean;
   description?: string | null;
+  priceListId?: number | null;
+  priceList?: { id: number; name: string } | null;
   commissions?: SalesCommission[];
+  _count?: { commissions: number };
 }
 
 export interface SalesCommission {
@@ -20,14 +23,16 @@ export interface SalesCommission {
   };
 }
 
-export interface CreateCommissionLevelDto  {
+export interface CreateCommissionLevelDto {
   name: string;
   description?: string;
+  priceListId?: number | null;
 }
 
 export interface UpdateCommissionLevelDto {
   name?: string;
   description?: string;
+  priceListId?: number | null;
 }
 
 export interface AssignCommissionDto {

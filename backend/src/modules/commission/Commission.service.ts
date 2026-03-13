@@ -13,7 +13,10 @@ export class CommissionService {
   async getAllLevels() {
     return prisma.commissionLevel.findMany({
       orderBy: { name: "asc" },
-      include: { _count: { select: { commissions: true } } },
+      include: {
+        _count: { select: { commissions: true } },
+        priceList: { select: { id: true, name: true } },
+      },
     });
   }
 
@@ -21,12 +24,13 @@ export class CommissionService {
     const level = await prisma.commissionLevel.findUnique({
       where: { id },
       include: {
+        priceList: { select: { id: true, name: true } },
         commissions: {
           include: { user: { select: userSelect } },
         },
       },
     });
-    if (!level) throw new DomainError("Comision no wencontrada");
+    if (!level) throw new DomainError("Comision no encontrada");
     return level;
   }
 
@@ -65,7 +69,9 @@ export class CommissionService {
     return prisma.salesCommission.findMany({
       include: {
         user: { select: userSelect },
-        level: true,
+        level: {
+          include: { priceList: { select: { id: true, name: true } } },
+        },
       },
       orderBy: [{ user: { name: "asc" } }, { level: { name: "asc" } }],
     });

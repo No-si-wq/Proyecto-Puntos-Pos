@@ -4,6 +4,18 @@ import { formatCurrency } from "../../../core/utils/formatters";
 import type { SaleCartItem } from "..//saleCart.store";
 import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
 
+interface PriceList {
+  id: number;
+  name: string;
+  active: boolean;
+}
+
+interface Product {
+  id: number;
+  price: number;
+  prices?: { priceListId: number; price: number }[];
+}
+
 interface Props {
   items: SaleCartItem[];
   onQuantityChange: (id: number, q: number) => void;
@@ -13,6 +25,9 @@ interface Props {
     type: "NONE" | "PERCENTAGE" | "FIXED",
     value: number
   ) => void;
+  onPriceListChange: (productId: number, priceListId: number | undefined, resolvedPrice: number) => void;
+  priceLists: PriceList[];
+  products: Product[];
 }
 
 export function SaleCartTable({
@@ -20,6 +35,9 @@ export function SaleCartTable({
   onQuantityChange,
   onRemove,
   onDiscountChange,
+  onPriceListChange,
+  priceLists,
+  products,
 }: Props) {
   const sizes = useResponsiveSizes();
 
@@ -28,6 +46,35 @@ export function SaleCartTable({
       title: "Producto",
       dataIndex: "name",
       ellipsis: true,
+    },
+    {
+      title: "Lista de precios",
+      width: 170,
+      render: (_, i) => {
+        const product = products.find((p) => p.id === i.productId);
+        return (
+          <Select
+            allowClear
+            placeholder="Base"
+            style={{ width: "100%" }}
+            value={i.priceListId ?? undefined}
+            onChange={(v) => {
+              const plId = v ?? undefined;
+              const customPrice = plId
+                ? product?.prices?.find((pp) => pp.priceListId === plId)?.price
+                : undefined;
+              const resolvedPrice =
+                customPrice !== undefined
+                  ? Number(customPrice)
+                  : Number(product?.price ?? i.price);
+              onPriceListChange(i.productId, plId, resolvedPrice);
+            }}
+            options={priceLists
+              .filter((pl) => pl.active)
+              .map((pl) => ({ value: pl.id, label: pl.name }))}
+          />
+        );
+      },
     },
     {
       title: "Precio",

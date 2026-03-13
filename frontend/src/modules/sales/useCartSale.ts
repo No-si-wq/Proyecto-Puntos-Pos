@@ -7,6 +7,7 @@ export function useCartSale() {
     items: cart.items,
     addProduct: cart.addProduct,
     updatePrice: cart.updatePrice,
+    updatePriceList: cart.updatePriceList,
     totalCommission: cart.totalCommission,
     updateQuantity: cart.updateQuantity,
     removeProduct: cart.removeProduct,

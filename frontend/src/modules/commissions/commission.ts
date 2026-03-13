@@ -2,6 +2,8 @@ export interface CommissionLevel {
   id: number;
   name: string;
   description?: string | null;
+  priceListId?: number | null;
+  priceList?: { id: number; name: string } | null;
   active: boolean;
   _count?: { commissions: number };
 }
