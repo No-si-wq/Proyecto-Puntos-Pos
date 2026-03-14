@@ -133,8 +133,8 @@ export const PERMISSIONS: Record<
   },
 
   commission: {
-    view: [Role.ADMIN, Role.USER],
-    create: [Role.ADMIN, Role.USER],
+    view: [Role.ADMIN],
+    create: [Role.ADMIN],
     edit: [Role.ADMIN],
     delete: [Role.ADMIN],
   },

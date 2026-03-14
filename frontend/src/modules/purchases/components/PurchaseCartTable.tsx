@@ -8,6 +8,7 @@ import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
 interface Props {
   items: PurchaseCartItem[];
   onQuantityChange: (id: number, q: number) => void;
+  onCostChange: (id: number, cost: number) => void;
   onExpirationChange: (
     id: number,
     date: Date | null
@@ -18,6 +19,7 @@ interface Props {
 export function PurchaseCartTable({
   items,
   onQuantityChange,
+  onCostChange,
   onExpirationChange,
   onRemove,
 }: Props) {
@@ -32,8 +34,23 @@ export function PurchaseCartTable({
       title: "Costo",
       width: 140,
       align: "right",
-      render: (_, i) => 
-        formatCurrency(i.cost)
+      render: (_, i) => (
+        <InputNumber
+          min={0}
+          precision={2}
+          style={{ width: "100%" }}
+          value={i.cost}
+          formatter={(v) =>
+            `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+          }
+          parser={(v) =>
+            parseFloat(v?.replace(/,/g, "") ?? "0")
+          }
+          onChange={(v) =>
+            onCostChange(i.productId, Number(v ?? 0))
+          }
+        />
+      ),
     },
     {
       title: "Cantidad",

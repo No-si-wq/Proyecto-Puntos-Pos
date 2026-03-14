@@ -130,14 +130,20 @@ export class SaleService {
  
       const productMap = new Map(products.map((p) => [p.id, p]));
  
-      const sellerCommission = await tx.salesCommission.findFirst({
-        where: { userId },
-        select: { percent: true },
+      const sellerCommissions = await tx.salesCommission.findMany({
+        where: { userId, active: true },
+        select: { 
+          percent: true,
+          level: {
+            select: { priceListId: true },
+          },
+        },
       });
- 
-      const commissionPercent: Prisma.Decimal | null = sellerCommission
-        ? new Prisma.Decimal(sellerCommission.percent)
-        : null;
+
+      const commissionByPriceList = new Map<number | null, Prisma.Decimal>();
+        for (const sc of sellerCommissions) {
+          commissionByPriceList.set(sc.level.priceListId, new Prisma.Decimal(sc.percent));
+        }
  
       let grossSubtotal = 0;
       let subtotalAfterLineDiscount = 0;
@@ -189,6 +195,11 @@ export class SaleService {
  
         const lineSubtotal = grossLine.sub(discountAmount);
         if (lineSubtotal.lt(0)) throw new Error("Subtotal negativo en línea");
+
+        const commissionPercent: Prisma.Decimal | null =
+          commissionByPriceList.get(item.priceListId ?? null) ??
+          commissionByPriceList.get(null) ??
+          null;
  
         const commissionAmount = commissionPercent
           ? lineSubtotal.mul(commissionPercent).div(100).toDecimalPlaces(2)

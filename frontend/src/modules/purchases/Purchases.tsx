@@ -230,6 +230,7 @@ export default function Purchases() {
             <PurchaseCartTable
               items={cart.items}
               onQuantityChange={cart.updateQuantity}
+              onCostChange={cart.updateCost}
               onExpirationChange={cart.updateExpiration}
               onRemove={cart.removeProduct}
             />

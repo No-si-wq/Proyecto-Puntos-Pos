@@ -86,10 +86,10 @@ export class CommissionService {
 
   async assignCommission(dto: AssignCommissionDto) {
     const user = await prisma.user.findUnique({ where: { id: dto.userId } });
-    if (!user) throw new DomainError("User not found");
+    if (!user) throw new DomainError("Usuario no encontrado");
 
     const level = await prisma.commissionLevel.findUnique({ where: { id: dto.levelId } });
-    if (!level) throw new DomainError("Commission level not found");
+    if (!level) throw new DomainError("Nivel de Comision no encontrada");
 
     return prisma.salesCommission.upsert({
       where: {
