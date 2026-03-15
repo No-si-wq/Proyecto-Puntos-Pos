@@ -69,6 +69,21 @@ export function errorMiddleware(
       case InventoryError.INVALID_QUANTITY:
         return res.status(400).json({ message: "Cantidad inválida" });
 
+      case InventoryError.INVALID_ITEM:
+        return res.status(400).json({ message: "Producto no encontrado en inventario" });
+
+      case SaleError.INSUFFICIENT_STOCK:
+        return res.status(409).json({ message: "Stock insuficiente para completar la venta" });
+
+      case SaleError.INVALID_QUANTITY:
+        return res.status(400).json({ message: "Cantidad inválida en un item de la venta" });
+
+      case SaleError.INVALID_ITEM:
+        return res.status(400).json({ message: "Item de venta inválido" });
+
+      case SaleError.INVALID_PRICE_LIST:
+        return res.status(400).json({ message: "Lista de precios inválida o inactiva" });
+
       case SaleError.PRODUCT_NOT_AVAILABLE:
         return res.status(400).json({ message: "Producto no disponible" });
 

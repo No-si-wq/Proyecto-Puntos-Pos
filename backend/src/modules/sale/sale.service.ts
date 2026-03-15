@@ -1,6 +1,7 @@
 import prisma from "../../core/prisma";
 import { Prisma } from "@prisma/client";
 import { CommissionType, InventoryMovementType, SaleStatus } from "@prisma/client";
+import { InventoryError } from "../inventory/inventory";
 import { InventoryService } from "../inventory/inventory.service";
 import { LoyaltyService } from "../loyalty/loyalty.service";
 import { CreateSaleInput, SaleError } from "./sale";
@@ -273,6 +274,9 @@ export class SaleService {
       let totalCogs = new Prisma.Decimal(0);
  
       for (const item of calculatedItems) {
+        if (item.quantity <= 0) {
+          throw new Error(SaleError.INVALID_QUANTITY);
+        }
         const saleItem = await tx.saleItem.create({
           data: {
             saleId: sale.id,
@@ -302,13 +306,24 @@ export class SaleService {
           });
         }
  
-        const itemCogs = await InventoryService.consumeStockFIFO(
-          tx,
-          saleItem.id,
-          item.productId,
-          warehouseId,
-          item.quantity
-        );
+        let itemCogs : Prisma.Decimal;
+        try {
+          itemCogs = await InventoryService.consumeStockFIFO(
+            tx,
+            saleItem.id,
+            item.productId,
+            warehouseId,
+            item.quantity
+          );
+        } catch (err: any) {
+          if (err.message === InventoryError.INSUFFICIENT_STOCK) {
+            throw new Error(SaleError.INSUFFICIENT_STOCK);
+          }
+          if (err.message === InventoryError.INVALID_ITEM) {
+            throw new Error(SaleError.INVALID_ITEM);
+          }
+          throw err;
+        }
  
         totalCogs = totalCogs.add(itemCogs);
  
@@ -386,6 +401,10 @@ export class SaleService {
 
       for (const item of sale.items) {
         for (const allocation of item.lots) {
+          if (allocation.quantity <= 0) {
+            throw new Error(SaleError.INVALID_QUANTITY);
+          }
+
           const updated = await tx.purchaseItem.updateMany({
             where: { id: allocation.purchaseItemId },
             data: { quantity: { increment: allocation.quantity } },
