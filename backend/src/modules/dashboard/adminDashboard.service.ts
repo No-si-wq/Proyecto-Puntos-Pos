@@ -25,7 +25,7 @@ export class AdminDashboardService {
       salesByWarehouse,
       inventoryValue,
       topProducts,
-      metrics,
+      metrics
     ] = await Promise.all([
       this.getFinancialSummary(dateFilter),
       this.getSalesByWarehouse(dateFilter),

@@ -69,6 +69,6 @@ export interface AdminDashboardData {
   }[];
   metrics: {
     averageTicket: number;
-    inventoryTurnover: number,
+    inventoryTurnover: number;
   };
 }
