@@ -8,7 +8,13 @@ export class PriceListService {
       where: { active: true },
       orderBy: { name: "asc" },
       include: {
-        _count: { select: { prices: true } },
+        _count: { 
+          select: { 
+            prices: {
+              where: { active: true }
+            },
+          }, 
+        },
       },
     });
   }
@@ -57,12 +63,12 @@ export class PriceListService {
     await this.getById(priceListId);
 
     const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (!product) throw new DomainError("Product not found");
+    if (!product) throw new DomainError("Producto no eoncontrado");
 
     return prisma.productPrice.upsert({
       where: { productId_priceListId: { productId, priceListId } },
-      update: { price },
-      create: { productId, priceListId, price },
+      update: { price, active: true },
+      create: { productId, priceListId, price, active: true },
       include: {
         product: { select: { id: true, name: true, sku: true, price: true } },
         priceList: { select: { id: true, name: true, active: true } },

@@ -11,6 +11,7 @@ export interface ProductPrice {
   productId: number;
   priceListId: number;
   price: number;
+  active: boolean;
   product?: { id: number; name: string; sku: string; price: number };
   priceList: { id: number; name: string; active: boolean };
 }

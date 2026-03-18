@@ -3,18 +3,8 @@ import type { ColumnsType } from "antd/es/table";
 import { formatCurrency } from "../../../core/utils/formatters";
 import type { SaleCartItem } from "..//saleCart.store";
 import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
-
-interface PriceList {
-  id: number;
-  name: string;
-  active: boolean;
-}
-
-interface Product {
-  id: number;
-  price: number;
-  prices?: { priceListId: number; price: number }[];
-}
+import type { PriceList } from "../../priceLists/pricelist";
+import type { Product } from "../../products/product";
 
 interface Props {
   items: SaleCartItem[];
@@ -52,6 +42,16 @@ export function SaleCartTable({
       width: 170,
       render: (_, i) => {
         const product = products.find((p) => p.id === i.productId);
+        const productPriceListIds = new Set(
+          product?.prices
+            ?.filter((pp) => pp.active)          
+            .map((pp) => pp.priceListId) ?? []
+        );
+
+        const availableOptions = priceLists
+          .filter((pl) => pl.active && productPriceListIds.has(pl.id))
+          .map((pl) => ({ value: pl.id, label: pl.name }));
+
         return (
           <Select
             allowClear
@@ -69,9 +69,7 @@ export function SaleCartTable({
                   : Number(product?.price ?? i.price);
               onPriceListChange(i.productId, plId, resolvedPrice);
             }}
-            options={priceLists
-              .filter((pl) => pl.active)
-              .map((pl) => ({ value: pl.id, label: pl.name }))}
+            options={availableOptions}
           />
         );
       },
