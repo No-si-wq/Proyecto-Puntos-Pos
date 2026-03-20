@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
-import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
-import http from "../../core/http/http";
-import type { Product } from "../products/product";
-import type { Lot } from "./Inventory";
+import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
+import http from "../../../core/http/http";
+import type { Product } from "../../products/product";
+import type { Lot } from "../types/inventory";
 
 export function useInventory(
   productId?: number,

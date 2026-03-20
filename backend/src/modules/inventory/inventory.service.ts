@@ -81,6 +81,7 @@ export class InventoryService {
     quantity: number;
   }) {
     const { productId, fromWarehouseId, toWarehouseId, quantity } = params;
+    let totalCost = new Prisma.Decimal(0);
 
     if (quantity <= 0) {
       throw new Error("Cantidad inválida");
@@ -118,6 +119,10 @@ export class InventoryService {
           },
         });
 
+        totalCost = totalCost.plus(
+          new Prisma.Decimal(lot.cost).mul(deduct)
+        );
+
         await tx.purchaseItem.create({
           data: {
             purchaseId: lot.purchaseId,
@@ -136,23 +141,99 @@ export class InventoryService {
         throw new Error("Stock insuficiente para transferencia");
       }
 
-      await tx.inventoryMovement.createMany({
-        data: [
-          {
-            productId,
-            warehouseId: fromWarehouseId,
-            type: "OUT",
-            quantity: -quantity,
-            note: "Transferencia salida",
+      await InventoryService.createMovementTX(tx, {
+        productId,
+        warehouseId: fromWarehouseId,
+        type: InventoryMovementType.OUT,
+        quantity,
+        movementValue: totalCost,
+        referenceType: "TRANSFER_WAREHOUSE",
+        referenceId: fromWarehouseId,
+        note: `Transferencia a bodega #${toWarehouseId}`,
+      });
+
+      await InventoryService.createMovementTX(tx, {
+        productId,
+        warehouseId: toWarehouseId,
+        type: InventoryMovementType.IN,
+        quantity,
+        movementValue: totalCost,
+        referenceType: "TRANSFER_WAREHOUSE",
+        referenceId: fromWarehouseId,
+        note: `Transferencia desde bodega #${fromWarehouseId}`,
+      });
+    });
+  }
+
+  static async transferProduct(params: {
+    warehouseId: number;
+    fromProductId: number;
+    toProductId: number;
+    quantity: number;
+    factor: number;
+  }) {
+    const { warehouseId, fromProductId, toProductId, quantity, factor } = params;
+
+    if (quantity <= 0 || factor <= 0) throw new Error("Cantidad o factor inválido");
+    if (fromProductId === toProductId) throw new Error("Los productos deben ser diferentes");
+
+    return prisma.$transaction(async (tx) => {
+      let remaining = quantity;
+      let totalCost = new Prisma.Decimal(0);
+
+      const lots = await tx.purchaseItem.findMany({
+        where: { productId: fromProductId, warehouseId, quantity: { gt: 0 } },
+        orderBy: [{ expiresAt: "asc" }],
+      });
+
+      if (!lots.length) throw new Error("No hay stock disponible");
+
+      for (const lot of lots) {
+        if (remaining <= 0) break;
+        const deduct = Math.min(lot.quantity, remaining);
+
+        await tx.purchaseItem.update({
+          where: { id: lot.id },
+          data: { quantity: { decrement: deduct } },
+        });
+
+        await tx.purchaseItem.create({
+          data: {
+            purchaseId: lot.purchaseId,
+            productId: toProductId,
+            warehouseId,
+            quantity: deduct * factor,
+            cost: new Prisma.Decimal(lot.cost).div(factor),
+            expiresAt: lot.expiresAt,
           },
-          {
-            productId,
-            warehouseId: toWarehouseId,
-            type: "IN",
-            quantity,
-            note: "Transferencia entrada",
-          },
-        ],
+        });
+
+        totalCost = totalCost.add(new Prisma.Decimal(lot.cost).mul(deduct));
+        remaining -= deduct;
+      }
+
+      if (remaining > 0) throw new Error("Stock insuficiente");
+
+      await InventoryService.createMovementTX(tx, {
+        productId: fromProductId,
+        warehouseId,
+        type: InventoryMovementType.OUT,
+        quantity,
+        movementValue: totalCost,
+        referenceType: "TRANSFER_PRODUCT",
+        referenceId: fromProductId,
+        note: `Transferencia a producto #${toProductId}`,
+      });
+
+      await InventoryService.createMovementTX(tx, {
+        productId: toProductId,
+        warehouseId,
+        type: InventoryMovementType.IN,
+        quantity: quantity * factor,
+        movementValue: totalCost,
+        referenceType: "TRANSFER_PRODUCT",
+        referenceId: fromProductId,
+        note: `Transferencia desde producto #${fromProductId}`,
       });
     });
   }

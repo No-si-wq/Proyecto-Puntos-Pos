@@ -139,6 +139,7 @@ model Product {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   categoryId         Int
+  tax                Decimal             @default(0) @db.Decimal(5, 2)
   barcodes           Barcode[]
   inventoryMovements InventoryMovement[]
   category           Category            @relation(fields: [categoryId], references: [id])
@@ -313,6 +314,7 @@ model Sale {
   paymentMethod PaymentMethod         @default(CASH)
   grossSubtotal Decimal               @db.Decimal(12, 2)
   priceListId   Int?
+  taxTotal      Decimal               @default(0)
   receivable    AccountReceivable?
   commissions   Commission[]
   history       LoyaltyPointHistory[]
@@ -336,6 +338,9 @@ model SaleItem {
   commissionAmount  Decimal?      @db.Decimal(10, 2)
   commissionPercent Decimal?      @db.Decimal(5, 2)
   priceListId       Int?
+  lineTotal         Decimal       @default(0)
+  tax               Decimal       @default(0) @db.Decimal(5, 2)
+  taxAmount         Decimal       @default(0)
   commissions       Commission[]
   product           Product       @relation(fields: [productId], references: [id])
   sale              Sale          @relation(fields: [saleId], references: [id])

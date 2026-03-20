@@ -1,18 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
-import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
-import http from "../../core/http/http";
-
-export interface InventorySummary {
-  id: number;
-  sku: string;
-  name: string;
-  stock: number;
-  active: boolean;
-}
-
-interface Filters {
-  search?: string;
-}
+import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
+import http from "../../../core/http/http";
+import type { InventorySummary, Filters } from "../types/inventory";
 
 export function useInventoryList() {
   const [data, setData] = useState<InventorySummary[]>([]);

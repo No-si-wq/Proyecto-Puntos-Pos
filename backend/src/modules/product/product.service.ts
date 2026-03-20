@@ -21,6 +21,7 @@ const baseSelect = {
   description: true,
   price: true,
   cost: true,
+  tax: true,
   active: true,
   categoryId: true,
   barcodes: { select: { code: true } },

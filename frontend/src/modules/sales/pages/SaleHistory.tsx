@@ -1,16 +1,16 @@
 import { Button, Space } from "antd";
 import { useState } from "react";
-import PageHeader from "../../core/components/common/PageHeader";
+import PageHeader from "../../../core/components/common/PageHeader";
 import dayjs from "dayjs";
-import { useSales } from "./useSales";
-import SalesTable from "./components/SalesTable";
-import { formatDate, formatCurrency } from "../../core/utils/formatters";
+import { useSales } from "../hooks/useSales";
+import SalesTable from "../components/SalesTable";
+import { formatDate, formatCurrency } from "../../../core/utils/formatters";
 import type { Sale } from "./sale";
-import ResponsiveRangePicker from "../../core/components/common/ResponsiveRangePicker";
-import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
-import { exportToPdf } from "../../core/utils/exportPDF";
-import { exportToExcel } from "../../core/utils/exportExcel";
-import { useDeviceType } from "../../core/hooks/useDeviceType";
+import ResponsiveRangePicker from "../../../core/components/common/ResponsiveRangePicker";
+import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
+import { exportToPdf } from "../../../core/utils/exportPDF";
+import { exportToExcel } from "../../../core/utils/exportExcel";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
 import { useNavigate } from "react-router-dom";
 
 export default function SaleHistory() {

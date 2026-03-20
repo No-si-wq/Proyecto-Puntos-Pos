@@ -73,3 +73,25 @@ export async function transferInventory(req: Request, res: Response) {
     message: "Transferencia realizada",
   });
 }
+
+export async function TransferProduct(req: Request, res: Response) {
+  const {
+    fromProductId,
+    toProductId,
+    quantity,
+    factor,
+  } = req.body;
+  const warehouseId = (req as any).warehouseId;
+
+  await InventoryService.transferProduct({
+    warehouseId,
+    fromProductId,
+    toProductId,
+    quantity,
+    factor,
+  });
+
+  res.status(201).json({
+    message: "Transferencia realizada",
+  });
+}

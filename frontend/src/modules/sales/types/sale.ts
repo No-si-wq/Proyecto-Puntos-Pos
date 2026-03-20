@@ -1,5 +1,3 @@
-import type { BaseItem } from "../../core/types/base";
-
 export type SalePaymentMethod =
   | "CASH"
   | "CARD"
@@ -16,12 +14,18 @@ export interface SaleItemDTO {
 }
 
 export interface SaleItems {
+  id: number;
   product: {
     id: number;
+    sku: string;
     name: string;
   };
   price: number;
+  tax: number;
+  total: number;
+  taxAmount: number;
   lineSubtotal: number;
+  lineTotal: number;
   quantity: number;
   discountAmount: number;
   discountType?: DiscountType;
@@ -33,14 +37,11 @@ export interface SaleItems {
 export interface CreateSaleDTO {
   customerId?: number;
   pointsUsed?: number;
+  sellerId?: number;
   priceListId?: number;
   items: SaleItemDTO[];
   paymentMethod: SalePaymentMethod;
   dueDate?: string;
-}
-
-export interface SaleItem extends BaseItem {
-  id: number;
 }
 
 export type SaleStatus = "COMPLETED" | "CANCELLED";
@@ -51,6 +52,7 @@ export interface Sale {
   total: number;
   subtotal: number;
   discount: number;
+  taxTotal: number;
   grossSubtotal?: number;
   totalCommission?: number;
   createdAt: string;
@@ -64,6 +66,11 @@ export interface Sale {
   };
 
   user: {
+    id: number;
+    name: string;
+  };
+
+  seller: {
     id: number;
     name: string;
   };

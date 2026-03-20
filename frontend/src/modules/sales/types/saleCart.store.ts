@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Product } from "../products/product";
+import type { Product } from "../../products/product";
 
 export type DiscountType =
   | "NONE"
@@ -10,6 +10,7 @@ export interface SaleCartItem {
   productId: number;
   name: string;
   price: number;
+  tax: number;
   quantity: number;
   priceListId?: number;
 
@@ -59,7 +60,12 @@ function calculateItem(
     "grossLine" | "discountAmount" | "lineSubtotal"
   >
 ): SaleCartItem {
-  const grossLine = item.price * item.quantity;
+
+  const baseTotal = item.price * item.quantity;
+
+  const taxAmount = baseTotal * item.tax;
+
+  const grossLine = baseTotal + taxAmount;
 
   let discountAmount = 0;
 
@@ -92,12 +98,14 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
   addProduct: (product, overridePrice) =>
     set((state) => {
       const price = overridePrice ?? Number(product.price);
+      const tax = Number(product.tax)
       const existing = state.items.find((i) => i.productId === product.id);
 
       if (existing) {
         const updated = calculateItem({
           ...existing,
           price,
+          tax,
           quantity: existing.quantity + 1,
         });
         return {
@@ -111,6 +119,7 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
         productId: product.id,
         name: product.name,
         price,
+        tax,
         quantity: 1,
         priceListId: undefined,
         discountType: "NONE",

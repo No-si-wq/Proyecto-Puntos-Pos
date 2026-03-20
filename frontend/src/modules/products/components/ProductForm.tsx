@@ -61,6 +61,25 @@ export default function ProductForm({
       </Form.Item>
 
       <Form.Item
+        name="tax"
+        label="Impuesto"
+        rules={[
+          { required: true, type: "number", min: 0, max: 100, message: "Impuesto inválido (0-100)" },
+        ]}
+        normalize={(value) => (value != null ? value / 100 : value)}
+        getValueProps={(value) => ({ value: value != null ? value * 100 : value })}
+      >
+        <InputNumber
+          min={0}
+          max={100}
+          step={1}
+          formatter={(value) => `${value}%`}
+          parser={(value) => value?.replace("%", "") as any}
+          style={{ width: "100%" }}
+        />
+      </Form.Item>
+
+      <Form.Item
         name="categoryPath"
         label="Categoria"
         rules={[

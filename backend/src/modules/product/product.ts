@@ -13,6 +13,7 @@ export interface ProductBase {
   description?: string;
   cost: number;
   price: number;
+  tax: number;
   categoryId: CategoryId;
   prices: ProductPriceInput[];
   barcodes?: Barcode[];

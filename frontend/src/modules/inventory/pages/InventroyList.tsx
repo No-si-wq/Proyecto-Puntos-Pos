@@ -3,28 +3,27 @@ import { Tag, Button, Input, Row, Col } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useNavigate } from "react-router-dom";
 
-import { useInventoryList } from "./useInventoryList";
-import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
-import { exportToPdf } from "../../core/utils/exportPDF";
-import { exportToExcel } from "../../core/utils/exportExcel";
-import PageHeader from "../../core/components/common/PageHeader";
-import SimpleTable from "../../core/components/table/SimpleTable";
-
-interface InventoryRow {
-  id: number;
-  sku: string;
-  name: string;
-  stock: number;
-  active: boolean;
-}
+import { useInventoryList } from "../hooks/useInventoryList";
+import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
+import { exportToPdf } from "../../../core/utils/exportPDF";
+import { exportToExcel } from "../../../core/utils/exportExcel";
+import ProtectedButton from "../../../core/components/common/ProtectedButton";
+import type { InventoryRow } from "../types/inventory";
+import { getAllowedRoles } from "../../../core/utils/permissions";
+import PageHeader from "../../../core/components/common/PageHeader";
+import SimpleTable from "../../../core/components/table/SimpleTable";
+import TransferInventoryModal from "../components/Transferinventorymodal";
+import TransferProductModal from "../components/TransferProductModal";
 
 export default function InventoryList() {
-  const { data, loading, setFilters } = useInventoryList();
+  const { data, loading, setFilters, reload } = useInventoryList();
 
   const navigate = useNavigate();
   const sizes = useResponsiveSizes();
 
   const [searchValue, setSearchValue] = useState("");
+  const [transferProduct, setTransferProduct]         = useState<InventoryRow | null>(null);
+  const [transferProductTarget, setTransferProductTarget] = useState<InventoryRow | null>(null);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -90,12 +89,29 @@ export default function InventoryList() {
     {
       title: "Acciones",
       render: (_, record) => (
-        <Button
-          size={sizes.button}
-          onClick={() => navigate(`/inventory/${record.id}`)}
-        >
-          Ver detalle
-        </Button>
+        <>
+          <Button
+            size={sizes.button}
+            onClick={() => navigate(`/inventory/${record.id}`)}
+          >
+            Ver detalle
+          </Button>
+          <ProtectedButton 
+            roles={getAllowedRoles("inventory", "manage")}
+            size={sizes.button}
+            disabled={record.stock <= 0} 
+            onClick={() => setTransferProduct(record)}
+          >
+            Transferir
+          </ProtectedButton>
+          <ProtectedButton 
+            roles={getAllowedRoles("inventory", "manage")} 
+            size={sizes.button}
+            disabled={record.stock <= 0} 
+            onClick={() => setTransferProductTarget(record)}>
+            Transferir a producto
+          </ProtectedButton>
+        </>
       ),
     },
   ];
@@ -146,6 +162,21 @@ export default function InventoryList() {
         data={data}
         loading={loading}
       />
+
+      <TransferInventoryModal
+        open={transferProduct !== null}
+        product={transferProduct}
+        onClose={() => setTransferProduct(null)}
+        onSuccess={reload}
+      />
+
+      <TransferProductModal
+        open={transferProductTarget !== null}
+        product={transferProductTarget}
+        onClose={() => setTransferProductTarget(null)}
+        onSuccess={reload}
+      />
+
     </>
   );
 }

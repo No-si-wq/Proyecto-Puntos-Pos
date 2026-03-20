@@ -1,4 +1,4 @@
-import { saleCartStore } from "./saleCart.store";
+import { saleCartStore } from "../types/saleCart.store";
 
 export function useCartSale() {
   const cart = saleCartStore();

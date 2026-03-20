@@ -105,7 +105,8 @@ export default function Products() {
       description: editing.description,
       price: editing.price,
       cost: editing.cost,
-      barcodes: editing.barcodes,
+      tax: editing.tax,
+      barcodes: editing.barcodes ?? undefined,
       categoryPath: path.map(c => c.id),
       active: editing.active,
     };
@@ -139,6 +140,7 @@ export default function Products() {
         description: values.description,
         price: values.price,
         cost: values.cost,
+        tax: values.tax,
         active: values.active,
         categoryId,
         ...(values.barcodes !== undefined && {
@@ -198,6 +200,7 @@ export default function Products() {
     { title: "Nombre", dataIndex: "name" },
     { title: "Costo", dataIndex: "cost" },
     { title: "Precio", dataIndex: "price" },
+    { title: "Impuesto", dataIndex: "tax", render: (v: number) => v != null ? `${(v * 100).toFixed(0)}%` : "—" },
     {
       title: "Categoría",
       render: (_, record) => {

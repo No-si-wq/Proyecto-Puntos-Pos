@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button, Card, Table, Space, message, Tag, Alert } from "antd";
-import { ConfirmModal } from "../../core/components/common/ConfirmModal";
-import PageHeader from "../../core/components/common/PageHeader";
-import http from "../../core/http/http";
-import { formatCurrency, formatDate } from "../../core/utils/formatters";
-import type { Sale } from "./sale";
-import { exportToPdf } from "../../core/utils/exportPDF";
+import { ConfirmModal } from "../../../core/components/common/ConfirmModal";
+import PageHeader from "../../../core/components/common/PageHeader";
+import http from "../../../core/http/http";
+import { formatCurrency, formatDate } from "../../../core/utils/formatters";
+import type { Sale } from "../types/sale";
+import { exportToPdf } from "../../../core/utils/exportPDF";
 
 export default function SaleDetail() {
   const { id } = useParams();
@@ -96,6 +96,15 @@ export default function SaleDetail() {
       dataIndex: "lineSubtotal",
       render: (v: number) => formatCurrency(v)
     },
+    { 
+      title: "Impuesto",  
+      dataIndex: "taxAmount",       
+      render: (v: number) => formatCurrency(v) 
+    },
+    { title: "Total",     
+      dataIndex: "lineTotal",       
+      render: (v: number) => formatCurrency(v) 
+    },
     {
       title: "Comisión",
       dataIndex: "commissionAmount",
@@ -164,6 +173,7 @@ export default function SaleDetail() {
         <Card style={{ marginTop: 16 }}>
           <p><b>Subtotal:</b> {formatCurrency(sale?.subtotal ?? 0)}</p>
           <p><b>Descuento:</b> {formatCurrency(sale?.discount ?? 0)}</p>
+          <p><b>Impuestos:</b> {formatCurrency(sale?.taxTotal ?? 0)}</p>
           <p><b>Total:</b> {formatCurrency(sale?.total ?? 0)}</p>
           {(sale?.totalCommission ?? 0) > 0 && (
             <p style={{ color: "#52c41a" }}>

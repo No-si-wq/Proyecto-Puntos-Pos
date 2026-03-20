@@ -14,21 +14,21 @@ import {
   Divider,
 } from "antd";
 
-import { useCustomers } from "../customers/useCustomers";
-import { useSales } from "./useSales";
-import { useCartSale } from "./useCartSale";
-import { useBarcodeScanner } from "../../core/hooks/useBarcodeScanner";
-import { saleStore } from "./sale.store";
-import { SaleCartTable } from "./components/SaleCartTable";
-import { formatCurrency } from "../../core/utils/formatters";
-import { useDeviceType } from "../../core/hooks/useDeviceType";
-import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
-import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
-import { useWarehouseProducts } from "../warehouses/useWarehouseProducts";
-import { usePriceLists } from "../priceLists/usePriceList";
-import type { SalePaymentMethod } from "./sale";
+import { useCustomers } from "../../customers/useCustomers";
+import { useSales } from "../hooks/useSales";
+import { useCartSale } from "../hooks/useCartSale";
+import { useBarcodeScanner } from "../../../core/hooks/useBarcodeScanner";
+import { saleStore } from "../types/sale.store";
+import { SaleCartTable } from "../components/SaleCartTable";
+import { formatCurrency } from "../../../core/utils/formatters";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
+import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
+import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
+import { useWarehouseProducts } from "../../warehouses/useWarehouseProducts";
+import { usePriceLists } from "../../priceLists/usePriceList";
+import type { SalePaymentMethod } from "../types/sale";
 
-import PageHeader from "../../core/components/common/PageHeader";
+import PageHeader from "../../../core/components/common/PageHeader";
 
 export default function Sales() {
   const { customers, reload: reloadCustomers } = useCustomers();

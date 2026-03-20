@@ -47,6 +47,7 @@ export class SaleService {
         grossSubtotal: true,
         subtotal: true,
         discount: true,
+        taxTotal: true,
         total: true,
         cogs: true,
         pointsUsed: true,
@@ -60,10 +61,13 @@ export class SaleService {
             id: true,
             quantity: true,
             price: true,
+            tax: true,
+            taxAmount: true,
             discountType: true,
             discountValue: true,
             discountAmount: true,
             lineSubtotal: true,
+            lineTotal: true,
             commissionPercent: true,
             commissionAmount: true,
             product: { select: { id: true, name: true, sku: true } },
@@ -148,18 +152,22 @@ export class SaleService {
  
       let grossSubtotal = 0;
       let subtotalAfterLineDiscount = 0;
+      let totalTax = 0;
  
       const calculatedItems: {
         productId: number;
         quantity: number;
         priceListId: number | null;
         price: Prisma.Decimal;
+        tax: Prisma.Decimal;
         discountType: any;
         discountValue: Prisma.Decimal;
         discountAmount: Prisma.Decimal;
         lineSubtotal: Prisma.Decimal;
         commissionPercent: Prisma.Decimal | null;
         commissionAmount: Prisma.Decimal | null;
+        taxAmount: Prisma.Decimal;
+        lineTotal: Prisma.Decimal;
       }[] = [];
  
       for (const item of data.items) {
@@ -176,6 +184,8 @@ export class SaleService {
           customPrice !== undefined
             ? new Prisma.Decimal(customPrice)
             : product.price;
+
+        const tax = product.tax;
  
         const quantity = item.quantity;
         const grossLine = price.mul(quantity);
@@ -197,6 +207,10 @@ export class SaleService {
         const lineSubtotal = grossLine.sub(discountAmount);
         if (lineSubtotal.lt(0)) throw new Error("Subtotal negativo en línea");
 
+        const taxAmount = lineSubtotal.mul(product.tax)
+
+        const lineTotal = lineSubtotal.add(taxAmount);
+
         const commissionPercent: Prisma.Decimal | null =
           commissionByPriceList.get(item.priceListId ?? null) ??
           commissionByPriceList.get(null) ??
@@ -208,18 +222,22 @@ export class SaleService {
  
         grossSubtotal += grossLine.toNumber();
         subtotalAfterLineDiscount += lineSubtotal.toNumber();
+        totalTax += taxAmount.toNumber();
  
         calculatedItems.push({
           productId: item.productId,
           quantity,
           priceListId: item.priceListId ?? null,
           price,
+          tax,
           discountType,
           discountValue,
           discountAmount,
           lineSubtotal,
           commissionPercent,
           commissionAmount,
+          taxAmount,
+          lineTotal,
         });
       }
  
@@ -232,6 +250,7 @@ export class SaleService {
  
       const saleNumber = `SALE-${warehouseId}-${String(sequence.current).padStart(6, "0")}`;
       const subtotalDecimal = new Prisma.Decimal(subtotalAfterLineDiscount);
+      const taxTotalDecimal = new Prisma.Decimal(totalTax);
       const pointsUsed = data.pointsUsed ?? 0;
  
       const sale = await tx.sale.create({
@@ -240,7 +259,8 @@ export class SaleService {
           grossSubtotal: new Prisma.Decimal(grossSubtotal),
           subtotal: subtotalDecimal,
           discount: new Prisma.Decimal(0),
-          total: subtotalDecimal,
+          taxTotal: taxTotalDecimal,
+          total: subtotalDecimal.add(taxTotalDecimal),
           pointsUsed,
           pointsEarned: 0,
           userId,
@@ -263,7 +283,7 @@ export class SaleService {
         globalDiscount = new Prisma.Decimal(discountFromPoints);
       }
  
-      const total = subtotalDecimal.sub(globalDiscount);
+      const total = subtotalDecimal.sub(globalDiscount).add(taxTotalDecimal);
       if (total.lt(0)) throw new Error(SaleError.INVALID_TOTAL);
  
       await tx.sale.update({
@@ -284,6 +304,9 @@ export class SaleService {
             quantity: item.quantity,
             priceListId: item.priceListId,
             price: item.price,
+            tax: item.tax,
+            taxAmount: item.taxAmount,
+            lineTotal: item.lineTotal,
             discountType: item.discountType,
             discountValue: item.discountValue,
             discountAmount: item.discountAmount,
@@ -376,6 +399,7 @@ export class SaleService {
         ...sale,
         grossSubtotal,
         subtotal: subtotalDecimal,
+        taxTotal: taxTotalDecimal,
         discount: globalDiscount,
         total,
         pointsEarned,

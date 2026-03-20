@@ -9,6 +9,8 @@ import {
 } from "./inventory.schema";
 import { requireWarehouse } from "../../core/middlewares/warehouse.middleware";
 import { asyncHandler } from "../../core/utils/asyncHandler";
+import { roleMiddleware } from "../../core/middlewares/role.middleware";
+import { Role } from "../user/roles";
 
 const router = Router();
 
@@ -38,8 +40,15 @@ router.get(
 )
 
 router.post(
-  "/transfer", 
+  "/transfer",
+  roleMiddleware(Role.ADMIN),
   asyncHandler(controller.transferInventory),
+);
+
+router.post(
+  "/transfer-product",
+  roleMiddleware(Role.ADMIN),
+  asyncHandler(controller.TransferProduct),
 );
 
 export default router;

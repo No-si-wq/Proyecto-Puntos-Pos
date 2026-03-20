@@ -11,22 +11,12 @@ import { useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import type { ColumnsType } from "antd/es/table";
 
-import SimpleTable from "../../core/components/table/SimpleTable";
-import { useInventory } from "./useInventory";
-import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
-import { exportToPdf } from "../../core/utils/exportPDF";
-import { exportToExcel } from "../../core/utils/exportExcel";
-
-export interface Lot {
-  id: number;
-  quantity: number;
-  cost: number;
-  expiresAt?: string | null;
-  purchase: {
-    id: number;
-    createdAt: string;
-  };
-}
+import SimpleTable from "../../../core/components/table/SimpleTable";
+import { useInventory } from "../hooks/useInventory";
+import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
+import { exportToPdf } from "../../../core/utils/exportPDF";
+import { exportToExcel } from "../../../core/utils/exportExcel";
+import type { Lot } from "../types/inventory";
 
 export default function InventoryPage() {
   const { productId } = useParams();

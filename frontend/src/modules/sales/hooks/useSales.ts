@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
-import http from "../../core/http/http";
+import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
+import http from "../../../core/http/http";
 import type { Sale, CreateSaleDTO } from "./sale";
 
 export function useSales() {
