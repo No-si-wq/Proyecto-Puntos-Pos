@@ -55,3 +55,14 @@ export const removeCommission = asyncHandler(async (req: Request, res: Response)
   await commissionService.removeCommission(id, active);
   res.status(204).send();
 });
+
+export const getCommissionReport = asyncHandler( async (req: Request, res: Response) => {
+  const from =
+    typeof req.query.from === "string" ? new Date(req.query.from) : undefined;
+  const to =
+    typeof req.query.to === "string" ? new Date(req.query.to) : undefined;
+
+  const data = await commissionService.getSummary({ from, to });
+
+  res.json(data);
+})

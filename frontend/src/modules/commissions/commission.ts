@@ -1,3 +1,12 @@
+export interface CommissionRow {
+  userId: number;
+  userName: string;
+  totalSales: number;
+  earned: number;
+  reversed: number;
+  net: number;
+}
+
 export interface CommissionLevel {
   id: number;
   name: string;

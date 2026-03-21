@@ -32,6 +32,7 @@ router.patch(
 );
 
 router.get("/", asyncHandler(controller.getAllCommissions));
+router.get("/reports", roleMiddleware(Role.ADMIN), asyncHandler(controller.getCommissionReport));
 router.get("/user/:userId", asyncHandler(controller.getCommissionsByUser));
 router.post("/", validate(assignCommissionSchema), asyncHandler(controller.assignCommission));
 router.put("/:id", 

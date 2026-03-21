@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Table,
   Card,
@@ -20,28 +20,19 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import { Dayjs } from "dayjs";
-import http from "../../core/http/http";
 import { formatCurrency } from "../../core/utils/formatters";
 import PageHeader from "../../core/components/common/PageHeader";
 import { exportToPdf } from "../../core/utils/exportPDF";
 import { useDeviceType } from "../../core/hooks/useDeviceType";
+import { useCommissionReport } from "./useCommissions";
+import type { CommissionRow } from "./commission";
 import * as XLSX from "xlsx";
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
 
-interface CommissionRow {
-  userId: number;
-  userName: string;
-  totalSales: number;
-  earned: number;
-  reversed: number;
-  net: number;
-}
-
 export default function CommissionReport() {
-  const [data, setData] = useState<CommissionRow[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data, loading, fetch: fetchReport } = useCommissionReport();
   const [dates, setDates] = useState<[Dayjs, Dayjs] | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -49,24 +40,9 @@ export default function CommissionReport() {
   const isCompact = isMobile || isTablet;
 
   async function load() {
-    setLoading(true);
-    try {
-      const params: Record<string, string> = {};
-      if (dates) {
-        params.from = dates[0].startOf("day").toISOString();
-        params.to = dates[1].endOf("day").toISOString();
-      }
-      const { data: rows } = await http.get("/commission-report", { params });
-      setData(rows);
-    } finally {
-      setLoading(false);
-      if (isMobile) setFilterOpen(false);
-    }
+    await fetchReport(dates);
+    if (isMobile) setFilterOpen(false);
   }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   const totalEarned = data.reduce((acc, r) => acc + Number(r.earned), 0);
   const totalReversed = data.reduce((acc, r) => acc + Number(r.reversed), 0);

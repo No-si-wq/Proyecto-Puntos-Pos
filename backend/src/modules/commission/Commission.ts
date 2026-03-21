@@ -1,3 +1,14 @@
+import { Prisma } from "@prisma/client";
+
+export interface CommissionReportRow {
+  userId: number;
+  userName: string;
+  totalSales: number;
+  earned: Prisma.Decimal;
+  reversed: Prisma.Decimal;
+  net: Prisma.Decimal;
+}
+
 export interface CommissionLevel {
   id: number;
   name: string;

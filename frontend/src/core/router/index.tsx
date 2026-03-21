@@ -29,7 +29,7 @@ import SaleDetail from "../../modules/sales/pages/SaleDetail";
 import PurchaseDetail from "../../modules/purchases/PurchaseDetail";
 import PriceLists from "../../modules/priceLists/PriceLists";
 import Commissions from "../../modules/commissions/Commissions";
-import CommissionReport from "../../modules/CommissionReport/CommissionReport";
+import CommissionReport from "../../modules/commissions/CommissionReport";
 
 import Unauthorized from "../../modules/Unauthorized";
 
