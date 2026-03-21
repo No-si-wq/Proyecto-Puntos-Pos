@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { message, Tooltip, Form, Button, Row, Col, Upload } from "antd";
-import { TagsOutlined } from "@ant-design/icons";
+import { message, Tooltip, Form, Button, Row, Col, Upload, Badge } from "antd";
+import { TagsOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
 import type { Product } from "./product";
@@ -22,6 +22,8 @@ import { exportToPdf } from "../../core/utils/exportPDF";
 import { exportToExcel } from "../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
 
+import ReorderPointModal from "./components/ReorderPointModal";
+
 export default function Products() {
   const {
     products,
@@ -30,6 +32,7 @@ export default function Products() {
     update,
     toggleActive,
     importExcel,
+    reorderPoints,
   } = useProducts();
 
   const [open, setOpen] = useState(false);
@@ -40,6 +43,9 @@ export default function Products() {
 
   const [pricesOpen, setPricesOpen] = useState(false);
   const [pricingProduct, setPricingProduct] = useState<Product | null>(null);
+
+  const [reorderOpen, setReorderOpen] = useState(false);
+  const [reorderProduct, setReorderProduct] = useState<Product | null>(null);
 
   function buildBreadcrumbFromId(categoryId: number) {
     const path = buildCategoryPath(categoryTree, categoryId);
@@ -124,6 +130,20 @@ export default function Products() {
   function openPrices(product: Product) {
     setPricingProduct(product);
     setPricesOpen(true);
+  }
+
+  function openReorder(product: Product) {
+    setReorderProduct(product);
+    setReorderOpen(true);
+  }
+
+  async function handleSaveReorderPoint(productId: number, reorderPoint: number) {
+    try {
+      await reorderPoints(productId, reorderPoint);
+      message.success("Punto de reorden actualizado");
+    } catch {
+      message.error("Error actualizando punto de reorden");
+    }
   }
 
   async function submit(values: any) {
@@ -213,6 +233,12 @@ export default function Products() {
       },
     },
     {
+      title: "Mínimo Stock", dataIndex: "reorderPoint",
+      render: (value: number) => value > 0
+        ? <Badge count={value} style={{ backgroundColor: "#faad14" }} overflowCount={9999} />
+        : <span style={{ color: "#bfbfbf" }}>—</span>,
+    },
+    {
       title: "Activo",
       dataIndex: "active",
       render: (v) => (v ? "Sí" : "No"),
@@ -234,7 +260,17 @@ export default function Products() {
               icon={<TagsOutlined />}
               onClick={() => openPrices(record)}
             >
-              Editar
+              Lista Precios
+            </ProtectedButton>
+          </Tooltip>
+
+          <Tooltip title="Punto de reorden">
+            <ProtectedButton 
+              roles={getAllowedRoles("products", "edit")} 
+              icon={<ReloadOutlined />} 
+              onClick={() => openReorder(record)}
+            >
+              Reorden
             </ProtectedButton>
           </Tooltip>
 
@@ -313,6 +349,17 @@ export default function Products() {
           onClose={() => { setPricesOpen(false); setPricingProduct(null); }}
           productId={pricingProduct.id}
           productName={pricingProduct.name}
+        />
+      )}
+
+      {reorderProduct && (
+        <ReorderPointModal
+          open={reorderOpen}
+          onClose={() => { setReorderOpen(false); setReorderProduct(null); }}
+          productId={reorderProduct.id}
+          productName={reorderProduct.name}
+          currentReorderPoint={reorderProduct.reorderPoint ?? 0}
+          onSave={handleSaveReorderPoint}
         />
       )}
     </>

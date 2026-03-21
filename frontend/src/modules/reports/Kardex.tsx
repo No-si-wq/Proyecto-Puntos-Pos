@@ -10,12 +10,14 @@ import type { KardexRow, KardexTableRow } from "./report";
 import { exportKardexToExcel } from "../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
 import { useDeviceType } from "../../core/hooks/useDeviceType";
+import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
 
 export default function Kardex() {
   const { products, loading: loadingProducts } = useWarehouseProducts();
   const sizes = useResponsiveSizes();
   const { fetchKardex, loading } = useReports();
   const { isMobile } = useDeviceType();
+  const warehouseId = useRequiredWarehouse();
 
   const [productId, setProductId] = useState<number>();
   const [range, setRange] = useState<any>();
@@ -148,7 +150,16 @@ export default function Kardex() {
     setCursor(null);
     setHasMore(true);
     setInitialBalance(null);
-  }, [productId]);
+  }, [productId, warehouseId]);
+
+  function clearFilter() {
+    setData([]);
+    setRange(null);
+    setCursor(null);
+    setHasMore(true);
+    setInitialBalance(null);
+    setProductId(undefined);
+  }
 
   const finalBalance = useMemo(() => {
     if (!data.length) return null;
@@ -245,7 +256,7 @@ export default function Kardex() {
           </div>
 
           <ResponsiveRangePicker
-            style={{ width: "100%" }}
+            value={range}
             onChange={(dates) => setRange(dates)}
             size={sizes.input}
           />
@@ -257,6 +268,13 @@ export default function Kardex() {
             onClick={handleSearch}
           >
             Consultar
+          </Button>
+
+          <Button
+            size={sizes.button}
+            onClick={clearFilter}
+          >
+            Limpiar
           </Button>
 
           <Button
@@ -309,7 +327,7 @@ export default function Kardex() {
             <Col>
               <Statistic
                 title="Saldo Final Valor"
-                value={formatMoney(finalBalance.balance_value)}
+                value={formatCurrency(Number(finalBalance.balance_value))}
               />
             </Col>
           </Row>

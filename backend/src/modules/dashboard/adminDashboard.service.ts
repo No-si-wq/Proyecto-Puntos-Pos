@@ -1,37 +1,34 @@
 import prisma from "../../core/prisma";
 
-interface DashboardParams {
-  from?: Date;
-  to?: Date;
+function getTodayRange(): { gte: Date; lte: Date } {
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+  return { gte: start, lte: end };
 }
 
 export class AdminDashboardService {
 
-  static async getDashboard(params?: DashboardParams) {
-    const { from, to } = params || {};
+  static async getDashboard() {
 
-    const dateFilter =
-      from && to
-        ? {
-            createdAt: {
-              gte: from,
-              lte: to,
-            },
-          }
-        : {};
+    const todayFilter = { createdAt: getTodayRange() };
 
     const [
       financial,
       salesByWarehouse,
       inventoryValue,
       topProducts,
-      metrics
+      metrics,
+      reorderAlerts,
     ] = await Promise.all([
-      this.getFinancialSummary(dateFilter),
-      this.getSalesByWarehouse(dateFilter),
+      this.getFinancialSummary(todayFilter),
+      this.getSalesByWarehouse(todayFilter),
       this.getInventoryValue(),
-      this.getTopProducts(dateFilter),
-      this.getExecutiveMetrics(dateFilter),
+      this.getTopProducts(todayFilter),
+      this.getExecutiveMetrics(todayFilter),
+      this.getReorderAlerts(),
     ]);
 
     return {
@@ -40,6 +37,7 @@ export class AdminDashboardService {
       inventoryValue,
       topProducts,
       metrics,
+      reorderAlerts,
     };
   }
 
@@ -223,6 +221,47 @@ export class AdminDashboardService {
     return {
       averageTicket,
       inventoryTurnover,
+    };
+  }
+
+  private static async getReorderAlerts() {
+    const products = await prisma.product.findMany({
+      where: {
+        active: true,
+        reorderPoint: { gt: 0 },
+      },
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        reorderPoint: true,
+        purchaseItems: {
+          where: { quantity: { gt: 0 } },
+          select: { quantity: true },
+        },
+      },
+    });
+ 
+    const alerts = products
+      .map(p => {
+        const currentStock = p.purchaseItems.reduce(
+          (sum, item) => sum + item.quantity,
+          0
+        );
+        return {
+          productId: p.id,
+          productName: p.name,
+          sku: p.sku,
+          currentStock,
+          reorderPoint: p.reorderPoint,
+        };
+      })
+      .filter(p => p.currentStock <= p.reorderPoint)
+      .sort((a, b) => a.currentStock - b.currentStock);
+ 
+    return {
+      count: alerts.length,
+      items: alerts,
     };
   }
 }

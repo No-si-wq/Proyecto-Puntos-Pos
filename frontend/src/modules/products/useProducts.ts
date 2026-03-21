@@ -36,7 +36,12 @@ export function useProducts() {
     return mapProduct(data);
   };
 
-  return { products, loading, reload: load, create, update, toggleActive, importExcel, findByBarcode };
+  const reorderPoints = async (productId: number, reorderPoint: number) => {
+    await http.patch(`/products/${productId}/point`, { reorderPoint })
+    await load();
+  }
+
+  return { products, loading, reload: load, create, update, toggleActive, importExcel, findByBarcode, reorderPoints };
 }
 
 export function useProductPrices(productId: number, enabled: boolean) {

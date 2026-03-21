@@ -56,6 +56,7 @@ export async function importProductsFromExcel(filePath: string) {
       description: row.Descripcion ?? null,
       price: Number(row.Precio),
       cost: Number(row.Costo),
+      tax: Number(row.Impuesto),
       categoryId,
     });
   }

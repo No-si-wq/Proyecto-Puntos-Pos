@@ -174,6 +174,21 @@ export class ProductService {
     return prisma.product.update({ where: { id }, data: { active } });
   }
 
+  static async setReorderPoint(
+    id: number,
+    reorderPoint: number
+  ) {
+    if (reorderPoint < 0) {
+      throw new Error("El punto de reorden no puede ser negativo");
+    }
+ 
+    return prisma.product.update({
+      where: { id },
+      data: { reorderPoint },
+      select: { id: true, name: true, reorderPoint: true },
+    });
+  }
+
   private static async _validatePriceLists(priceListIds: number[]) {
     const found = await prisma.priceList.findMany({
       where: { id: { in: priceListIds }, active: true },

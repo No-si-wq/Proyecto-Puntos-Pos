@@ -19,21 +19,8 @@ export async function getDashboard(req: Request, res: Response) {
 }
 
 export async function getAdminDashboard(req: Request, res: Response) {
-  const from =
-    typeof req.query.from === "string"
-      ? dayjs(req.query.from).startOf("day").toDate()
-      : undefined;
 
-  const to =
-    typeof req.query.to === "string"
-      ? dayjs(req.query.to).endOf("day").toDate()
-      : undefined;
-
-  const data =
-    await AdminDashboardService.getDashboard({
-      from,
-      to,
-    });
+  const data = await AdminDashboardService.getDashboard();
 
   res.json(data);
 }

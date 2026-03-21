@@ -41,6 +41,11 @@ router.post(
   asyncHandler(controller.createProduct)
 );
 
+router.patch(
+  "/:id/point",
+  asyncHandler(controller.ReorderPoint),
+);
+
 router.get(
   "/:id",
   validate(productIdParamSchema),

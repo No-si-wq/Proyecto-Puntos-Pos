@@ -19,7 +19,6 @@ router.get(
 
 router.get(
   "/admin",
-  validate(dashboardQuerySchema),
   requireAdmin,
   asyncHandler(controller.getAdminDashboard,)
 )

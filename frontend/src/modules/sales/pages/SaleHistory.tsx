@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import { useSales } from "../hooks/useSales";
 import SalesTable from "../components/SalesTable";
 import { formatDate, formatCurrency } from "../../../core/utils/formatters";
-import type { Sale } from "./sale";
+import type { Sale } from "../types/sale";
 import ResponsiveRangePicker from "../../../core/components/common/ResponsiveRangePicker";
 import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
 import { exportToPdf } from "../../../core/utils/exportPDF";

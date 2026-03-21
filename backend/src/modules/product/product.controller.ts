@@ -96,6 +96,13 @@ export async function getProductByBarcode(req: Request, res: Response) {
   return res.json(product);
 }
 
+export async function ReorderPoint(req: Request, res: Response) {
+  const id = Number(req.params.id);
+  const { reorderPoint } = req.body;
+  const data = await ProductService.setReorderPoint(id, reorderPoint);
+  res.json(data);
+}
+
 export async function ProductPrices(req: Request, res: Response) {
   const id = Number(req.params.id);
 

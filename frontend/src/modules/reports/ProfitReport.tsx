@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Table,
   Card,
@@ -16,6 +16,7 @@ import { formatCurrency } from "../../core/utils/formatters";
 import { exportProfitReportToExcel } from "../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
 import { useDeviceType } from "../../core/hooks/useDeviceType";
+import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
 
 export default function ProfitReport() {
   const { fetchProfit, loading } = useReports();
@@ -23,6 +24,7 @@ export default function ProfitReport() {
   const [range, setRange] = useState<any>();
   const [data, setData] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
+  const warehouseId = useRequiredWarehouse();
   const sizes = useResponsiveSizes();
   const { isMobile } = useDeviceType();
 
@@ -37,6 +39,17 @@ export default function ProfitReport() {
     setData(result.details);
     setSummary(result.summary);
   };
+
+  useEffect(() => {
+    setData([]);
+    setSummary(null);
+  }, [warehouseId])
+
+  function clearFilter() {
+    setData([]);
+    setSummary(null);
+    setRange(null);
+  }
 
   const totalMarginColor = useMemo(() => {
     if (!summary) return "default";
@@ -54,7 +67,7 @@ export default function ProfitReport() {
           style={{ marginBottom: 12, width: isMobile ? "100%" : undefined }}
         >
           <ResponsiveRangePicker
-            style={{ width: "100%" }}
+            value={range}
             onChange={(dates) => setRange(dates)}
             size={sizes.input}
           />
@@ -66,6 +79,13 @@ export default function ProfitReport() {
             onClick={handleSearch}
           >
             Consultar
+          </Button>
+
+          <Button
+            size={sizes.button}
+            onClick={clearFilter}
+          >
+            Limpiar
           </Button>
 
           <Button

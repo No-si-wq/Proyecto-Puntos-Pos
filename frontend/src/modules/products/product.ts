@@ -11,6 +11,7 @@ export interface Product {
   cost: number;
   tax: number;
   stock: number;
+  reorderPoint: number;
 
   barcodes: string[];
 
@@ -39,7 +40,6 @@ export interface CreateProductDTO {
   description?: string;
   price: number;
   cost: number;
-  tax: number;
   categoryId: number;
 
   barcodes?: string[];
@@ -51,7 +51,6 @@ export interface UpdateProductDTO {
   description?: string;
   price?: number;
   cost?: number;
-  tax?: number;
   categoryId?: number;
   active?: boolean;
 
