@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
 import http from "../../../core/http/http";
-import type { Sale, CreateSaleDTO } from "./sale";
+import type { Sale, CreateSaleDTO } from "../types/sale";
 
 export function useSales() {
   const [sales, setSales] = useState<Sale[]>([]);
