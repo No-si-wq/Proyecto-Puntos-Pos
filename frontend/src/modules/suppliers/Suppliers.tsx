@@ -79,11 +79,17 @@ export default function Suppliers() {
 
   async function submit(values: any) {
     try {
+      const payload = {
+        ...values,
+        email: values.email?.trim() || undefined,
+        phone: values.phone?.trim() || undefined,
+      }
+
       if (editing) {
-        await update(editing.id, values);
+        await update(editing.id, payload);
         message.success("Proveedor actualizado");
       } else {
-        await create(values);
+        await create(payload);
         message.success("Proveedor creado");
       }
       setOpen(false);
