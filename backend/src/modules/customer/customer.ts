@@ -5,6 +5,7 @@ export interface CustomerBase {
   name: string;
   email?: CustomerEmail;
   phone?: CustomerPhone;
+  dni?: string;
 }
 
 export type CreateCustomerInput = CustomerBase;

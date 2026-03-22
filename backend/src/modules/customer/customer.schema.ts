@@ -5,6 +5,7 @@ export const createCustomerSchema = z.object({
     name: z.string().min(3, "Nombre muy corto"),
     email: z.string().email("Email inválido").optional(),
     phone: z.string().min(6).optional(),
+    dni: z.string().min(13, "DNI invalido").optional(),
   }),
 });
 
@@ -13,6 +14,7 @@ export const updateCustomerSchema = z.object({
     name: z.string().min(3).optional(),
     email: z.string().email().optional(),
     phone: z.string().min(6).optional(),
+    dni: z.string().min(13, "DNI invalido").optional(),
     active: z.boolean().optional(),
   }),
 });

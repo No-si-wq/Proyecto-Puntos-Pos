@@ -2,7 +2,13 @@ import { Request, Response } from "express";
 import { CustomerService } from "./customer.service";
 
 export async function listCustomers(req: Request, res: Response) {
-  const customers = await CustomerService.list();
+
+  const search =
+    typeof req.query.search === "string"
+      ? req.query.search
+      : undefined;
+
+  const customers = await CustomerService.list({ search });
   res.json(customers);
 }
 

@@ -4,22 +4,32 @@ import { Prisma } from "@prisma/client";
 import { DomainError } from "../../core/errors/domain-error";
 
 export class CustomerService {
-  static async list() {
+  static async list(
+    params: { search?: string }
+  ) {
+    
+    const { search } = params;
+
     return prisma.customer.findMany({
-      where: { active: true },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
+      where: { 
         active: true,
-        createdAt: true,
-        points: {
-          select: {
-            balance: true,
-          },
-        },
-      },
+        ...(search && {
+          OR: [
+            {
+              dni: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+          ],
+        }),
+       },
       orderBy: { createdAt: "desc" },
     });
   }

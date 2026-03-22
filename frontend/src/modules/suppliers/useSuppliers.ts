@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import http from "../../core/http/http";
+import type { Filters } from "../inventory/types/inventory";
 import type {
   Supplier,
   CreateSupplierDTO,
@@ -9,17 +10,20 @@ import type {
 export function useSuppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState<Filters>({});
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await http.get<Supplier[]>("/suppliers");
+      const { data } = await http.get<Supplier[]>("/suppliers", {
+        params: { search: filters.search }
+      });
       setSuppliers(data);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters.search]);
 
   useEffect(() => {
     load();
@@ -48,6 +52,8 @@ export function useSuppliers() {
   return {
     suppliers,
     loading,
+    filters,
+    setFilters,
     creating,
     reload: load,
     create,

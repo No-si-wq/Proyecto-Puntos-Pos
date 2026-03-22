@@ -66,10 +66,10 @@ export class DashboardService {
         where: {
           quantity: { gt: 0 },
           warehouseId,
-          expiresAt: {
-            not: null,
-            lte: dayjs().add(60, "day").toDate(),
-          },
+          AND: [
+            { expiresAt: { not: null } },
+            { expiresAt: { lte: dayjs().add(60, "day").endOf("day").toDate() } },
+          ],
         },
         include: {
           product: {

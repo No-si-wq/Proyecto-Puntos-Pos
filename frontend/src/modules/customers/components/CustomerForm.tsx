@@ -22,6 +22,16 @@ export default function CustomerForm({
       onCancel={onCancel}
     >
       <Form.Item
+        name="dni"
+        label="DNI"
+        rules={[
+          { required: true, min: 13, message: "DNI muy corto" },
+        ]}
+      >
+        <Input autoFocus />
+      </Form.Item>
+
+      <Form.Item
         name="name"
         label="Nombre"
         rules={[

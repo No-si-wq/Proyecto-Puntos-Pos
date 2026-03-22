@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import http from "../../core/http/http"
+import type { Filters } from "../inventory/types/inventory";
 import type {
   Customer,
   CreateCustomerDTO,
@@ -8,17 +9,20 @@ import type {
 
 export function useCustomers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filters, setFilters] = useState<Filters>({});
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await http.get<Customer[]>("/customers");
+      const { data } = await http.get<Customer[]>("/customers", {
+        params: { search: filters.search }
+      });
       setCustomers(data);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters.search]);
 
   useEffect(() => {
     load();
@@ -42,6 +46,8 @@ export function useCustomers() {
   return {
     customers,
     loading,
+    filters,
+    setFilters,
     reload: load,
     create,
     update,

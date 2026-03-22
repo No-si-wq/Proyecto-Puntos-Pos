@@ -37,7 +37,11 @@ export async function importProducts(req: Request, res: Response) {
 }
 
 export async function listProducts(req: Request, res: Response) {
-  const data = await ProductService.listGlobal();
+  const search =
+    typeof req.query.search === "string"
+      ? req.query.search
+      : undefined;
+  const data = await ProductService.listGlobal({search});
   return res.json(data);
 }
 

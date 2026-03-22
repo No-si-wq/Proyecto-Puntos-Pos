@@ -6,9 +6,32 @@ import {
 } from "./supplier";
 
 export class SupplierService {
-  static async list() {
+  static async list(
+    params: { search?: string }
+  ) {
+
+    const { search } = params;
+
     return prisma.supplier.findMany({
-      where: { active: true },
+      where: { 
+        active: true,
+        ...(search && {
+          OR: [
+            {
+              rtn: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              }
+            },
+          ],
+        }),
+       },
       orderBy: { name: "asc" },
     });
   }

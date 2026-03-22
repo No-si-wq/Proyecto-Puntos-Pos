@@ -3,21 +3,25 @@ import { message } from "antd";
 import http from "../../core/http/http";
 import type { Product, CreateProductDTO, UpdateProductDTO, ApiProduct } from "./product";
 import type { ProductPrice } from "../priceLists/pricelist";
+import type { Filters } from "../inventory/types/inventory";
 import { mapProduct } from "./product";
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [filters, setFilters] = useState<Filters>({});
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await http.get<Product[]>("/products");
+      const { data } = await http.get<Product[]>("/products", {
+        params: {search: filters.search}
+      });
       setProducts(data);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters.search]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -41,7 +45,7 @@ export function useProducts() {
     await load();
   }
 
-  return { products, loading, reload: load, create, update, toggleActive, importExcel, findByBarcode, reorderPoints };
+  return { products, loading, filters, setFilters, reload: load, create, update, toggleActive, importExcel, findByBarcode, reorderPoints };
 }
 
 export function useProductPrices(productId: number, enabled: boolean) {

@@ -1,18 +1,13 @@
 import { Form, Select, InputNumber } from "antd";
+import { type User, Role } from "../../users/user";
 import FormBase from "../../../core/components/forms/FormBase";
 import type { SalesCommission, CommissionLevel, AssignCommissionDto, UpdateCommissionDto } from "../commission";
-
-interface UserOption {
-  id: number;
-  name: string | null;
-  username: string;
-}
 
 interface Props {
   onSubmit: (data: AssignCommissionDto | UpdateCommissionDto) => Promise<void>;
   onCancel: () => void;
   levels: CommissionLevel[];
-  users: UserOption[];
+  users: User[];
   initial?: SalesCommission | null;
   loading?: boolean;
 }
@@ -50,10 +45,12 @@ export function AssignCommissionForm({ onSubmit, onCancel, levels, users, initia
           disabled={isEdit}
           placeholder="Seleccionar usuario..."
           optionFilterProp="label"
-          options={users.map((u) => ({
-            value: u.id,
-            label: u.name ? `${u.name} (${u.username})` : u.username,
-          }))}
+          options={users
+            .filter((u) => u.role === Role.USER)
+            .map((u) => ({
+              value: u.id,
+              label: u.name ? `${u.name} (${u.username})` : u.username,
+            }))}
         />
       </Form.Item>
 

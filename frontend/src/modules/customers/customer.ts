@@ -3,6 +3,7 @@ export interface Customer {
   name: string;
   email?: string;
   phone?: string;
+  dni: string;
   active: boolean;
   createdAt?: string;
   points?: {
@@ -14,11 +15,13 @@ export interface CreateCustomerDTO {
   name: string;
   email?: string;
   phone?: string;
+  dni: string;
 }
 
 export interface UpdateCustomerDTO {
   name?: string;
   email?: string;
   phone?: string;
+  dni?: string;
   active?: boolean;
 }

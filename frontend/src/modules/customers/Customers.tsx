@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { message, Button, Row, Col } from "antd";
+import { useState, useEffect } from "react";
+import { message, Button, Row, Col, Input } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
 import type { Customer } from "./customer";
@@ -22,14 +22,26 @@ export default function Customers() {
   const {
     customers,
     loading,
+    setFilters,
     create,
     update,
     toggleActive,
   } = useCustomers();
 
   const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
   const [editing, setEditing] = useState<Customer | null>(null);
   const sizes = useResponsiveSizes();
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setFilters({
+        search: searchValue || undefined,
+      });
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [searchValue]);
 
   function buildExportRows(data: Customer[]) {
     return data
@@ -38,6 +50,7 @@ export default function Customers() {
         Nombre: c.name,
         Email: c.email ?? "-",
         Telefono: c.phone ?? "-",
+        DNI: c.dni ?? "-",
         Puntos: c.points?.balance ?? 0,
       }));
   }
@@ -56,6 +69,7 @@ export default function Customers() {
         { header: "Nombre", dataKey: "Nombre" },
         { header: "Email", dataKey: "Email" },
         { header: "Telefono", dataKey: "Telefono" },
+        { header: "DNI", dataKey: "DNI" },
         { header: "Puntos", dataKey: "Puntos" },
       ],
       buildExportRows(customers),
@@ -111,6 +125,11 @@ export default function Customers() {
   }
 
   const columns: ColumnsType<Customer> = [
+    {
+      title: "DNI",
+      dataIndex: "dni",
+      render: (v) => v ?? "-",
+    },
     { title: "Nombre", dataIndex: "name" },
     {
       title: "Email",
@@ -179,9 +198,15 @@ export default function Customers() {
         justify="space-between"
         align="middle"
         style={{ marginBottom: 16 }}
+        gutter={[16, 16]}
       >
+        <Input
+          placeholder="Buscar por nombre"
+          allowClear
+          onChange={(e) => setSearchValue(e.target.value)}
+        />
         <Col>
-          <Row gutter={12}>
+          <Row gutter={[16, sizes.gutter]}>
             <Col>
               <Button
                 type="default"

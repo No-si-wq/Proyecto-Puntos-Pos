@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { message, Row, Col, Button } from "antd";
+import { useState, useEffect } from "react";
+import { message, Row, Col, Button, Input } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
 import type { Supplier } from "./supplier";
@@ -18,11 +18,22 @@ import { ConfirmModal } from "../../core/components/common/ConfirmModal";
 import { getAllowedRoles } from "../../core/utils/permissions";
 
 export default function Suppliers() {
-  const { suppliers, loading, create, update, toggleActive } = useSuppliers();
+  const { suppliers, loading, setFilters, create, update, toggleActive } = useSuppliers();
   const sizes = useResponsiveSizes();
 
   const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
   const [editing, setEditing] = useState<Supplier | null>(null);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setFilters({
+        search: searchValue || undefined,
+      });
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [searchValue]);
 
   function buildExportRows(data: Supplier[]) {
     return data
@@ -31,6 +42,7 @@ export default function Suppliers() {
         Nombre: s.name,
         Email: s.email ?? "-",
         Telefono: s.phone ?? "-",
+        RTN: s.rtn ?? "-",
       }));
   }
 
@@ -45,6 +57,7 @@ export default function Suppliers() {
     exportToPdf(
       "Proveedores",
       [
+        { header: "RTN", dataKey: "RTN" },
         { header: "Nombre", dataKey: "Nombre" },
         { header: "Email", dataKey: "Email" },
         { header: "Telefono", dataKey: "Telefono" },
@@ -96,6 +109,7 @@ export default function Suppliers() {
   }
 
   const columns: ColumnsType<Supplier> = [
+    { title: "RTN", dataIndex: "rtn", render: (v) => v ?? "—" },
     { title: "Nombre", dataIndex: "name" },
     { title: "Email", dataIndex: "email", render: (v) => v ?? "—" },
     { title: "Teléfono", dataIndex: "phone", render: (v) => v ?? "—" },
@@ -147,9 +161,15 @@ export default function Suppliers() {
         justify="space-between"
         align="middle"
         style={{ marginBottom: 16 }}
+        gutter={[16, 16]}
       >
+        <Input
+          placeholder="Buscar por nombre"
+          allowClear
+          onChange={(e) => setSearchValue(e.target.value)}
+        />
         <Col>
-          <Row gutter={12}>
+          <Row gutter={[16, sizes.gutter]}>
             <Col>
               <Button
                 type="default"

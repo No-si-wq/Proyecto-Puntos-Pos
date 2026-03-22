@@ -90,6 +90,7 @@ model Customer {
   active     Boolean               @default(true)
   createdAt  DateTime              @default(now())
   updatedAt  DateTime              @updatedAt
+  dni        String?
   receivable AccountReceivable[]
   points     LoyaltyPoint?
   history    LoyaltyPointHistory[]
@@ -194,6 +195,7 @@ model Supplier {
   active    Boolean          @default(true)
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
+  rtn       String?
   payable   AccountPayable[]
   purchases Purchase[]
 }

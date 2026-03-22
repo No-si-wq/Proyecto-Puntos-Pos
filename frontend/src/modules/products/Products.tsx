@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { message, Tooltip, Form, Button, Row, Col, Upload, Badge } from "antd";
+import { useState, useMemo, useEffect } from "react";
+import { message, Tooltip, Form, Button, Row, Col, Upload, Badge, Input } from "antd";
 import { TagsOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
@@ -33,10 +33,12 @@ export default function Products() {
     toggleActive,
     importExcel,
     reorderPoints,
+    setFilters,
   } = useProducts();
 
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm<Product>();
+  const [searchValue, setSearchValue] = useState("");
   const [editing, setEditing] = useState<Product | null>(null);
   const sizes = useResponsiveSizes();
   const { categoryTree } = useCategories();
@@ -46,6 +48,16 @@ export default function Products() {
 
   const [reorderOpen, setReorderOpen] = useState(false);
   const [reorderProduct, setReorderProduct] = useState<Product | null>(null);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setFilters({
+        search: searchValue || undefined,
+      });
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [searchValue]);
 
   function buildBreadcrumbFromId(categoryId: number) {
     const path = buildCategoryPath(categoryTree, categoryId);
@@ -302,9 +314,19 @@ export default function Products() {
         }
       />
 
-      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+      <Row 
+        justify="space-between"
+        align="middle" 
+        style={{ marginBottom: 16 }}
+        gutter={[16, 16]}
+      >
+        <Input
+          placeholder="Buscar por nombre"
+          allowClear
+          onChange={(e) => setSearchValue(e.target.value)}
+        />
         <Col>
-          <Row gutter={12}>
+          <Row gutter={[16, sizes.gutter]}>
             <Col>
               <Button type="default" onClick={handleExportExcel} size={sizes.button}>
                 Exportar Excel

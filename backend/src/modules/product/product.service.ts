@@ -41,12 +41,38 @@ function rethrowBarcodeError(error: unknown): never {
 }
 
 export class ProductService {
-  static async listGlobal() {
-    return prisma.product.findMany({
-      where: { active: true },
+  static async listGlobal(params: { 
+    search?: string;
+   }) {
+    const { search } = params;
+    const products = await prisma.product.findMany({
+      where: { 
+        active: true,
+        ...(search && {
+          OR: [
+            {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              sku: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+          ],
+        })
+       },
       include: { barcodes: { select: { code: true } }, ...pricesInclude },
       orderBy: { name: "asc" },
     });
+
+    return products.map(p => ({
+      ...p,
+      barcodes: p.barcodes.map(b => b.code),
+    }));
   }
 
   static async getByWarehouse(warehouseId: number) {
@@ -75,7 +101,13 @@ export class ProductService {
   }
 
   static async getById(id: number) {
-    return prisma.product.findUnique({ where: { id }, select: baseSelect });
+    const product = await prisma.product.findUnique({ where: { id }, select: baseSelect });
+    if (!product) return null;
+
+    return {
+      ...product,
+      barcodes: product.barcodes.map(b => b.code),
+    };
   }
 
   static async getPrices(id: number) {

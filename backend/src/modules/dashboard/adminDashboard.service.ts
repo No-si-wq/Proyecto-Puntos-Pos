@@ -25,7 +25,7 @@ export class AdminDashboardService {
     ] = await Promise.all([
       this.getFinancialSummary(todayFilter),
       this.getSalesByWarehouse(todayFilter),
-      this.getInventoryValue(),
+      this.getInventoryValue(todayFilter),
       this.getTopProducts(todayFilter),
       this.getExecutiveMetrics(todayFilter),
       this.getReorderAlerts(),
@@ -124,11 +124,12 @@ export class AdminDashboardService {
     });
   }
 
-  private static async getInventoryValue() {
+  private static async getInventoryValue(dateFilter: any) {
 
     const lots = await prisma.purchaseItem.findMany({
       where: {
         quantity: { gt: 0 },
+        purchase: dateFilter,
       },
       select: {
         quantity: true,
@@ -148,6 +149,9 @@ export class AdminDashboardService {
   private static async getTopProducts(dateFilter: any) {
 
     const grouped = await prisma.saleItem.groupBy({
+      where: {
+        sale: dateFilter,
+      },
       by: ["productId"],
       _sum: {
         quantity: true,
@@ -211,7 +215,7 @@ export class AdminDashboardService {
         ? totalRevenue / sales.length
         : 0;
 
-    const inventoryValue = await this.getInventoryValue();
+    const inventoryValue = await this.getInventoryValue(dateFilter);
 
     const inventoryTurnover =
       totalCogs > 0 && inventoryValue > 0
