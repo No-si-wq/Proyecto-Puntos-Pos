@@ -123,7 +123,7 @@ export default function Products() {
       description: editing.description,
       price: editing.price,
       cost: editing.cost,
-      tax: editing.tax,
+      tax: editing.tax != null ? Number(editing.tax) * 100 : undefined,
       barcodes: editing.barcodes ?? undefined,
       categoryPath: path.map(c => c.id),
       active: editing.active,
@@ -172,7 +172,7 @@ export default function Products() {
         description: values.description,
         price: values.price,
         cost: values.cost,
-        tax: values.tax,
+        tax: values.tax != null ? values.tax / 100 : values.tax,
         active: values.active,
         categoryId,
         ...(values.barcodes !== undefined && {

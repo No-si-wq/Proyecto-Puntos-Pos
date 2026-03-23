@@ -66,8 +66,6 @@ export default function ProductForm({
         rules={[
           { required: true, type: "number", min: 0, max: 100, message: "Impuesto inválido (0-100)" },
         ]}
-        normalize={(value) => (value != null ? value / 100 : value)}
-        getValueProps={(value) => ({ value: value != null ? value * 100 : value })}
       >
         <InputNumber
           min={0}

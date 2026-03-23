@@ -138,6 +138,7 @@ export class ProductService {
           description: data.description,
           price: data.price,
           cost: data.cost,
+          tax: data.tax,
           categoryId: data.categoryId,
           barcodes: data.barcodes?.length
             ? { create: data.barcodes.map((code) => ({ code })) }
