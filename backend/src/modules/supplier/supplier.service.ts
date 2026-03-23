@@ -59,6 +59,7 @@ export class SupplierService {
     try {
       return await prisma.supplier.create({
         data: {
+          rtn: data.rtn,
           name: data.name.trim(),
           email: data.email,
           phone: data.phone,

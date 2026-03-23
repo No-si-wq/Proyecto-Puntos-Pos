@@ -58,6 +58,7 @@ export class CustomerService {
       return prisma.$transaction(async (tx) => {
         const customer = await tx.customer.create({
           data: {
+            dni: data.dni,
             name: data.name,
             email: data.email,
             phone: data.phone,
