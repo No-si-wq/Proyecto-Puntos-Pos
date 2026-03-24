@@ -1,6 +1,6 @@
 import { Form, Input, Select } from "antd";
 import FormBase from "../../../core/components/forms/FormBase";
-import type { CommissionLevel, CreateCommissionLevelDto, UpdateCommissionLevelDto } from "../commission";
+import type { CommissionLevel, CreateCommissionLevelDto, UpdateCommissionLevelDto } from "../types/commission";
 import { usePriceLists } from "../../priceLists/usePriceList";
 
 interface Props {

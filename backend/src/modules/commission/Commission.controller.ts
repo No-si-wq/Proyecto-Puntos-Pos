@@ -35,7 +35,8 @@ export const getAllCommissions = asyncHandler(async (_req: Request, res: Respons
 });
 
 export const getCommissionsByUser = asyncHandler(async (req: Request, res: Response) => {
-  const data = await commissionService.getCommissionsByUser(Number(req.params.userId));
+  const userId = Number(req.params.userId);
+  const data = await commissionService.getCommissionsByUser(userId);
   res.json(data);
 });
 

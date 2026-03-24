@@ -4,25 +4,41 @@ import {
   InputNumber,
   Input,
   message,
+  Select,
+  Checkbox
 } from "antd";
 import { useState } from "react";
 import { useAccountPayable } from "./useAccountPayable";
 import { formatCurrency } from "../../core/utils/formatters";
 import PageHeader from "../../core/components/common/PageHeader";
 import FinancialAccountsTable from "../../core/components/table/FinancialAccountsTable";
+import { useSuppliers } from "../suppliers/useSuppliers";
 
 export default function AccountsPayable() {
-  const { data, loading, pay } =
+  const { data, loading, pay, reload } =
     useAccountPayable();
+
+  const { suppliers } = useSuppliers();
 
   const [selected, setSelected] =
     useState<any>(null);
+
+  const [filters, setFilters] = useState<{
+    status?: string;
+    supplierId?: number;
+    overdue?: boolean;
+  }>({});
 
   const [amount, setAmount] =
     useState<number>(0);
 
   const [note, setNote] =
     useState<string>();
+
+  function handleFilterChange(newFilters: typeof filters) {
+    setFilters(newFilters);
+    reload(newFilters);
+  }
 
   async function handlePayment() {
     if (!amount || amount <= 0) {
@@ -45,6 +61,54 @@ export default function AccountsPayable() {
       />
 
       <Card>
+        <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+          
+          <Select
+            allowClear
+            placeholder="Estado"
+            style={{ width: 160 }}
+            onChange={(value) =>
+              handleFilterChange({ ...filters, status: value })
+            }
+            options={[
+              { label: "Pendiente", value: "PENDING" },
+              { label: "Parcial",   value: "PARTIAL" },
+              { label: "Pagado",    value: "PAID" },
+            ]}
+          />
+
+          <Select
+            allowClear
+            showSearch                        
+            placeholder="Proveedor"
+            style={{ width: 220 }}
+            filterOption={(input, option) =>
+              (option?.label ?? "")
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+            onChange={(value) =>
+              handleFilterChange({ ...filters, supplierId: value })
+            }
+            options={suppliers.map((s) => ({
+              label: s.name,
+              value: s.id,
+            }))}
+          />
+
+          <Checkbox
+            onChange={(e) =>
+              handleFilterChange({
+                ...filters,
+                overdue: e.target.checked || undefined,
+              })
+            }
+          >
+            Solo vencidas
+          </Checkbox>
+
+        </div>
+
         <FinancialAccountsTable
           data={data}
           loading={loading}

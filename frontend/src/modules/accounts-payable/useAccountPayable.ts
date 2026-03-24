@@ -4,9 +4,11 @@ import http from "../../core/http/http";
 export function useAccountPayable() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentFilters, setCurrentFilters] = useState<any>({});
 
   async function load(filters?: any) {
     setLoading(true);
+    setCurrentFilters(filters ?? {});
     try {
       const res = await http.get("/account-payable", {
         params: filters,
@@ -27,7 +29,7 @@ export function useAccountPayable() {
       note,
     });
 
-    await load();
+    await load(currentFilters);
   }
 
   useEffect(() => {

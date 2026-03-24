@@ -28,8 +28,9 @@ import ProfitReport from "../../modules/reports/ProfitReport";
 import SaleDetail from "../../modules/sales/pages/SaleDetail";
 import PurchaseDetail from "../../modules/purchases/PurchaseDetail";
 import PriceLists from "../../modules/priceLists/PriceLists";
-import Commissions from "../../modules/commissions/Commissions";
-import CommissionReport from "../../modules/commissions/CommissionReport";
+import Commissions from "../../modules/commissions/pages/Commissions";
+import CommissionReport from "../../modules/commissions/pages/CommissionReport";
+import CommissionUserDetail from "../../modules/commissions/pages/CommissionUserDetail";
 
 import Unauthorized from "../../modules/Unauthorized";
 
@@ -82,6 +83,8 @@ export default function AppRouter() {
               </ProtectedRoute>
             }
           />
+
+          <Route path="/commissions/user/:userId" element={<CommissionUserDetail />} />
 
           <Route
             path="/customers"

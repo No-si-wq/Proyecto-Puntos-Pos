@@ -20,18 +20,20 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import { Dayjs } from "dayjs";
-import { formatCurrency } from "../../core/utils/formatters";
-import PageHeader from "../../core/components/common/PageHeader";
-import { exportToPdf } from "../../core/utils/exportPDF";
-import { useDeviceType } from "../../core/hooks/useDeviceType";
-import { useCommissionReport } from "./useCommissions";
-import type { CommissionRow } from "./commission";
+import { formatCurrency } from "../../../core/utils/formatters";
+import PageHeader from "../../../core/components/common/PageHeader";
+import { exportToPdf } from "../../../core/utils/exportPDF";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
+import { useCommissionReport } from "../hooks/useCommissionReport";
+import type { CommissionRow } from "../types/commission";
+import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
 
 export default function CommissionReport() {
+  const navigate = useNavigate();
   const { data, loading, fetch: fetchReport } = useCommissionReport();
   const [dates, setDates] = useState<[Dayjs, Dayjs] | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -335,6 +337,10 @@ export default function CommissionReport() {
         pagination={false}
         size={isCompact ? "small" : "middle"}
         scroll={isCompact ? { x: true } : undefined}
+        onRow={(record) => ({
+          onClick: () => navigate(`/commissions/user/${record.userId}`),
+          style: { cursor: "pointer" },
+        })}
         expandable={
           isMobile
             ? {

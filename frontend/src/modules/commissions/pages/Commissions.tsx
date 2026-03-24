@@ -2,16 +2,17 @@ import { useState } from "react";
 import { Tabs, Table, Tag, Space, Typography, Dropdown } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from "@ant-design/icons";
 import type { MenuProps } from "antd";
-import PageHeader from "../../core/components/common/PageHeader";
-import ProtectedButton from "../../core/components/common/ProtectedButton";
-import FormModal from "../../core/components/forms/FormModal";
-import { CommissionLevelForm } from "./components/CommissionLevelForm";
-import { AssignCommissionForm } from "./components/AssignCommissionForm";
-import { useCommissionLevels, useCommissions } from "./useCommissions";
-import { getAllowedRoles } from "../../core/utils/permissions";
-import type { CommissionLevel, SalesCommission } from "./commission";
-import { useUsers } from "../users/useUsers";
-import { useDeviceType } from "../../core/hooks/useDeviceType";
+import PageHeader from "../../../core/components/common/PageHeader";
+import ProtectedButton from "../../../core/components/common/ProtectedButton";
+import FormModal from "../../../core/components/forms/FormModal";
+import { CommissionLevelForm } from "../components/CommissionLevelForm";
+import { AssignCommissionForm } from "../components/AssignCommissionForm";
+import { useCommissions } from "../hooks/useCommissions";
+import { useCommissionLevels } from "../hooks/useCommissionLevels";
+import { getAllowedRoles } from "../../../core/utils/permissions";
+import type { CommissionLevel, SalesCommission } from "../types/commission";
+import { useUsers } from "../../users/useUsers";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
 
 const { Text } = Typography;
 

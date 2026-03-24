@@ -38,7 +38,7 @@ router.post("/", validate(assignCommissionSchema), asyncHandler(controller.assig
 router.put("/:id", 
   validate(updateCommissionSchema), 
   roleMiddleware(Role.ADMIN),
-  asyncHandler(controller.updateCommission)
+  asyncHandler(controller.updateCommission),
 );
 router.patch(
   "/:id/activate", 

@@ -1,7 +1,7 @@
 import { Form, Select, InputNumber } from "antd";
 import { type User, Role } from "../../users/user";
 import FormBase from "../../../core/components/forms/FormBase";
-import type { SalesCommission, CommissionLevel, AssignCommissionDto, UpdateCommissionDto } from "../commission";
+import type { SalesCommission, CommissionLevel, AssignCommissionDto, UpdateCommissionDto } from "../types/commission";
 
 interface Props {
   onSubmit: (data: AssignCommissionDto | UpdateCommissionDto) => Promise<void>;
