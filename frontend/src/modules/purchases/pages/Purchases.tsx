@@ -13,18 +13,19 @@ import {
   Select as AntSelect
 } from "antd";
 
-import { usePurchases } from "./usePurchases";
-import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
-import { useCartPurchase } from "./useCartPurchase";
-import { useSuppliers } from "../suppliers/useSuppliers";
-import { formatCurrency } from "../../core/utils/formatters";
-import { PurchaseCartTable } from "./components/PurchaseCartTable";
-import { useBarcodeScanner } from "../../core/hooks/useBarcodeScanner";
-import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
-import { useWarehouseProducts } from "../warehouses/useWarehouseProducts";
-import type { PurchasePaymentMethod } from "./purchase";
+import { useDebouncedCallback } from "use-debounce";
+import { usePurchases } from "../hooks/usePurchases";
+import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
+import { useCartPurchase } from "../hooks/useCartPurchase";
+import { useSuppliers } from "../../suppliers/useSuppliers";
+import { formatCurrency } from "../../../core/utils/formatters";
+import { PurchaseCartTable } from "../components/PurchaseCartTable";
+import { useBarcodeScanner } from "../../../core/hooks/useBarcodeScanner";
+import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
+import { useWarehouseProducts } from "../../warehouses/useWarehouseProducts";
+import type { PurchasePaymentMethod } from "../types/purchase";
 
-import PageHeader from "../../core/components/common/PageHeader";
+import PageHeader from "../../../core/components/common/PageHeader";
 
 export default function Purchases() {
   const [supplierId, setSupplierId] = useState(undefined);
@@ -41,7 +42,11 @@ export default function Purchases() {
   const selectRef = useRef<any>(null);
   const cart = useCartPurchase();
   const sizes = useResponsiveSizes();
-  const { suppliers } = useSuppliers();
+  const { suppliers, loading: loadingSuppliers, setFilters: setFiltersSupplier } = useSuppliers();
+
+  const handleSearch = useDebouncedCallback((value: string) => {
+    setFiltersSupplier({ search: value });
+  }, 400);
 
   const { onKey } = useBarcodeScanner({
     onProductFound: (product, meta) => {
@@ -137,6 +142,7 @@ export default function Purchases() {
                   showSearch
                   virtual
                   listHeight={sizes.selectListHeight}
+                  loading={loadingSuppliers}
                   placeholder="Buscar proveedor..."
                   allowClear
                   value={supplierId}
@@ -144,14 +150,9 @@ export default function Purchases() {
                   size={sizes.select}
                   dropdownMatchSelectWidth
                   onChange={setSupplierId}
+                  onSearch={handleSearch}
                   status={supplierId ?? undefined}
-                  optionFilterProp="label"
-                  filterOption={(input, option) => {
-                    const label = option?.label as string;
-                    return label
-                      ?.toLowerCase()
-                      .includes(input.toLowerCase());
-                  }}
+                  filterOption={false}
                   options={suppliers
                     .filter((s) => s.active)
                     .map((s) => ({

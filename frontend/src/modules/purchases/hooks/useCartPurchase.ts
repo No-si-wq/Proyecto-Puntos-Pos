@@ -1,5 +1,5 @@
-import { purchaseCartStore } from "./purchaseCart.store";
-import type { Product } from "../products/product";
+import { purchaseCartStore } from "../types/purchaseCart.store";
+import type { Product } from "../../products/product";
 
 export function useCartPurchase() {
   const cart = purchaseCartStore();

@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { Button, Space } from "antd";
 import dayjs from "dayjs";
-import PageHeader from "../../core/components/common/PageHeader";
-import PurchasesTable from "./components/PurchasesTable";
-import { formatDate, formatCurrency } from "../../core/utils/formatters";
-import { usePurchases } from "./usePurchases";
-import type { Purchase } from "./purchase";
-import { exportToPdf } from "../../core/utils/exportPDF";
-import { exportToExcel } from "../../core/utils/exportExcel";
-import ResponsiveRangePicker from "../../core/components/common/ResponsiveRangePicker";
-import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
-import { useDeviceType } from "../../core/hooks/useDeviceType";
+import PageHeader from "../../../core/components/common/PageHeader";
+import PurchasesTable from "../components/PurchasesTable";
+import { formatDate, formatCurrency } from "../../../core/utils/formatters";
+import { usePurchases } from "../hooks/usePurchases";
+import type { Purchase } from "../types/purchase";
+import { exportToPdf } from "../../../core/utils/exportPDF";
+import { exportToExcel } from "../../../core/utils/exportExcel";
+import ResponsiveRangePicker from "../../../core/components/common/ResponsiveRangePicker";
+import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
 import { useNavigate } from "react-router-dom";
 
 export default function PurchaseHistory() {

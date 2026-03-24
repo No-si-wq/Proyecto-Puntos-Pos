@@ -8,6 +8,7 @@ import {
   Checkbox
 } from "antd";
 import { useState } from "react";
+import { useDebouncedCallback } from "use-debounce";
 import { useAccountPayable } from "./useAccountPayable";
 import { formatCurrency } from "../../core/utils/formatters";
 import PageHeader from "../../core/components/common/PageHeader";
@@ -18,7 +19,7 @@ export default function AccountsPayable() {
   const { data, loading, pay, reload } =
     useAccountPayable();
 
-  const { suppliers } = useSuppliers();
+  const { suppliers, loading: loadingSuppliers, setFilters: setFiltersSuppliers } = useSuppliers();
 
   const [selected, setSelected] =
     useState<any>(null);
@@ -34,6 +35,10 @@ export default function AccountsPayable() {
 
   const [note, setNote] =
     useState<string>();
+
+  const handleSearch = useDebouncedCallback((value: string) => {
+    setFiltersSuppliers({ search: value });
+  }, 400);
 
   function handleFilterChange(newFilters: typeof filters) {
     setFilters(newFilters);
@@ -82,11 +87,9 @@ export default function AccountsPayable() {
             showSearch                        
             placeholder="Proveedor"
             style={{ width: 220 }}
-            filterOption={(input, option) =>
-              (option?.label ?? "")
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
+            loading={loadingSuppliers}
+            filterOption={false}
+            onSearch={handleSearch}
             onChange={(value) =>
               handleFilterChange({ ...filters, supplierId: value })
             }

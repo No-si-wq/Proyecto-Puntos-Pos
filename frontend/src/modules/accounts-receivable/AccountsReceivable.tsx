@@ -8,6 +8,7 @@ import {
   Checkbox,
 } from "antd";
 import { useState } from "react";
+import { useDebouncedCallback } from "use-debounce";
 import { useAccountReceivable } from "./useAccountReceivable";
 import { formatCurrency } from "../../core/utils/formatters";
 import { useCustomers } from "../customers/useCustomers";
@@ -18,7 +19,7 @@ export default function AccountsReceivable() {
   const { data, loading, pay, reload } =
     useAccountReceivable();
 
-  const { customers } = useCustomers();
+  const { customers, loading: loadingCustomers, setFilters: setFiltersCustomer } = useCustomers();
 
   const [filters, setFilters] = useState<{
     status?: string;
@@ -34,6 +35,10 @@ export default function AccountsReceivable() {
 
   const [note, setNote] =
     useState<string>();
+
+  const handleSearch = useDebouncedCallback((value: string) => {
+    setFiltersCustomer({ search: value });
+  }, 400);
 
   function handleFilterChange(newFilters: typeof filters) {
     setFilters(newFilters);
@@ -82,11 +87,9 @@ export default function AccountsReceivable() {
             showSearch                        
             placeholder="Cliente"
             style={{ width: 220 }}
-            filterOption={(input, option) =>
-              (option?.label ?? "")
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
+            loading={loadingCustomers}
+            filterOption={false}
+            onSearch={handleSearch}
             onChange={(value) =>
               handleFilterChange({ ...filters, customerId: value })
             }

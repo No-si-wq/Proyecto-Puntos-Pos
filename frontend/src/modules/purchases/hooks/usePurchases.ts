@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
-import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
-import http from "../../core/http/http";
+import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
+import http from "../../../core/http/http";
 import type {
   Purchase,
   CreatePurchaseDTO,
-} from "./purchase";
+} from "../types/purchase";
 
 export function usePurchases() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);

@@ -1,4 +1,4 @@
-import type { BaseItem } from "../../core/types/base";
+import type { BaseItem } from "../../../core/types/base";
 
 export type PurchasePaymentMethod =
   | "CASH"

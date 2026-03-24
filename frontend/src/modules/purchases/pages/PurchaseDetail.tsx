@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, Button, Table, Space } from "antd";
 import type { TableColumnsType } from "antd";
-import PageHeader from "../../core/components/common/PageHeader";
-import http from "../../core/http/http";
-import { formatDate, formatCurrency } from "../../core/utils/formatters";
-import type { Purchase, PurchaseItems } from "./purchase";
-import { exportToPdf } from "../../core/utils/exportPDF";
+import PageHeader from "../../../core/components/common/PageHeader";
+import http from "../../../core/http/http";
+import { formatDate, formatCurrency } from "../../../core/utils/formatters";
+import type { Purchase, PurchaseItems } from "../types/purchase";
+import { exportToPdf } from "../../../core/utils/exportPDF";
 
 export default function PurchaseDetail() {
   const { id } = useParams();

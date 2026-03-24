@@ -14,6 +14,7 @@ import {
   Divider,
 } from "antd";
 
+import { useDebouncedCallback } from "use-debounce";
 import { useCustomers } from "../../customers/useCustomers";
 import { useSales } from "../hooks/useSales";
 import { useCartSale } from "../hooks/useCartSale";
@@ -31,7 +32,8 @@ import type { SalePaymentMethod } from "../types/sale";
 import PageHeader from "../../../core/components/common/PageHeader";
 
 export default function Sales() {
-  const { customers, reload: reloadCustomers } = useCustomers();
+  const { customers, reload: reloadCustomers, loading: loadingCustomers, setFilters: setFiltersCustomers } 
+    = useCustomers();
   const warehouseId = useRequiredWarehouse();
   const { products, reload: reloadProducts } = useWarehouseProducts();
   const { priceLists = [] } = usePriceLists();
@@ -48,6 +50,10 @@ export default function Sales() {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const selectRef = useRef<any>(null);
   const cart = useCartSale();
+
+  const handleSearch = useDebouncedCallback((value: string) => {
+    setFiltersCustomers({ search: value });
+  }, 400);
 
   useEffect(() => {
     cart.clear();
@@ -177,12 +183,11 @@ export default function Sales() {
             size={sizes.select}
             placeholder="Cliente"
             value={sale.customerId}
+            loading={loadingCustomers}
             onChange={(v) => sale.setCustomer(v ?? undefined)}
             style={{ width: "100%", marginBottom: 8 }}
-            filterOption={(input, option) => {
-              const label = option?.label as string;
-              return label?.toLowerCase().includes(input.toLowerCase());
-            }}
+            onSearch={handleSearch}
+            filterOption={false}
             options={customers
               .filter((c) => c.active)
               .map((c) => ({
@@ -371,14 +376,13 @@ export default function Sales() {
                       allowClear
                       listHeight={sizes.selectListHeight}
                       size={sizes.select}
+                      loading={loadingCustomers}
                       placeholder="Seleccionar cliente"
                       value={sale.customerId}
                       onChange={(v) => sale.setCustomer(v ?? undefined)}
                       style={{ width: "100%" }}
-                      optionFilterProp="label"
-                      filterOption={(input, option) =>
-                        (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
-                      }
+                      filterOption={false}
+                      onSearch={handleSearch}
                       options={customers
                         .filter((c) => c.active)
                         .map((c) => ({
