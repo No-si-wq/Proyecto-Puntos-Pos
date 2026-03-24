@@ -133,13 +133,7 @@ export class ProductService {
     try {
       return await prisma.product.create({
         data: {
-          sku: data.sku,
-          name: data.name,
-          description: data.description,
-          price: data.price,
-          cost: data.cost,
-          tax: data.tax,
-          categoryId: data.categoryId,
+          ...data,
           barcodes: data.barcodes?.length
             ? { create: data.barcodes.map((code) => ({ code })) }
             : undefined,

@@ -30,6 +30,13 @@ export class CustomerService {
           ],
         }),
        },
+      include: {
+        points: {
+          select: {
+            balance: true,
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -56,14 +63,7 @@ export class CustomerService {
   static async create(data: CreateCustomerInput) {
     try {
       return prisma.$transaction(async (tx) => {
-        const customer = await tx.customer.create({
-          data: {
-            dni: data.dni,
-            name: data.name,
-            email: data.email,
-            phone: data.phone,
-          },
-        });
+        const customer = await tx.customer.create({data});
 
         await tx.loyaltyPoint.create({
           data: {
