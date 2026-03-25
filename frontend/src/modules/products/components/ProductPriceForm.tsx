@@ -1,6 +1,6 @@
 import { Form, InputNumber, Select } from "antd";
 import FormBase from "../../../core/components/forms/FormBase";
-import type { ProductPrice, PriceList } from "../../priceLists/pricelist";
+import type { ProductPrice, PriceList } from "../../priceLists/types/pricelist";
 
 interface Props {
   productId: number;

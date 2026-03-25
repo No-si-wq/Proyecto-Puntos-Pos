@@ -5,7 +5,7 @@ import { formatCurrency } from "../../../core/utils/formatters";
 import type { SaleCartItem } from "../types/saleCart.store";
 import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
-import type { PriceList } from "../../priceLists/pricelist";
+import type { PriceList } from "../../priceLists/types/pricelist";
 import type { Product } from "../../products/product";
 
 interface Props {

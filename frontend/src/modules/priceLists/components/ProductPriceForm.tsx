@@ -1,6 +1,6 @@
 import { Form, InputNumber, Select } from "antd";
 import FormBase from "../../../core/components/forms/FormBase";
-import type { ProductPrice, UpsertProductPriceDto } from "../pricelist";
+import type { ProductPrice, UpsertProductPriceDto } from "../types/pricelist";
 
 interface ProductOption {
   id: number;

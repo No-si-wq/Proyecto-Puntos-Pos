@@ -6,10 +6,10 @@ import FormModal from "../../../core/components/forms/FormModal";
 import ProtectedButton from "../../../core/components/common/ProtectedButton";
 import { ConfirmModal } from "../../../core/components/common/ConfirmModal";
 import { getAllowedRoles } from "../../../core/utils/permissions";
-import { useProductPrices } from "../useProducts";
-import { usePriceLists } from "../../priceLists/usePriceList";
+import { useProductPrices } from "../hooks/useProductPrices";
+import { usePriceLists } from "../../priceLists/hooks/usePriceList";
 import ProductPriceForm from "./ProductPriceForm";
-import type { ProductPrice } from "../../priceLists/pricelist";
+import type { ProductPrice } from "../../priceLists/types/pricelist";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
 
 const { Text } = Typography;

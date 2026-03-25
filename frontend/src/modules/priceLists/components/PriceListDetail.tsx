@@ -1,7 +1,7 @@
 import { Table, Button, Space, Popconfirm, Typography, Skeleton, Dropdown } from "antd";
 import { EditOutlined, DeleteOutlined, MoreOutlined } from "@ant-design/icons";
 import type { MenuProps } from "antd";
-import type { PriceListDetail as PriceListDetailType, ProductPrice } from "../pricelist";
+import type { PriceListDetail as PriceListDetailType, ProductPrice } from "../types/pricelist";
 import { formatCurrency } from "../../../core/utils/formatters";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
 

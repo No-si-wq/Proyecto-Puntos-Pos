@@ -17,17 +17,18 @@ import {
   MoreOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
-import PageHeader from "../../core/components/common/PageHeader";
-import ProtectedButton from "../../core/components/common/ProtectedButton";
-import FormModal from "../../core/components/forms/FormModal";
-import { PriceListForm } from "./components/PriceListForm";
-import { ProductPriceForm } from "./components/ProductPriceForm";
-import { PriceListDetail } from "./components/PriceListDetail";
-import { usePriceLists, usePriceListDetail } from "./usePriceList";
-import type { PriceList, ProductPrice } from "./pricelist";
-import { useProducts } from "../products/useProducts";
-import { getAllowedRoles } from "../../core/utils/permissions";
-import { useDeviceType } from "../../core/hooks/useDeviceType";
+import PageHeader from "../../../core/components/common/PageHeader";
+import ProtectedButton from "../../../core/components/common/ProtectedButton";
+import FormModal from "../../../core/components/forms/FormModal";
+import { PriceListForm } from "../components/PriceListForm";
+import { ProductPriceForm } from "../components/ProductPriceForm";
+import { PriceListDetail } from "../components/PriceListDetail";
+import { usePriceLists } from "../hooks/usePriceList";
+import { usePriceListDetail } from "../hooks/usePriceListDetail";
+import type { PriceList, ProductPrice } from "../types/pricelist";
+import { useProducts } from "../../products/hooks/useProducts";
+import { getAllowedRoles } from "../../../core/utils/permissions";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
 
 const { Text } = Typography;
 

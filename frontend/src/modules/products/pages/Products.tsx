@@ -3,26 +3,26 @@ import { message, Tooltip, Form, Button, Row, Col, Upload, Badge, Input } from "
 import { TagsOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
-import type { Product } from "./product";
+import type { Product } from "../types/product";
 
-import { useProducts } from "./useProducts";
-import FormModal from "../../core/components/forms/FormModal";
+import { useProducts } from "../hooks/useProducts";
+import FormModal from "../../../core/components/forms/FormModal";
 
-import PageHeader from "../../core/components/common/PageHeader";
-import ProtectedButton from "../../core/components/common/ProtectedButton";
-import { ConfirmModal } from "../../core/components/common/ConfirmModal";
-import ProductForm from "./components/ProductForm";
-import ProductPricesModal from "./components/ProductPricesModal";
-import SimpleTable from "../../core/components/table/SimpleTable";
-import { buildCategoryPath, buildCategoryBreadcrumb } from "../../core/utils/category";
+import PageHeader from "../../../core/components/common/PageHeader";
+import ProtectedButton from "../../../core/components/common/ProtectedButton";
+import { ConfirmModal } from "../../../core/components/common/ConfirmModal";
+import ProductForm from "../components/ProductForm";
+import ProductPricesModal from "../components/ProductPricesModal";
+import SimpleTable from "../../../core/components/table/SimpleTable";
+import { buildCategoryPath, buildCategoryBreadcrumb } from "../../../core/utils/category";
 
-import { getAllowedRoles } from "../../core/utils/permissions";
-import { useCategories } from "../categories/useCategories";
-import { exportToPdf } from "../../core/utils/exportPDF";
-import { exportToExcel } from "../../core/utils/exportExcel";
-import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
+import { getAllowedRoles } from "../../../core/utils/permissions";
+import { useCategories } from "../../categories/useCategories";
+import { exportToPdf } from "../../../core/utils/exportPDF";
+import { exportToExcel } from "../../../core/utils/exportExcel";
+import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
 
-import ReorderPointModal from "./components/ReorderPointModal";
+import ReorderPointModal from "../components/ReorderPointModal";
 
 export default function Products() {
   const {

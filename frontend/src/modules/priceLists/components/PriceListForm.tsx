@@ -1,6 +1,6 @@
 import { Form, Input, Switch } from "antd";
 import FormBase from "../../../core/components/forms/FormBase";
-import type { PriceList, CreatePriceListDto, UpdatePriceListDto } from "../pricelist";
+import type { PriceList, CreatePriceListDto, UpdatePriceListDto } from "../types/pricelist";
 
 interface Props {
   isEdit: boolean;

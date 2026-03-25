@@ -1,7 +1,7 @@
 import { useRef, useCallback } from "react";
 import { message } from "antd";
 import type { Product } from "../../modules/products/product";
-import { useProducts } from "../../modules/products/useProducts";
+import { useProducts } from "../../modules/products/hooks/useProducts";
 import { parseScannedCode } from "../utils/parseScannedCode";
 
 interface UseBarcodeScannerOptions {

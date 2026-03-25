@@ -18,15 +18,8 @@ export async function getUser(req: Request, res: Response) {
 }
 
 export async function createUser(req: Request, res: Response) {
-  const { email, name, password, role, username } = req.body;
 
-  const user = await UserService.create({
-    email,
-    name,
-    username,
-    password,
-    role,
-  });
+  const user = await UserService.create(req.body);
 
   res.status(201).json(user);
 }

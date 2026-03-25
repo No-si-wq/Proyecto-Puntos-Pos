@@ -1,7 +1,7 @@
 import { Form, Input, Select } from "antd";
 import FormBase from "../../../core/components/forms/FormBase";
 import type { CommissionLevel, CreateCommissionLevelDto, UpdateCommissionLevelDto } from "../types/commission";
-import { usePriceLists } from "../../priceLists/usePriceList";
+import { usePriceLists } from "../../priceLists/hooks/usePriceList";
 
 interface Props {
   onSubmit: (data: CreateCommissionLevelDto | UpdateCommissionLevelDto) => Promise<void>;

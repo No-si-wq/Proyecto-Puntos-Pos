@@ -24,13 +24,8 @@ export async function getCustomer(req: Request, res: Response) {
 }
 
 export async function createCustomer(req: Request, res: Response) {
-  const { name, email, phone } = req.body;
 
-  const customer = await CustomerService.create({
-    name,
-    email,
-    phone,
-  });
+  const customer = await CustomerService.create(req.body);
 
   res.status(201).json(customer);
 }
