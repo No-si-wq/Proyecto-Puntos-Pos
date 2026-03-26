@@ -11,7 +11,7 @@ export function useCommissionReport() {
   const fetch = useCallback(async (dates?: [Dayjs, Dayjs] | null) => {
     setLoading(true);
     try {
-      const params: Record<string, string> = {};
+      const params: Record<string, string>= {};
       if (dates) {
         params.from = dates[0].startOf("day").toISOString();
         params.to = dates[1].endOf("day").toISOString();

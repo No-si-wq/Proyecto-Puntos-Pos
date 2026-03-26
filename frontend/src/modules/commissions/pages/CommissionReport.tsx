@@ -46,6 +46,11 @@ export default function CommissionReport() {
     if (isMobile) setFilterOpen(false);
   }
 
+  function clearFilter() {
+    setDates(null);
+    fetchReport();
+  }
+
   const totalEarned = data.reduce((acc, r) => acc + Number(r.earned), 0);
   const totalReversed = data.reduce((acc, r) => acc + Number(r.reversed), 0);
   const totalNet = data.reduce((acc, r) => acc + Number(r.net), 0);
@@ -224,6 +229,11 @@ export default function CommissionReport() {
       >
         Consultar
       </Button>
+
+      <Button onClick={clearFilter}>
+        Limpiar
+      </Button>
+
       <Divider style={{ margin: "8px 0" }} />
       <Text type="secondary" style={{ fontSize: 12 }}>
         Exportar
@@ -264,6 +274,9 @@ export default function CommissionReport() {
       />
       <Button type="primary" onClick={load} loading={loading}>
         Consultar
+      </Button>
+      <Button onClick={clearFilter}>
+        Limpiar
       </Button>
       <Button icon={<FilePdfOutlined />} onClick={handleExportPdf}>
         PDF

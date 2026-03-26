@@ -136,9 +136,10 @@ export class CommissionService {
   }
   
   async getSummary(params?: {
-    from?: Date;
-    to?: Date;
-  }): Promise<CommissionReportRow[]> {
+      from?: Date;
+      to?: Date;
+    }
+  ): Promise<CommissionReportRow[]> {
     const dateFilter =
       params?.from && params?.to
         ? { createdAt: { gte: params.from, lte: params.to } }
