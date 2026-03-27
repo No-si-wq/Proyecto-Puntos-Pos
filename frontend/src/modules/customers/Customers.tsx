@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { message, Button, Row, Col, Input } from "antd";
+import { message, Button, Row, Col, Input, Switch, Space, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
 import type { Customer } from "./customer";
@@ -18,10 +18,13 @@ import SimpleTable from "../../core/components/table/SimpleTable";
 
 import { getAllowedRoles } from "../../core/utils/permissions";
 
+const { Text } = Typography;
+
 export default function Customers() {
   const {
     customers,
     loading,
+    filters,
     setFilters,
     create,
     update,
@@ -205,6 +208,13 @@ export default function Customers() {
           allowClear
           onChange={(e) => setSearchValue(e.target.value)}
         />
+      <Space>
+        <Switch
+          checked={filters.onlyInactive}
+          onChange={(val) => { setFilters((prev) => ({...prev, onlyInactive: val})) }}
+        />
+        <Text>Mostrar inactivos</Text>
+      </Space>
         <Col>
           <Row gutter={[16, sizes.gutter]}>
             <Col>

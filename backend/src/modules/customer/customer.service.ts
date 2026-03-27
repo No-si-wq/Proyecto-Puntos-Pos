@@ -5,14 +5,14 @@ import { DomainError } from "../../core/errors/domain-error";
 
 export class CustomerService {
   static async list(
-    params: { search?: string }
+    params: { search?: string, onlyInactive?: boolean },
   ) {
     
-    const { search } = params;
+    const { search, onlyInactive } = params;
 
     return prisma.customer.findMany({
-      where: { 
-        active: true,
+      where: {
+        active: onlyInactive ? false : true,
         ...(search && {
           OR: [
             {

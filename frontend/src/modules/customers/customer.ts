@@ -1,3 +1,8 @@
+export interface FiltersCustomers {
+  search?: string,
+  onlyInactive?: boolean,
+}
+
 export interface Customer {
   id: number;
   name: string;

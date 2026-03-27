@@ -8,7 +8,9 @@ export async function listCustomers(req: Request, res: Response) {
       ? req.query.search
       : undefined;
 
-  const customers = await CustomerService.list({ search });
+  const onlyInactive = req.query.onlyInactive === "true";
+
+  const customers = await CustomerService.list({ search, onlyInactive });
   res.json(customers);
 }
 
