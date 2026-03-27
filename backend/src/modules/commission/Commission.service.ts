@@ -79,10 +79,29 @@ export class CommissionService {
     });
   }
 
-  async getCommissionsByUser(userId: number) {
-    return prisma.salesCommission.findMany({
-      where: { userId },
-      include: { level: true },
+  async getCommissionsByUser(
+    userId: number,
+    params?: { from?: Date; to?: Date }
+  ) {
+    const dateFilter =
+      params?.from && params?.to
+        ? { createdAt: { gte: params.from, lte: params.to } }
+        : {};
+
+    return prisma.commission.findMany({
+      where: {
+        userId,
+        ...dateFilter,
+      },
+      include: {
+        sale: {
+          select: { id: true, createdAt: true, saleNumber: true },
+        },
+        saleItem: {
+          select: { id: true, productId: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
   }
 

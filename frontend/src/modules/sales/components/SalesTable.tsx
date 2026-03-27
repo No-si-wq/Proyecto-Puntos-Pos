@@ -1,6 +1,6 @@
 import { Button, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import type { Sale } from "../sale";
+import type { Sale } from "../types/sale";
 import { formatCurrency, formatDate } from "../../../core/utils/formatters";
 import SimpleTable from "../../../core/components/table/SimpleTable";
 

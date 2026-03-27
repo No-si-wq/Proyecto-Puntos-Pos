@@ -1,13 +1,17 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Table, Tag, Card, Statistic, Row, Col, Button } from "antd";
+import { Table, Tag, Card, Statistic, Row, Col, Button, Typography } from "antd";
+import dayjs from "dayjs"
 import { useCommissions } from "../hooks/useCommissions";
 import { useCommissionReport } from "../hooks/useCommissionReport";
+import { formatCurrency } from "../../../core/utils/formatters";
 import PageHeader from "../../../core/components/common/PageHeader";
+
+const { Text } = Typography;
 
 export default function CommissionUserDetail() {
   const { userId } = useParams<{ userId: string }>();
-  const { userCommissions, loading, fetchByUser } = useCommissions();
+  const { commissionHistory, loading, fetchByUser } = useCommissions();
   const { data: reportData, fetch: fetchReport } = useCommissionReport();
   const navigate = useNavigate();
 
@@ -21,19 +25,34 @@ export default function CommissionUserDetail() {
 
   const columns = [
     {
-      title: "Nivel",
-      dataIndex: ["level", "name"],
+      title: "Fecha",
+      dataIndex: "createdAt",
+      render: (v: string) => dayjs(v).format("DD/MM/YYYY HH:mm"),
+    },
+    {
+      title: "Venta #",
+      dataIndex: ["sale", "saleNumber"]
+    },
+    {
+      title: "Tipo",
+      dataIndex: "type",
+      render: (v: string) => (
+        <Tag color={v === "SALE" ? "green" : "red"}>
+          {v === "SALE" ? "Venta" : "Reversión"}
+        </Tag>
+      ),
     },
     {
       title: "Porcentaje",
       dataIndex: "percent",
-      render: (v: number) => `${v}%`,
+      render: (v: string) => `${v}%`,
     },
     {
-      title: "Estado",
-      dataIndex: "active",
-      render: (v: boolean) => (
-        <Tag color={v ? "green" : "red"}>{v ? "Activa" : "Inactiva"}</Tag>
+      title: "Monto",
+      dataIndex: "amount",
+      align: "right" as const,
+      render: (v: string) => (
+        <Text type={undefined}>{formatCurrency(Number(v))}</Text>
       ),
     },
   ];
@@ -90,7 +109,7 @@ export default function CommissionUserDetail() {
 
       <Card>
         <Table
-          dataSource={userCommissions}
+          dataSource={commissionHistory}
           columns={columns}
           rowKey="id"
           loading={loading}

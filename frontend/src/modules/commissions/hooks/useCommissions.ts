@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { message } from "antd";
+import { Dayjs } from "dayjs";
 import http from "../../../core/http/http";
 import type {
   SalesCommission,
   AssignCommissionDto,
   UpdateCommissionDto,
+  CommissionHistory,
 } from "../types/commission";
 
 const BASE = "/commissions";
 
 export function useCommissions() {
   const [commissions, setCommissions] = useState<SalesCommission[]>([]);
-  const [userCommissions, setUserCommissions] = useState<SalesCommission[]>([]);
+  const [commissionHistory, setCommissionHistory] = useState<CommissionHistory[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchAll = useCallback(async () => {
@@ -28,11 +30,19 @@ export function useCommissions() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const fetchByUser = useCallback(async (userId: number) => {
+  const fetchByUser = useCallback(async (
+    userId: number,
+    params?: { from?: Dayjs, to?: Dayjs }
+  ) => {
     setLoading(true);
     try {
-      const { data } = await http.get<SalesCommission[]>(`${BASE}/user/${userId}`);
-      setUserCommissions(data);
+      const query = new URLSearchParams();
+      if (params?.from) query.set("from", params.from.toISOString());
+      if (params?.to) query.set("to", params.to.toISOString());
+      const { data } = await http.get<CommissionHistory[]>(
+        `${BASE}/user/${userId}?${query.toString()}`
+      );
+      setCommissionHistory(data);
       return data;
     } catch {
       message.error("Error al cargar comisiones del usuario");
@@ -89,5 +99,5 @@ export function useCommissions() {
     }
   };
 
-  return { commissions, userCommissions, loading, fetchAll, fetchByUser, assign, update, remove };
+  return { commissions, commissionHistory, loading, fetchAll, fetchByUser, assign, update, remove };
 }

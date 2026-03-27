@@ -1,3 +1,15 @@
+export interface CommissionHistory {
+  id: number;
+  saleId: number;
+  saleItemId: number | null;
+  percent: string;
+  amount: string;
+  type: "SALE" | "REVERSAL";
+  createdAt: string;
+  sale: { id: number, createdAt: string, saleNumber: string, };
+  saleItem: { id: number; productId: number } | null;
+}
+
 export interface CommissionRow {
   userId: number;
   userName: string;

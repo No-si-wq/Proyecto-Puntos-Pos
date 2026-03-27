@@ -36,7 +36,11 @@ export const getAllCommissions = asyncHandler(async (_req: Request, res: Respons
 
 export const getCommissionsByUser = asyncHandler(async (req: Request, res: Response) => {
   const userId = Number(req.params.userId);
-  const data = await commissionService.getCommissionsByUser(userId);
+  const from =
+    typeof req.query.from === "string" ? new Date(req.query.from) : undefined;
+  const to =
+    typeof req.query.to === "string" ? new Date(req.query.to) : undefined;
+  const data = await commissionService.getCommissionsByUser(userId, { from, to });
   res.json(data);
 });
 
@@ -57,7 +61,7 @@ export const removeCommission = asyncHandler(async (req: Request, res: Response)
   res.status(204).send();
 });
 
-export const getCommissionReport = asyncHandler( async (req: Request, res: Response) => {
+export const getCommissionReport = asyncHandler(async (req: Request, res: Response) => {
   const from =
     typeof req.query.from === "string" ? new Date(req.query.from) : undefined;
   const to =
@@ -66,4 +70,4 @@ export const getCommissionReport = asyncHandler( async (req: Request, res: Respo
   const data = await commissionService.getSummary({ from, to });
 
   res.json(data);
-})
+});
