@@ -208,13 +208,13 @@ export default function Customers() {
           allowClear
           onChange={(e) => setSearchValue(e.target.value)}
         />
-      <Space>
+      {/*<Space>
         <Switch
           checked={filters.onlyInactive}
           onChange={(val) => { setFilters((prev) => ({...prev, onlyInactive: val})) }}
         />
         <Text>Mostrar inactivos</Text>
-      </Space>
+      </Space>*/}
         <Col>
           <Row gutter={[16, sizes.gutter]}>
             <Col>
