@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   Table,
   Card,
-  DatePicker,
   Button,
   Space,
   Typography,
@@ -28,8 +27,8 @@ import { useCommissionReport } from "../hooks/useCommissionReport";
 import type { CommissionRow } from "../types/commission";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
+import ResponsiveRangePicker from "../../../core/components/common/ResponsiveRangePicker";
 
-const { RangePicker } = DatePicker;
 const { Text } = Typography;
 
 export default function CommissionReport() {
@@ -49,6 +48,7 @@ export default function CommissionReport() {
   function clearFilter() {
     setDates(null);
     fetchReport();
+    if(isMobile) setFilterOpen(false);
   }
 
   const totalEarned = data.reduce((acc, r) => acc + Number(r.earned), 0);
@@ -213,7 +213,7 @@ export default function CommissionReport() {
         <Text type="secondary" style={{ display: "block", marginBottom: 8 }}>
           Rango de fechas
         </Text>
-        <RangePicker
+        <ResponsiveRangePicker
           value={dates}
           onChange={(val) => setDates(val as [Dayjs, Dayjs] | null)}
           format="DD/MM/YYYY"
@@ -230,7 +230,11 @@ export default function CommissionReport() {
         Consultar
       </Button>
 
-      <Button onClick={clearFilter}>
+      <Button 
+        type="primary"
+        block
+        onClick={clearFilter}
+      >
         Limpiar
       </Button>
 
@@ -267,7 +271,7 @@ export default function CommissionReport() {
     </Button>
   ) : (
     <Space wrap>
-      <RangePicker
+      <ResponsiveRangePicker
         value={dates}
         onChange={(val) => setDates(val as [Dayjs, Dayjs] | null)}
         format="DD/MM/YYYY"

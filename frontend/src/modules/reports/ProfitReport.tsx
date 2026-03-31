@@ -55,6 +55,7 @@ export default function ProfitReport() {
     setData([]);
     setSummary(null);
     setRange(null);
+    if (isMobile) setFilterOpen(false)
   }
 
   const totalMarginColor = useMemo(() => {

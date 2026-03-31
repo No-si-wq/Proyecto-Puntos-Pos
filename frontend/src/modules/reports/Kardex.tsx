@@ -135,6 +135,7 @@ export default function Kardex() {
     setHasMore(true);
     setInitialBalance(null);
     setProductId(undefined);
+    if (isMobile) setFilterOpen(false);
   }
 
   const finalBalance = useMemo(() => {

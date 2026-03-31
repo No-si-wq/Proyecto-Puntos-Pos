@@ -146,7 +146,7 @@ export default function SaleHistory() {
             Aplicar
           </Button>
           <Button block size={sizes.button} onClick={clearFilter}>
-            Limpiar filtro
+            Limpiar
           </Button>
         </Space>
       </Drawer>
