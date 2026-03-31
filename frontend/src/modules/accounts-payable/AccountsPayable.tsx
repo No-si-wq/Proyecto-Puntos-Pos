@@ -5,7 +5,9 @@ import {
   Input,
   message,
   Select,
-  Checkbox
+  Checkbox,
+  Row,
+  Col,
 } from "antd";
 import { useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
@@ -66,51 +68,55 @@ export default function AccountsPayable() {
       />
 
       <Card>
-        <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-          
-          <Select
-            allowClear
-            placeholder="Estado"
-            style={{ width: 160 }}
-            onChange={(value) =>
-              handleFilterChange({ ...filters, status: value })
-            }
-            options={[
-              { label: "Pendiente", value: "PENDING" },
-              { label: "Parcial",   value: "PARTIAL" },
-              { label: "Pagado",    value: "PAID" },
-            ]}
-          />
-
-          <Select
-            allowClear
-            showSearch                        
-            placeholder="Proveedor"
-            style={{ width: 220 }}
-            loading={loadingSuppliers}
-            filterOption={false}
-            onSearch={handleSearch}
-            onChange={(value) =>
-              handleFilterChange({ ...filters, supplierId: value })
-            }
-            options={suppliers.map((s) => ({
-              label: s.name,
-              value: s.id,
-            }))}
-          />
-
-          <Checkbox
-            onChange={(e) =>
-              handleFilterChange({
-                ...filters,
-                overdue: e.target.checked || undefined,
-              })
-            }
-          >
-            Solo vencidas
-          </Checkbox>
-
-        </div>
+        <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+          <Col xs={12} sm={8} md={6}>
+            <Select
+              allowClear
+              placeholder="Estado"
+              style={{ width: "100%" }}
+              onChange={(value) =>
+                handleFilterChange({ ...filters, status: value })
+              }
+              options={[
+                { label: "Pendiente", value: "PENDING" },
+                { label: "Parcial", value: "PARTIAL" },
+                { label: "Pagado", value: "PAID" },
+              ]}
+            />
+          </Col>
+ 
+          <Col xs={12} sm={10} md={8}>
+            <Select
+              allowClear
+              showSearch
+              placeholder="Proveedor"
+              style={{ width: "100%" }}
+              loading={loadingSuppliers}
+              filterOption={false}
+              onSearch={handleSearch}
+              onChange={(value) =>
+                handleFilterChange({ ...filters, supplierId: value })
+              }
+              options={suppliers.map((s) => ({
+                label: s.name,
+                value: s.id,
+              }))}
+            />
+          </Col>
+ 
+          <Col xs={24} sm="auto">
+            <Checkbox
+              onChange={(e) =>
+                handleFilterChange({
+                  ...filters,
+                  overdue: e.target.checked || undefined,
+                })
+              }
+            >
+              Solo vencidas
+            </Checkbox>
+          </Col>
+        </Row>
 
         <FinancialAccountsTable
           data={data}

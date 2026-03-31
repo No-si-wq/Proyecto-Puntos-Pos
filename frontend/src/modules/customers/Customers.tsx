@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { message, Button, Row, Col, Input, Switch, Space, Typography } from "antd";
+import { message, Button, Input, Typography, Dropdown, Tag, type MenuProps, Space, Switch } from "antd";
+import { PlusOutlined, MoreOutlined, EditOutlined, StopOutlined, CheckCircleOutlined, FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
 import type { Customer } from "./customer";
@@ -10,6 +11,7 @@ import { useCustomers } from "./useCustomers";
 import PageHeader from "../../core/components/common/PageHeader";
 import ProtectedButton from "../../core/components/common/ProtectedButton";
 import { ConfirmModal } from "../../core/components/common/ConfirmModal";
+import { useDeviceType } from "../../core/hooks/useDeviceType";
 import { exportToPdf } from "../../core/utils/exportPDF";
 import { exportToExcel } from "../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
@@ -23,8 +25,8 @@ const { Text } = Typography;
 export default function Customers() {
   const {
     customers,
-    loading,
     filters,
+    loading,
     setFilters,
     create,
     update,
@@ -35,6 +37,7 @@ export default function Customers() {
   const [searchValue, setSearchValue] = useState("");
   const [editing, setEditing] = useState<Customer | null>(null);
   const sizes = useResponsiveSizes();
+  const { isMobile } = useDeviceType();
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -127,56 +130,82 @@ export default function Customers() {
     });
   }
 
-  const columns: ColumnsType<Customer> = [
+  const exportMenu: MenuProps = {
+    items: [
+      { key: "excel", label: "Exportar Excel", icon: <FileExcelOutlined />, onClick: handleExportExcel },
+      { key: "pdf",   label: "Exportar PDF",   icon: <FilePdfOutlined />,   onClick: handleExportPdf   },
+    ],
+  };
+
+  function getRowMenu(r: Customer): MenuProps {
+    return {
+      items: [
+        { key: "edit", label: "Editar", icon: <EditOutlined />, onClick: () => openEdit(r) },
+        {
+          key: "toggle", danger: r.active,
+          label: r.active ? "Desactivar" : "Activar",
+          icon: r.active ? <StopOutlined /> : <CheckCircleOutlined />,
+          onClick: () => confirmToggle(r),
+        },
+      ],
+    };
+  }
+
+  const desktopColumns: ColumnsType<Customer> = [
+    { title: "DNI",      dataIndex: "dni",   render: (v) => v ?? "-" },
+    { title: "Nombre",   dataIndex: "name"  },
+    { title: "Email",    dataIndex: "email", render: (v) => v ?? "-" },
+    { title: "Teléfono", dataIndex: "phone", render: (v) => v ?? "-" },
+    { title: "Direccion", dataIndex: "direction", render: (v) => v ?? "-" },
+    { title: "Activo",   dataIndex: "active", render: (v) => (v ? "Sí" : "No") },
+    { title: "Puntos",   dataIndex: "points", align: "right",
+      render: (_, r) => new Intl.NumberFormat("es-HN").format(r.points?.balance ?? 0) },
     {
-      title: "DNI",
-      dataIndex: "dni",
-      render: (v) => v ?? "-",
+      title: "Acciones",
+      render: (_, r) => (
+        <>
+          <ProtectedButton roles={getAllowedRoles("customers", "edit")} onClick={() => openEdit(r)}>Editar</ProtectedButton>
+          <ProtectedButton roles={getAllowedRoles("customers", "delete")} danger onClick={() => confirmToggle(r)}>
+            {r.active ? "Desactivar" : "Activar"}
+          </ProtectedButton>
+        </>
+      ),
     },
-    { title: "Nombre", dataIndex: "name" },
+  ];
+
+  const mobileColumns: ColumnsType<Customer> = [
     {
-      title: "Email",
-      dataIndex: "email",
-      render: (v) => v ?? "-",
-    },
-    {
-      title: "Teléfono",
-      dataIndex: "phone",
-      render: (v) => v ?? "-",
-    },
-    {
-      title: "Activo",
-      dataIndex: "active",
-      render: (v) => (v ? "Sí" : "No"),
+      title: "Cliente",
+      render: (_, r) => (
+        <div>
+          <Text strong style={{ display: "block" }}>{r.name}</Text>
+          <Text type="secondary" style={{ fontSize: 11 }}>{r.dni ?? "Sin DNI"}</Text>
+          {(r.email || r.phone) && (
+            <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+              {[r.email, r.phone].filter(Boolean).join(" · ")}
+            </Text>
+          )}
+          <div style={{ marginTop: 4 }}>
+            <Tag color={r.active ? "green" : "default"}>{r.active ? "Activo" : "Inactivo"}</Tag>
+          </div>
+        </div>
+      ),
     },
     {
       title: "Puntos",
-      dataIndex: "points",
       align: "right",
-      render: (_, r) =>
-        new Intl.NumberFormat("es-HN").format(
-          r.points?.balance ?? 0
-        ),
-    },
-    {
-      title: "Acciones",
-      render: (_, record) => (
-        <>
-          <ProtectedButton
-            roles={getAllowedRoles("customers", "edit")}
-            onClick={() => openEdit(record)}
-          >
-            Editar
-          </ProtectedButton>
-
-          <ProtectedButton
-            roles={getAllowedRoles("customers", "delete")}
-            danger
-            onClick={() => confirmToggle(record)}
-          >
-            {record.active ? "Desactivar" : "Activar"}
-          </ProtectedButton>
-        </>
+      render: (_, r) => (
+        <div style={{ textAlign: "right" }}>
+          <Text strong style={{ display: "block" }}>
+            {new Intl.NumberFormat("es-HN").format(r.points?.balance ?? 0)}
+          </Text>
+          <Text type="secondary" style={{ fontSize: 10 }}>pts</Text>
+          <div style={{ marginTop: 6 }}>
+            <Dropdown menu={getRowMenu(r)} trigger={["click"]} placement="bottomRight">
+              <Button icon={<MoreOutlined />} size="small" style={{ border: "none", boxShadow: "none" }} />
+            </Dropdown>
+          </div>
+        </div>
       ),
     },
   ];
@@ -187,68 +216,59 @@ export default function Customers() {
         title="Clientes"
         subtitle="Gestión de clientes"
         extra={
-          <ProtectedButton
-            roles={getAllowedRoles("customers", "create")}
-            type="primary"
-            onClick={openCreate}
-          >
-            Nuevo cliente
-          </ProtectedButton>
+          isMobile ? (
+            <Space size={6}>
+              <ProtectedButton roles={getAllowedRoles("customers", "create")} type="primary"
+                icon={<PlusOutlined />} size="small" onClick={openCreate}>
+                Nuevo
+              </ProtectedButton>
+              <Dropdown menu={exportMenu} trigger={["click"]} placement="bottomRight">
+                <Button icon={<MoreOutlined />} size="small" />
+              </Dropdown>
+            </Space>
+          ) : (
+            <Space wrap>
+                  <Input
+                    placeholder="Buscar por nombre"
+                    allowClear
+                    onChange={(e) => setSearchValue(e.target.value)}
+                  />
+                <Space>
+                  <Switch
+                    checked={filters.onlyInactive}
+                    onChange={(val) => { setFilters((prev) => ({...prev, onlyInactive: val})) }}
+                  />
+                  <Text>Mostrar inactivos</Text>
+                </Space>
+              <Button onClick={handleExportExcel} size={sizes.button}>Exportar Excel</Button>
+              <Button onClick={handleExportPdf}   size={sizes.button}>Exportar PDF</Button>
+              <Text strong>Activos: {customers.filter(c => c.active).length}</Text>
+              <ProtectedButton roles={getAllowedRoles("customers", "create")} type="primary" onClick={openCreate}>
+                Nuevo cliente
+              </ProtectedButton>
+            </Space>
+          )
         }
       />
-
-      <Row
-        justify="space-between"
-        align="middle"
-        style={{ marginBottom: 16 }}
-        gutter={[16, 16]}
-      >
+      <div style={{ marginBottom: 12 }}>
         <Input
           placeholder="Buscar por nombre"
           allowClear
           onChange={(e) => setSearchValue(e.target.value)}
         />
-      {/*<Space>
-        <Switch
-          checked={filters.onlyInactive}
-          onChange={(val) => { setFilters((prev) => ({...prev, onlyInactive: val})) }}
-        />
-        <Text>Mostrar inactivos</Text>
-      </Space>*/}
-        <Col>
-          <Row gutter={[16, sizes.gutter]}>
-            <Col>
-              <Button
-                type="default"
-                onClick={handleExportExcel}
-                size={sizes.button}
-              >
-                Exportar Excel
-              </Button>
-            </Col>
-
-            <Col>
-              <Button
-                type="default"
-                onClick={handleExportPdf}
-                size={sizes.button}
-              >
-                Exportar PDF
-              </Button>
-            </Col>
-          </Row>
-        </Col>
-
-        <Col>
-          <strong>
-            Activos: {customers.filter(c => c.active).length}
-          </strong>
-        </Col>
-      </Row>
+        <Space style={{ marginTop: 12 }}>
+          <Switch
+            checked={filters.onlyInactive}
+            onChange={(val) => { setFilters((prev) => ({...prev, onlyInactive: val})) }}
+          />
+          <Text>Mostrar inactivos</Text>
+        </Space>
+      </div>
 
       <SimpleTable<Customer>
         data={customers}
-        columns={columns}
+        columns={desktopColumns}
+        mobileColumns={mobileColumns}
         loading={loading}
       />
 

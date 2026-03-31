@@ -15,5 +15,6 @@ export function useCartSale() {
     clear: cart.clear,
     grossSubtotal: cart.grossSubtotal,
     subtotal: cart.subtotal,
+    totalTax: cart.totalTax,
   };
 }

@@ -150,7 +150,10 @@ export class AdminDashboardService {
 
     const grouped = await prisma.saleItem.groupBy({
       where: {
-        sale: dateFilter,
+        sale: {
+          status: "COMPLETED",
+          ...dateFilter,
+        },
       },
       by: ["productId"],
       _sum: {

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Product } from "../../products/product";
+import type { Product } from "../../products/types/product";
 
 export type DiscountType =
   | "NONE"
@@ -52,6 +52,7 @@ interface SaleCartState {
   grossSubtotal: () => number;
   subtotal: () => number;
   totalCommission: () => number;
+  totalTax: () => number;
 }
 
 function calculateItem(
@@ -180,6 +181,12 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
 
   grossSubtotal: () =>
     get().items.reduce((sum, i) => sum + i.grossLine, 0),
+
+  totalTax: () =>
+    get().items.reduce(
+      (sum, i) => sum + i.price * i.quantity * i.tax,
+      0
+    ),
 
   subtotal: () =>
     get().items.reduce((sum, i) => sum + i.lineSubtotal, 0),

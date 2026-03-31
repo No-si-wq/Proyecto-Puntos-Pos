@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { message, Row, Col, Button, Input } from "antd";
+import { message, Tag, Dropdown, Typography, Space, Button, Input, type MenuProps } from "antd";
+import { PlusOutlined, MoreOutlined, EditOutlined, StopOutlined, CheckCircleOutlined, FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
 import type { Supplier } from "./supplier";
@@ -14,8 +15,11 @@ import { exportToPdf } from "../../core/utils/exportPDF";
 import { exportToExcel } from "../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
 import { ConfirmModal } from "../../core/components/common/ConfirmModal";
+import { useDeviceType } from "../../core/hooks/useDeviceType";
 
 import { getAllowedRoles } from "../../core/utils/permissions";
+
+const { Text } = Typography;
 
 export default function Suppliers() {
   const { suppliers, loading, setFilters, create, update, toggleActive } = useSuppliers();
@@ -24,6 +28,7 @@ export default function Suppliers() {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [editing, setEditing] = useState<Supplier | null>(null);
+  const { isMobile } = useDeviceType();
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -114,35 +119,71 @@ export default function Suppliers() {
     });
   }
 
-  const columns: ColumnsType<Supplier> = [
-    { title: "RTN", dataIndex: "rtn", render: (v) => v ?? "—" },
-    { title: "Nombre", dataIndex: "name" },
-    { title: "Email", dataIndex: "email", render: (v) => v ?? "—" },
+  const exportMenu: MenuProps = {
+    items: [
+      { key: "excel", label: "Exportar Excel", icon: <FileExcelOutlined />, onClick: handleExportExcel },
+      { key: "pdf",   label: "Exportar PDF",   icon: <FilePdfOutlined />,   onClick: handleExportPdf   },
+    ],
+  };
+
+  function getRowMenu(r: Supplier): MenuProps {
+    return {
+      items: [
+        { key: "edit", label: "Editar", icon: <EditOutlined />, onClick: () => openEdit(r) },
+        {
+          key: "toggle", danger: r.active,
+          label: r.active ? "Desactivar" : "Activar",
+          icon: r.active ? <StopOutlined /> : <CheckCircleOutlined />,
+          onClick: () => confirmToggle(r),
+        },
+      ],
+    };
+  }
+
+  const desktopColumns: ColumnsType<Supplier> = [
+    { title: "RTN", dataIndex: "rtn" },
+    { title: "Nombre",   dataIndex: "name"  },
+    { title: "Email",    dataIndex: "email", render: (v) => v ?? "—" },
     { title: "Teléfono", dataIndex: "phone", render: (v) => v ?? "—" },
-    {
-      title: "Activo",
-      dataIndex: "active",
-      render: (v) => (v ? "Sí" : "No"),
-    },
+    { title: "Activo",   dataIndex: "active", render: (v) => (v ? "Sí" : "No") },
     {
       title: "Acciones",
       render: (_, r) => (
         <>
-          <ProtectedButton
-            roles={getAllowedRoles("suppliers", "edit")}
-            onClick={() => openEdit(r)}
-          >
-            Editar
-          </ProtectedButton>
-
-          <ProtectedButton
-            roles={getAllowedRoles("suppliers", "delete")}
-            danger
-            onClick={() => confirmToggle(r)}
-          >
+          <ProtectedButton roles={getAllowedRoles("suppliers", "edit")} onClick={() => openEdit(r)}>Editar</ProtectedButton>
+          <ProtectedButton roles={getAllowedRoles("suppliers", "delete")} danger onClick={() => confirmToggle(r)}>
             {r.active ? "Desactivar" : "Activar"}
           </ProtectedButton>
         </>
+      ),
+    },
+  ];
+
+  const mobileColumns: ColumnsType<Supplier> = [
+    {
+      title: "Proveedor",
+      render: (_, r) => (
+        <div>
+          <Text strong style={{ display: "block" }}>{r.name}</Text>
+          {(r.email || r.phone) && (
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              {[r.email, r.phone].filter(Boolean).join(" · ")}
+            </Text>
+          )}
+          <div style={{ marginTop: 4 }}>
+            <Tag color={r.active ? "green" : "default"}>{r.active ? "Activo" : "Inactivo"}</Tag>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "",
+      align: "right",
+      width: 48,
+      render: (_, r) => (
+        <Dropdown menu={getRowMenu(r)} trigger={["click"]} placement="bottomRight">
+          <Button icon={<MoreOutlined />} size="small" style={{ border: "none", boxShadow: "none" }} />
+        </Dropdown>
       ),
     },
   ];
@@ -153,61 +194,41 @@ export default function Suppliers() {
         title="Proveedores"
         subtitle="Gestión de proveedores"
         extra={
-          <ProtectedButton
-            roles={getAllowedRoles("suppliers", "create")}
-            type="primary"
-            onClick={openCreate}
-          >
-            Nuevo proveedor
-          </ProtectedButton>
+          isMobile ? (
+            <Space size={6}>
+              <ProtectedButton roles={getAllowedRoles("suppliers", "create")} type="primary"
+                icon={<PlusOutlined />} size="small" onClick={openCreate}>
+                Nuevo
+              </ProtectedButton>
+              <Dropdown menu={exportMenu} trigger={["click"]} placement="bottomRight">
+                <Button icon={<MoreOutlined />} size="small" />
+              </Dropdown>
+            </Space>
+          ) : (
+            <Space wrap>
+              <Button onClick={handleExportExcel} size={sizes.button}>Exportar Excel</Button>
+              <Button onClick={handleExportPdf}   size={sizes.button}>Exportar PDF</Button>
+              <Text strong>Activos: {suppliers.filter(s => s.active).length}</Text>
+              <ProtectedButton roles={getAllowedRoles("suppliers", "create")} type="primary" onClick={openCreate}>
+                Nuevo proveedor
+              </ProtectedButton>
+            </Space>
+          )
         }
       />
 
-      <Row
-        justify="space-between"
-        align="middle"
-        style={{ marginBottom: 16 }}
-        gutter={[16, 16]}
-      >
+      <div style={{ marginBottom: 12 }}>
         <Input
           placeholder="Buscar por nombre"
           allowClear
           onChange={(e) => setSearchValue(e.target.value)}
         />
-        <Col>
-          <Row gutter={[16, sizes.gutter]}>
-            <Col>
-              <Button
-                type="default"
-                onClick={handleExportExcel}
-                size={sizes.button}
-              >
-                Exportar Excel
-              </Button>
-            </Col>
-
-            <Col>
-              <Button
-                type="default"
-                onClick={handleExportPdf}
-                size={sizes.button}
-              >
-                Exportar PDF
-              </Button>
-            </Col>
-          </Row>
-        </Col>
-
-        <Col>
-          <strong>
-            Activos: {suppliers.filter(s => s.active).length}
-          </strong>
-        </Col>
-      </Row>
+      </div>
 
       <SimpleTable<Supplier>
         data={suppliers}
-        columns={columns}
+        columns={desktopColumns}
+        mobileColumns={mobileColumns}
         loading={loading}
       />
 

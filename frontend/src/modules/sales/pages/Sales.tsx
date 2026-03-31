@@ -12,7 +12,9 @@ import {
   DatePicker,
   Tag,
   Divider,
+  Drawer,
 } from "antd";
+import { ShoppingCartOutlined } from "@ant-design/icons";
 
 import { useDebouncedCallback } from "use-debounce";
 import { useCustomers } from "../../customers/useCustomers";
@@ -32,14 +34,15 @@ import type { SalePaymentMethod } from "../types/sale";
 import PageHeader from "../../../core/components/common/PageHeader";
 
 export default function Sales() {
-  const { customers, reload: reloadCustomers, loading: loadingCustomers, setFilters: setFiltersCustomers } 
-    = useCustomers();
+  const { customers, reload: reloadCustomers, loading: loadingCustomers, setFilters: setFiltersCustomer } = useCustomers();
+  const [sellerId, setSellerId] = useState<number | undefined>();
   const warehouseId = useRequiredWarehouse();
   const { products, reload: reloadProducts } = useWarehouseProducts();
   const { priceLists = [] } = usePriceLists();
 
   const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>("CASH");
   const [dueDate, setDueDate] = useState<string>();
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   const { isMobile, isTablet, device } = useDeviceType();
   const tableSpan   = device === "desktop" ? 16 : device === "tablet" ? 14 : 24;
@@ -50,10 +53,6 @@ export default function Sales() {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const selectRef = useRef<any>(null);
   const cart = useCartSale();
-
-  const handleSearch = useDebouncedCallback((value: string) => {
-    setFiltersCustomers({ search: value });
-  }, 400);
 
   useEffect(() => {
     cart.clear();
@@ -73,20 +72,25 @@ export default function Sales() {
   const sale = saleStore();
   const selectedCustomer = customers.find((c) => c.id === sale.customerId);
   const availablePoints = selectedCustomer?.points?.balance ?? 0;
-
   const estimatedCommission = cart.totalCommission();
+
+  const handleSearch = useDebouncedCallback((value: string) => {
+    setFiltersCustomer({ search: value });
+  }, 400);
+
+  const isSubmitDisabled =
+    cart.items.length === 0 ||
+    (paymentMethod === "CREDIT" && (!sale.customerId || !dueDate));
 
   async function submitSale() {
     if (cart.items.length === 0) {
       message.warning("El carrito está vacío");
       return;
     }
-
     if (sale.pointsUsed > availablePoints) {
       message.error("Puntos insuficientes");
       return;
     }
-
     if (paymentMethod === "CREDIT") {
       if (!sale.customerId) {
         message.error("Debe seleccionar cliente para crédito");
@@ -98,7 +102,8 @@ export default function Sales() {
       }
     }
 
-    const finalTotal = cart.subtotal() - sale.pointsUsed;
+    const pointsDiscount = sale.pointsUsed;
+    const finalTotal = cart.subtotal() - pointsDiscount;
     if (finalTotal < 0) {
       message.error("Total inválido");
       return;
@@ -108,6 +113,7 @@ export default function Sales() {
       const result = await create({
         customerId: sale.customerId,
         pointsUsed: sale.pointsUsed,
+        sellerId,
         items: cart.items.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -124,7 +130,9 @@ export default function Sales() {
       cart.clear();
       sale.reset();
       setPaymentMethod("CASH");
+      setSellerId(undefined);
       setDueDate(undefined);
+      setSummaryOpen(false);
 
       message.success(
         result?.pointsEarned
@@ -136,158 +144,255 @@ export default function Sales() {
     }
   }
 
-  const commissionLine = estimatedCommission > 0 && (
-    <div style={{ color: "#52c41a", fontSize: 13 }}>
-      Comisión estimada:{" "}
-      <strong>{formatCurrency(estimatedCommission)}</strong>
+  const totalFinal = cart.subtotal() - (sale.pointsUsed) + cart.totalTax();
+
+  const summaryPanel = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+      <div>
+        <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>CLIENTE</div>
+        <Select
+          showSearch
+          allowClear
+          listHeight={sizes.selectListHeight}
+          size={sizes.select}
+          placeholder="Seleccionar cliente"
+          value={sale.customerId}
+          onChange={(v) => sale.setCustomer(v ?? undefined)}
+          style={{ width: "100%" }}
+          loading={loadingCustomers}
+          onSearch={handleSearch}
+          filterOption={false}
+          options={customers
+            .filter((c) => c.active)
+            .map((c) => ({ value: c.id, label: `${c.dni} - ${c.name}` }))}
+        />
+      </div>
+
+      {selectedCustomer && (
+        <div style={{ padding: "8px 10px", background: "#f6ffed", borderRadius: 6, border: "1px solid #b7eb8f" }}>
+          <Row align="middle" gutter={8}>
+            <Col flex={1}>
+              <span style={{ fontSize: 12, color: "#52c41a" }}>
+                Puntos disponibles: <strong>{availablePoints}</strong>
+              </span>
+            </Col>
+            <Col>
+              <InputNumber
+                size="small"
+                min={0}
+                max={availablePoints}
+                value={sale.pointsUsed}
+                onChange={(v) => sale.setPoints(Math.min(Number(v) || 0, availablePoints))}
+                placeholder="Usar puntos"
+                style={{ width: 110 }}
+              />
+            </Col>
+          </Row>
+        </div>
+      )}
+
+      <Divider style={{ margin: "0" }} />
+
+      <div>
+        <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>MÉTODO DE PAGO</div>
+        <Row gutter={8}>
+          <Col span={paymentMethod === "CREDIT" ? 12 : 24}>
+            <Select
+              value={paymentMethod}
+              onChange={(value) => {
+                setPaymentMethod(value);
+                if (value !== "CREDIT") setDueDate(undefined);
+              }}
+              size={sizes.select}
+              style={{ width: "100%" }}
+              options={[
+                { label: "Efectivo",      value: "CASH"     },
+                { label: "Tarjeta",       value: "CARD"     },
+                { label: "Transferencia", value: "TRANSFER" },
+                { label: "Crédito",       value: "CREDIT"   },
+              ]}
+            />
+          </Col>
+          {paymentMethod === "CREDIT" && (
+            <Col span={12}>
+              <DatePicker
+                style={{ width: "100%" }}
+                size={sizes.input}
+                placeholder="Vencimiento"
+                onChange={(date) => setDueDate(date?.toISOString())}
+              />
+            </Col>
+          )}
+        </Row>
+        {paymentMethod === "CREDIT" && (
+          <Tag color="orange" style={{ marginTop: 8 }}>Venta a crédito</Tag>
+        )}
+      </div>
+
+      <Divider style={{ margin: "0" }} />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span style={{ color: "#666" }}>Subtotal bruto</span>
+          <strong>{formatCurrency(cart.grossSubtotal())}</strong>
+        </div>
+
+        {cart.totalTax() > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ color: "#666" }}>Impuestos</span>
+            <strong style={{ color: "#faad14" }}>{formatCurrency(cart.totalTax())}</strong>
+          </div>
+        )}
+
+        {cart.grossSubtotal() !== cart.subtotal() && (
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ color: "#666" }}>Descuento productos</span>
+            <strong style={{ color: "#ff4d4f" }}>−{formatCurrency(cart.grossSubtotal() - cart.subtotal())}</strong>
+          </div>
+        )}
+
+        {sale.pointsUsed > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ color: "#666" }}>Descuento puntos</span>
+            <strong style={{ color: "#ff4d4f" }}>−{formatCurrency(sale.pointsUsed)}</strong>
+          </div>
+        )}
+
+        {estimatedCommission > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ color: "#52c41a" }}>Comisión estimada</span>
+            <strong style={{ color: "#52c41a" }}>{formatCurrency(estimatedCommission)}</strong>
+          </div>
+        )}
+      </div>
+
+      <Divider style={{ margin: "0" }} />
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ color: "#888", fontSize: 13 }}>Total</span>
+        <span style={{ fontSize: sizes.totalFontSize + 6, fontWeight: 700 }}>
+          {formatCurrency(totalFinal)}
+        </span>
+      </div>
+
+      <Button
+        type="primary"
+        size={sizes.button}
+        block
+        disabled={isSubmitDisabled}
+        loading={creating}
+        onClick={submitSale}
+      >
+        Confirmar venta
+      </Button>
     </div>
   );
 
   if (isMobile) {
     return (
-      <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "#fff" }}>
-        <PageHeader title="Ventas" subtitle="Punto de venta" />
+      <>
+        <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "#fff" }}>
+          <PageHeader title="Ventas" subtitle="Punto de venta" />
 
-        <div style={{ padding: 16, borderBottom: "1px solid #f0f0f0", background: "#fff" }}>
-          <Select
-            ref={selectRef}
-            showSearch
-            allowClear
-            disabled={!warehouseId}
-            placeholder="Buscar producto"
-            size={sizes.select}
-            style={{ width: "100%", marginBottom: 12 }}
-            value={selectedProductId}
-            onChange={setSelectedProductId}
-            onSelect={(id: number) => {
-              const product = products.find((p) => p.id === id);
-              if (product) cart.addProduct(product, undefined);
-              setSelectedProductId(null);
-            }}
-            filterOption={(input, option) => {
-              const label = option?.label as string;
-              return label?.toLowerCase().includes(input.toLowerCase());
-            }}
-            options={products
-              .filter((p) => p.active)
-              .map((p) => ({
-                value: p.id,
-                label: `${p.name} · ${p.stock}`,
-                disabled: p.stock <= 0,
-              }))}
-          />
-
-          <Select
-            showSearch
-            allowClear
-            size={sizes.select}
-            placeholder="Cliente"
-            value={sale.customerId}
-            loading={loadingCustomers}
-            onChange={(v) => sale.setCustomer(v ?? undefined)}
-            style={{ width: "100%", marginBottom: 8 }}
-            onSearch={handleSearch}
-            filterOption={false}
-            options={customers
-              .filter((c) => c.active)
-              .map((c) => ({
-                value: c.id,
-                label: `${c.name} · ${c.points?.balance ?? 0} pts`,
-              }))}
-          />
-
-          <div style={{ marginBottom: 16 }}>
-            {selectedCustomer && (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 13, color: "#666" }}>
-                  Puntos disponibles: <strong>{availablePoints}</strong>
-                </div>
-                <InputNumber
-                  size={sizes.input}
-                  min={0}
-                  max={availablePoints}
-                  value={sale.pointsUsed}
-                  onChange={(v) => sale.setPoints(Math.min(Number(v) || 0, availablePoints))}
-                  placeholder="Puntos a usar"
-                  style={{ width: "100%", marginTop: 6 }}
-                />
-              </div>
-            )}
-          </div>
-
-          <Select
-            value={paymentMethod}
-            onChange={(value) => {
-              setPaymentMethod(value);
-              if (value !== "CREDIT") setDueDate(undefined);
-            }}
-            size={sizes.select}
-            style={{ width: "100%" }}
-            options={[
-              { label: "Efectivo",      value: "CASH"     },
-              { label: "Tarjeta",       value: "CARD"     },
-              { label: "Transferencia", value: "TRANSFER" },
-              { label: "Crédito",       value: "CREDIT"   },
-            ]}
-          />
-
-          {paymentMethod === "CREDIT" && (
-            <DatePicker
-              style={{ width: "100%", marginTop: 8 }}
-              size={sizes.input}
-              placeholder="Fecha de vencimiento"
-              onChange={(date) => setDueDate(date?.toISOString())}
+          <div style={{ padding: 16, borderBottom: "1px solid #f0f0f0", background: "#fff" }}>
+            <Select
+              ref={selectRef}
+              showSearch
+              allowClear
+              disabled={!warehouseId}
+              placeholder="Buscar producto"
+              size={sizes.select}
+              style={{ width: "100%" }}
+              value={selectedProductId}
+              onChange={setSelectedProductId}
+              onSelect={(id: number) => {
+                const product = products.find((p) => p.id === id);
+                if (product) cart.addProduct(product, undefined);
+                setSelectedProductId(null);
+                selectRef.current?.blur();
+              }}
+              filterOption={(input, option) => {
+                const label = option?.label as string;
+                return label?.toLowerCase().includes(input.toLowerCase());
+              }}
+              options={products
+                .filter((p) => p.active)
+                .map((p) => ({
+                  value: p.id,
+                  label: `${p.sku} - ${p.name} - ${p.stock}`,
+                  disabled: p.stock <= 0,
+                }))}
             />
-          )}
-        </div>
-
-        <div style={{ flex: 1, overflowY: "auto", padding: 16, background: "#fafafa" }}>
-          <SaleCartTable
-            items={cart.items}
-            onQuantityChange={cart.updateQuantity}
-            onRemove={cart.removeProduct}
-            onDiscountChange={cart.updateDiscount}
-            onPriceListChange={(productId, priceListId, resolvedPrice) => {
-              cart.updatePriceList(productId, priceListId);
-              cart.updatePrice(productId, resolvedPrice);
-            }}
-            priceLists={priceLists}
-            products={products}
-          />
-        </div>
-
-        <div
-          style={{
-            borderTop: "1px solid #eee",
-            padding: 16,
-            paddingBottom: "calc(16px + env(safe-area-inset-bottom))",
-            background: "#fff",
-            boxShadow: "0 -4px 12px rgba(0,0,0,0.05)",
-          }}
-        >
-          {commissionLine}
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, marginTop: 6 }}>
-            <span style={{ fontSize: 13, color: "#666" }}>Total</span>
-            <strong style={{ fontSize: 20 }}>
-              {formatCurrency(cart.subtotal() - sale.pointsUsed)}
-            </strong>
           </div>
 
-          <Button
-            type="primary"
-            block
-            size="large"
-            disabled={
-              cart.items.length === 0 ||
-              (paymentMethod === "CREDIT" && (!sale.customerId || !dueDate))
-            }
-            loading={creating}
-            onClick={submitSale}
+          <div style={{ flex: 1, overflowY: "auto", padding: 16, background: "#fafafa" }}>
+            <SaleCartTable
+              items={cart.items}
+              onQuantityChange={cart.updateQuantity}
+              onRemove={cart.removeProduct}
+              onDiscountChange={cart.updateDiscount}
+              onPriceListChange={(productId, priceListId, resolvedPrice) => {
+                cart.updatePriceList(productId, priceListId);
+                cart.updatePrice(productId, resolvedPrice);
+              }}
+              priceLists={priceLists}
+              products={products}
+            />
+          </div>
+
+          <div
+            style={{
+              position: "sticky",
+              bottom: 0,
+              zIndex: 10,
+              background: "#fff",
+              borderTop: "1px solid #f0f0f0",
+              padding: "10px 16px calc(10px + env(safe-area-inset-bottom))",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              boxShadow: "0 -4px 12px rgba(0,0,0,0.05)",
+            }}
           >
-            Confirmar venta
-          </Button>
+            <div>
+              <div style={{ fontSize: 11, color: "#888" }}>Total</div>
+              <strong style={{ fontSize: 18 }}>
+                {formatCurrency(totalFinal)}
+              </strong>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button
+                icon={<ShoppingCartOutlined />}
+                onClick={() => setSummaryOpen(true)}
+                disabled={cart.items.length === 0}
+              >
+                Resumen
+              </Button>
+              <Button
+                type="primary"
+                loading={creating}
+                disabled={isSubmitDisabled}
+                onClick={submitSale}
+              >
+                Confirmar
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
+
+        <Drawer
+          title="Resumen de la venta"
+          placement="bottom"
+          height="auto"
+          open={summaryOpen}
+          onClose={() => setSummaryOpen(false)}
+          styles={{ body: { paddingBottom: 32 } }}
+        >
+          {summaryPanel}
+        </Drawer>
+      </>
     );
   }
 
@@ -299,7 +404,7 @@ export default function Sales() {
         <Col span={tableSpan}>
           <Card title="Productos" bodyStyle={{ padding: sizes.cardPadding }}>
             <Input
-              autoFocus
+              autoFocus={!isMobile}
               onChange={(e) => {
                 const value = e.target.value;
                 if (value) onKey(value[value.length - 1]);
@@ -338,7 +443,7 @@ export default function Sales() {
                   .filter((p) => p.active)
                   .map((p) => ({
                     value: p.id,
-                    label: `${p.name} · Existencia: ${p.stock}`,
+                    label: `${p.sku} - ${p.name} - Existencia: ${p.stock}`,
                     disabled: p.stock <= 0,
                   }))}
               />
@@ -362,158 +467,13 @@ export default function Sales() {
         {!isMobile && (
           <Col span={summarySpan}>
             <div style={{ position: "sticky", top: 0, display: "flex", flexDirection: "column", gap: sizes.gap }}>
-
               <Card
                 size="small"
                 bodyStyle={{ padding: sizes.cardPadding }}
                 style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
               >
-                <Row gutter={12}>
-                  <Col span={24}>
-                    <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>CLIENTE</div>
-                    <Select
-                      showSearch
-                      allowClear
-                      listHeight={sizes.selectListHeight}
-                      size={sizes.select}
-                      loading={loadingCustomers}
-                      placeholder="Seleccionar cliente"
-                      value={sale.customerId}
-                      onChange={(v) => sale.setCustomer(v ?? undefined)}
-                      style={{ width: "100%" }}
-                      filterOption={false}
-                      onSearch={handleSearch}
-                      options={customers
-                        .filter((c) => c.active)
-                        .map((c) => ({
-                          value: c.id,
-                          label: `${c.name} · ${c.points?.balance ?? 0} pts`,
-                        }))}
-                    />
-                  </Col>
-                </Row>
-
-                {selectedCustomer && (
-                  <div style={{ marginTop: 10, padding: "8px 10px", background: "#f6ffed", borderRadius: 6, border: "1px solid #b7eb8f" }}>
-                    <Row align="middle" gutter={8}>
-                      <Col flex={1}>
-                        <span style={{ fontSize: 12, color: "#52c41a" }}>
-                          Puntos disponibles: <strong>{availablePoints}</strong>
-                        </span>
-                      </Col>
-                      <Col>
-                        <InputNumber
-                          size="small"
-                          min={0}
-                          max={availablePoints}
-                          value={sale.pointsUsed}
-                          onChange={(v) => sale.setPoints(Math.min(Number(v) || 0, availablePoints))}
-                          placeholder="Usar puntos"
-                          style={{ width: 110 }}
-                        />
-                      </Col>
-                    </Row>
-                  </div>
-                )}
-
-                <Divider style={{ margin: "10px 0" }} />
-
-                <Row gutter={12} align="bottom">
-                  <Col span={paymentMethod === "CREDIT" ? 12 : 24}>
-                    <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>MÉTODO DE PAGO</div>
-                    <Select
-                      value={paymentMethod}
-                      onChange={(value) => {
-                        setPaymentMethod(value);
-                        if (value !== "CREDIT") setDueDate(undefined);
-                      }}
-                      size={sizes.select}
-                      style={{ width: "100%" }}
-                      options={[
-                        { label: "Efectivo",      value: "CASH"     },
-                        { label: "Tarjeta",       value: "CARD"     },
-                        { label: "Transferencia", value: "TRANSFER" },
-                        { label: "Crédito",       value: "CREDIT"   },
-                      ]}
-                    />
-                  </Col>
-                  {paymentMethod === "CREDIT" && (
-                    <Col span={12}>
-                      <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>VENCIMIENTO</div>
-                      <DatePicker
-                        style={{ width: "100%" }}
-                        size={sizes.input}
-                        placeholder="Fecha"
-                        onChange={(date) => setDueDate(date?.toISOString())}
-                      />
-                    </Col>
-                  )}
-                </Row>
-
-                {paymentMethod === "CREDIT" && (
-                  <Tag color="orange" style={{ marginTop: 8 }}>Venta a crédito</Tag>
-                )}
+                {summaryPanel}
               </Card>
-
-              <Card
-                size="small"
-                bodyStyle={{ padding: sizes.cardPadding }}
-                style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
-              >
-                <div style={{ fontSize: 12, color: "#888", marginBottom: 8 }}>RESUMEN</div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#666" }}>Subtotal bruto</span>
-                    <strong>{formatCurrency(cart.grossSubtotal())}</strong>
-                  </div>
-
-                  {cart.grossSubtotal() !== cart.subtotal() && (
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>Descuento productos</span>
-                      <strong style={{ color: "#ff4d4f" }}>−{formatCurrency(cart.grossSubtotal() - cart.subtotal())}</strong>
-                    </div>
-                  )}
-
-                  {sale.pointsUsed > 0 && (
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>Descuento puntos</span>
-                      <strong style={{ color: "#ff4d4f" }}>−{formatCurrency(sale.pointsUsed)}</strong>
-                    </div>
-                  )}
-
-                  {estimatedCommission > 0 && (
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#52c41a" }}>Comisión estimada</span>
-                      <strong style={{ color: "#52c41a" }}>{formatCurrency(estimatedCommission)}</strong>
-                    </div>
-                  )}
-                </div>
-
-                <Divider style={{ margin: "0 0 10px" }} />
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
-                  <span style={{ color: "#888", fontSize: 13 }}>Total</span>
-                  <span style={{ fontSize: sizes.totalFontSize + 6, fontWeight: 700 }}>
-                    {formatCurrency(cart.subtotal() - sale.pointsUsed)}
-                  </span>
-                </div>
-
-                <Button
-                  type="primary"
-                  size={sizes.button}
-                  block
-                  disabled={
-                    cart.items.length === 0 ||
-                    (paymentMethod === "CREDIT" && (!sale.customerId || !dueDate))
-                  }
-                  loading={creating}
-                  onClick={submitSale}
-                >
-                  Confirmar venta
-                </Button>
-              </Card>
-
             </div>
           </Col>
         )}

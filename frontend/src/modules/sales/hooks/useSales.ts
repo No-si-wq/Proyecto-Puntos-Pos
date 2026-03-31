@@ -6,6 +6,7 @@ import type { Sale, CreateSaleDTO } from "../types/sale";
 export function useSales() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loadingList, setLoadingList] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const [creating, setCreating] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const warehouseId = useRequiredWarehouse();
@@ -28,6 +29,16 @@ export function useSales() {
   useEffect(() => {
     load();
   }, [load]);
+
+  async function getSaleById(id: number | string): Promise<Sale> {
+    setLoadingDetail(true);
+    try {
+      const { data } = await http.get<Sale>(`/sales/${id}`);
+      return data;
+    } finally {
+      setLoadingDetail(false);
+    }
+  }
 
   async function create(payload: CreateSaleDTO) {
     setCreating(true);
@@ -53,9 +64,11 @@ export function useSales() {
   return {
     sales,
     loadingList,
+    loadingDetail,
     creating,
     canceling,
     reload: load,
+    getSaleById,
     create,
     cancel,
   };

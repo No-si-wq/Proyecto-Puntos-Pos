@@ -13,6 +13,7 @@ export interface PurchaseItemCreateDTO {
 }
 
 export interface PurchaseItems {
+  id: number;
   quantity: number;
   cost: number;
   product: {

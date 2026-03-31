@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { message, Tooltip, Form, Button, Row, Col, Upload, Badge, Input } from "antd";
-import { TagsOutlined, ReloadOutlined } from "@ant-design/icons";
+import { message, Tooltip, Form, Button, Upload, Badge, Tag, Dropdown, Typography, Space, Input, type MenuProps } from "antd";
+import { TagsOutlined, ReloadOutlined, MoreOutlined, PlusOutlined, FileExcelOutlined, FilePdfOutlined, FileTextOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
 import type { Product } from "../types/product";
@@ -21,8 +21,11 @@ import { useCategories } from "../../categories/useCategories";
 import { exportToPdf } from "../../../core/utils/exportPDF";
 import { exportToExcel } from "../../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
 
 import ReorderPointModal from "../components/ReorderPointModal";
+
+const { Text } = Typography;
 
 export default function Products() {
   const {
@@ -42,6 +45,7 @@ export default function Products() {
   const [editing, setEditing] = useState<Product | null>(null);
   const sizes = useResponsiveSizes();
   const { categoryTree } = useCategories();
+  const { isMobile } = useDeviceType();
 
   const [pricesOpen, setPricesOpen] = useState(false);
   const [pricingProduct, setPricingProduct] = useState<Product | null>(null);
@@ -227,21 +231,54 @@ export default function Products() {
     });
   }
 
-  const columns: ColumnsType<Product> = [
-    { title: "SKU", dataIndex: "sku" },
+  function getProductMenu(record: Product): MenuProps {
+    return {
+      items: [
+        { key: "edit",    label: "Editar",          icon: <TagsOutlined />,  onClick: () => openEdit(record)    },
+        { key: "prices",  label: "Listas de precios", icon: <TagsOutlined />, onClick: () => openPrices(record)  },
+        { key: "reorder", label: "Punto de reorden", icon: <ReloadOutlined />, onClick: () => openReorder(record) },
+        { type: "divider" as const },
+        {
+          key: "toggle", danger: record.active,
+          label: record.active ? "Desactivar" : "Activar",
+          onClick: () => confirmToggle(record),
+        },
+      ],
+    };
+  }
+ 
+  const toolsMenu: MenuProps = {
+    items: [
+      { key: "excel",  label: "Exportar Excel", icon: <FileExcelOutlined />, onClick: handleExportExcel },
+      { key: "pdf",    label: "Exportar PDF",   icon: <FilePdfOutlined />,   onClick: handleExportPdf   },
+      { key: "import", label: "Importar Excel", icon: <FileExcelOutlined />,
+        onClick: () => document.getElementById("products-import-input")?.click() },
+    ],
+  };
+ 
+  const desktopColumns: ColumnsType<Product> = [
+    { title: "SKU",    dataIndex: "sku"  },
     { title: "Nombre", dataIndex: "name" },
-    { title: "Costo", dataIndex: "cost" },
+    { title: "LB", dataIndex: "laboratory", render: (v: string) => v !== null ? v : "-" },
+    { title: "Costo",  dataIndex: "cost" },
     { title: "Precio", dataIndex: "price" },
+    {
+      title: "Obs.",
+      dataIndex: "observations",
+      render: (v: string) => v
+        ? (
+          <Tooltip title={<span style={{ whiteSpace: "pre-wrap" }}>{v}</span>}>
+            <FileTextOutlined style={{ color: "#1677ff", cursor: "pointer", fontSize: 16 }} />
+          </Tooltip>
+        )
+        : <span style={{ color: "#bfbfbf" }}>—</span>,
+    },
     { title: "Impuesto", dataIndex: "tax", render: (v: number) => v != null ? `${(v * 100).toFixed(0)}%` : "—" },
     {
       title: "Categoría",
       render: (_, record) => {
         const text = buildCategoryBreadcrumb(categoryTree, record.categoryId);
-        return (
-          <Tooltip title={text}>
-            <span>{text}</span>
-          </Tooltip>
-        );
+        return <Tooltip title={text}><span>{text}</span></Tooltip>;
       },
     },
     {
@@ -250,50 +287,55 @@ export default function Products() {
         ? <Badge count={value} style={{ backgroundColor: "#faad14" }} overflowCount={9999} />
         : <span style={{ color: "#bfbfbf" }}>—</span>,
     },
-    {
-      title: "Activo",
-      dataIndex: "active",
-      render: (v) => (v ? "Sí" : "No"),
-    },
+    { title: "Activo", dataIndex: "active", render: (v) => (v ? "Sí" : "No") },
     {
       title: "Acciones",
       render: (_, record) => (
         <>
-          <ProtectedButton
-            roles={getAllowedRoles("products", "edit")}
-            onClick={() => openEdit(record)}
-          >
-            Editar
-          </ProtectedButton>
-
+          <ProtectedButton roles={getAllowedRoles("products", "edit")} onClick={() => openEdit(record)}>Editar</ProtectedButton>
           <Tooltip title="Listas de precios">
-            <ProtectedButton
-              roles={getAllowedRoles("products", "edit")}
-              icon={<TagsOutlined />}
-              onClick={() => openPrices(record)}
-            >
-              Lista Precios
-            </ProtectedButton>
+            <ProtectedButton roles={getAllowedRoles("products", "edit")} icon={<TagsOutlined />} onClick={() => openPrices(record)}>Precios</ProtectedButton>
           </Tooltip>
-
           <Tooltip title="Punto de reorden">
-            <ProtectedButton 
-              roles={getAllowedRoles("products", "edit")} 
-              icon={<ReloadOutlined />} 
-              onClick={() => openReorder(record)}
-            >
-              Reorden
-            </ProtectedButton>
+            <ProtectedButton roles={getAllowedRoles("products", "edit")} icon={<ReloadOutlined />} onClick={() => openReorder(record)}>Reorden</ProtectedButton>
           </Tooltip>
-
-          <ProtectedButton
-            roles={getAllowedRoles("products", "delete")}
-            danger
-            onClick={() => confirmToggle(record)}
-          >
+          <ProtectedButton roles={getAllowedRoles("products", "delete")} danger onClick={() => confirmToggle(record)}>
             {record.active ? "Desactivar" : "Activar"}
           </ProtectedButton>
         </>
+      ),
+    },
+  ];
+ 
+  const mobileColumns: ColumnsType<Product> = [
+    {
+      title: "Producto",
+      render: (_, r) => (
+        <div>
+          <Text strong style={{ display: "block" }}>{r.name}</Text>
+          <Text type="secondary" style={{ fontSize: 11 }}>{r.sku}</Text>
+          <div style={{ marginTop: 4, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <Tag color={r.active ? "green" : "default"}>{r.active ? "Activo" : "Inactivo"}</Tag>
+            {r.reorderPoint > 0 && (
+              <Badge count={r.reorderPoint} style={{ backgroundColor: "#faad14" }} overflowCount={9999} />
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Precio",
+      align: "right",
+      render: (_, r) => (
+        <div style={{ textAlign: "right" }}>
+          <Text strong style={{ display: "block" }}>{r.price}</Text>
+          <Text type="secondary" style={{ fontSize: 11 }}>Costo: {r.cost}</Text>
+          <div style={{ marginTop: 4 }}>
+            <Dropdown menu={getProductMenu(r)} trigger={["click"]} placement="bottomRight">
+              <Button icon={<MoreOutlined />} size="small" style={{ border: "none", boxShadow: "none" }} />
+            </Dropdown>
+          </div>
+        </div>
       ),
     },
   ];
@@ -304,53 +346,62 @@ export default function Products() {
         title="Productos"
         subtitle="Gestión de productos"
         extra={
-          <ProtectedButton
-            roles={getAllowedRoles("products", "create")}
-            type="primary"
-            onClick={openCreate}
-          >
-            Nuevo producto
-          </ProtectedButton>
-        }
-      />
-
-      <Row 
-        justify="space-between"
-        align="middle" 
-        style={{ marginBottom: 16 }}
-        gutter={[16, 16]}
-      >
-        <Input
-          placeholder="Buscar por nombre"
-          allowClear
-          onChange={(e) => setSearchValue(e.target.value)}
-        />
-        <Col>
-          <Row gutter={[16, sizes.gutter]}>
-            <Col>
-              <Button type="default" onClick={handleExportExcel} size={sizes.button}>
-                Exportar Excel
-              </Button>
-            </Col>
-            <Col>
-              <Button type="default" onClick={handleExportPdf} size={sizes.button}>
-                Exportar PDF
-              </Button>
-            </Col>
-            <Col>
+          isMobile ? (
+            <Space size={6}>
+              <ProtectedButton
+                roles={getAllowedRoles("products", "create")}
+                type="primary"
+                icon={<PlusOutlined />}
+                size="small"
+                onClick={openCreate}
+              >
+                Nuevo
+              </ProtectedButton>
+              <Dropdown menu={toolsMenu} trigger={["click"]} placement="bottomRight">
+                <Button icon={<MoreOutlined />} size="small" />
+              </Dropdown>
+            </Space>
+          ) : (
+            <Space wrap>
+              <Button onClick={handleExportExcel} size={sizes.button}>Exportar Excel</Button>
+              <Button onClick={handleExportPdf} size={sizes.button}>Exportar PDF</Button>
               <Upload beforeUpload={handleImport} showUploadList={false} accept=".xlsx,.xls">
                 <Button size={sizes.button}>Importar Excel</Button>
               </Upload>
-            </Col>
-          </Row>
-        </Col>
+              <Text strong>Activos: {products.filter(p => p.active).length}</Text>
+              <ProtectedButton roles={getAllowedRoles("products", "create")} type="primary" onClick={openCreate}>
+                Nuevo producto
+              </ProtectedButton>
+            </Space>
+          )
+        }
+      />
 
-        <Col>
-          <strong>Activos: {products.filter(p => p.active).length}</strong>
-        </Col>
-      </Row>
+      <div style={{ marginBottom: 12 }}>
+        <Input
+          placeholder="Buscar por nombre"
+          allowClear
+          size={sizes.input}
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          style={{ width: "100%" }}
+        />
+      </div>
 
-      <SimpleTable<Product> data={products} columns={columns} loading={loading} />
+      <input
+        id="products-import-input"
+        type="file"
+        accept=".xlsx,.xls"
+        hidden
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f); e.target.value = ""; }}
+      />
+
+      <SimpleTable<Product> 
+        data={products} 
+        columns={desktopColumns}
+        mobileColumns={mobileColumns} 
+        loading={loading} 
+      />
 
       <FormModal
         open={open}

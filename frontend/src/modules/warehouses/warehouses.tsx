@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { message } from "antd";
+import { message, Tag, Dropdown, Typography, Button } from "antd";
+import { PlusOutlined, MoreOutlined, EditOutlined, StopOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import type { MenuProps } from "antd";
 
 import type { Warehouse } from "./warehouse";
 import { useWarehouses } from "./useWarehouse";
@@ -11,81 +13,89 @@ import FormModal from "../../core/components/forms/FormModal";
 import WarehouseForm from "./components/WarehouseForm";
 import ProtectedButton from "../../core/components/common/ProtectedButton";
 import { ConfirmModal } from "../../core/components/common/ConfirmModal";
+import { useDeviceType } from "../../core/hooks/useDeviceType";
+
+const { Text } = Typography;
 
 export default function Warehouses() {
-  const { warehouses, loading, create, update, toggleActive } =
-    useWarehouses();
+  const { warehouses, loading, create, update, toggleActive } = useWarehouses();
+  const { isMobile } = useDeviceType();
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]       = useState(false);
   const [editing, setEditing] = useState<Warehouse | null>(null);
 
-  function openCreate() {
-    setEditing(null);
-    setOpen(true);
-  }
-
-  function openEdit(record: Warehouse) {
-    setEditing(record);
-    setOpen(true);
-  }
+  function openCreate() { setEditing(null); setOpen(true); }
+  function openEdit(r: Warehouse) { setEditing(r); setOpen(true); }
 
   async function handleSubmit(values: any) {
     try {
-      if (editing) {
-        await update(editing.id, values);
-        message.success("Almacén actualizado");
-      } else {
-        await create(values);
-        message.success("Almacén creado");
-      }
+      if (editing) { await update(editing.id, values); message.success("Almacén actualizado"); }
+      else { await create(values); message.success("Almacén creado"); }
       setOpen(false);
-    } catch {
-      message.error("Error guardando almacén");
-    }
+    } catch { message.error("Error guardando almacén"); }
   }
 
-  function confirmToggle(wareHouse: Warehouse) {
+  function confirmToggle(r: Warehouse) {
     ConfirmModal({
-      title: wareHouse.active
-        ? "Desactivar proveedor"
-        : "Activar Proveedor",
-      content: `¿Seguro que deseas ${
-        wareHouse.active ? "desactivar" : "activar"
-      } a ${wareHouse.name}?`,
-      danger: wareHouse.active,
-      onConfirm: async () => {
-        await toggleActive(wareHouse.id, !wareHouse.active);
-        message.success("Estado actualizado");
-      },
+      title: r.active ? "Desactivar almacén" : "Activar almacén",
+      content: `¿Seguro que deseas ${r.active ? "desactivar" : "activar"} ${r.name}?`,
+      danger: r.active,
+      onConfirm: async () => { await toggleActive(r.id, !r.active); message.success("Estado actualizado"); },
     });
   }
 
-  const columns: ColumnsType<Warehouse> = [
+  function getRowMenu(r: Warehouse): MenuProps {
+    return {
+      items: [
+        { key: "edit", label: "Editar", icon: <EditOutlined />, onClick: () => openEdit(r) },
+        {
+          key: "toggle", danger: r.active,
+          label: r.active ? "Desactivar" : "Activar",
+          icon: r.active ? <StopOutlined /> : <CheckCircleOutlined />,
+          onClick: () => confirmToggle(r),
+        },
+      ],
+    };
+  }
+
+  const desktopColumns: ColumnsType<Warehouse> = [
     { title: "Nombre", dataIndex: "name" },
-    {
-      title: "Activo",
-      dataIndex: "active",
-      render: (v) => (v ? "Sí" : "No"),
-    },
+    { title: "Activo", dataIndex: "active", render: (v) => (v ? "Sí" : "No") },
     {
       title: "Acciones",
-      render: (_, record) => (
+      render: (_, r) => (
         <>
-          <ProtectedButton 
-            roles={getAllowedRoles("warehouse", "edit")}
-            onClick={() => openEdit(record)}
-          >
-            Editar
-          </ProtectedButton>
-
-          <ProtectedButton
-            roles={getAllowedRoles("warehouse", "delete")}
-            danger
-            onClick={() => confirmToggle(record)}
-          >
-            {record.active ? "Desactivar" : "Activar"}
+          <ProtectedButton roles={getAllowedRoles("warehouse", "edit")} onClick={() => openEdit(r)}>Editar</ProtectedButton>
+          <ProtectedButton roles={getAllowedRoles("warehouse", "delete")} danger onClick={() => confirmToggle(r)}>
+            {r.active ? "Desactivar" : "Activar"}
           </ProtectedButton>
         </>
+      ),
+    },
+  ];
+
+  const mobileColumns: ColumnsType<Warehouse> = [
+    {
+      title: "Almacén",
+      render: (_, r) => (
+        <div>
+          <Text strong>{r.name}</Text>
+          <div style={{ marginTop: 4 }}>
+            <Tag color={r.active ? "green" : "default"}>
+              {r.active ? "Activo" : "Inactivo"}
+            </Tag>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "",
+      align: "right",
+      width: 48,
+      render: (_, r) => (
+        <Dropdown menu={getRowMenu(r)} trigger={["click"]} placement="bottomRight">
+          <Button icon={<MoreOutlined />} size="small" style={{ border: "none", boxShadow: "none" }} />
+        </Dropdown>
       ),
     },
   ];
@@ -96,19 +106,22 @@ export default function Warehouses() {
         title="Almacenes"
         subtitle="Gestión de almacenes"
         extra={
-          <ProtectedButton 
+          <ProtectedButton
             roles={getAllowedRoles("warehouse", "create")}
-            type="primary"  
+            type="primary"
+            icon={isMobile ? <PlusOutlined /> : undefined}
+            size={isMobile ? "small" : "middle"}
             onClick={openCreate}
           >
-            Nuevo almacén
+            {isMobile ? "Nuevo" : "Nuevo almacén"}
           </ProtectedButton>
         }
       />
 
       <SimpleTable<Warehouse>
         data={warehouses}
-        columns={columns}
+        columns={desktopColumns}
+        mobileColumns={mobileColumns}
         loading={loading}
       />
 
@@ -116,6 +129,7 @@ export default function Warehouses() {
         open={open}
         title={editing ? "Editar almacén" : "Nuevo almacén"}
         onClose={() => setOpen(false)}
+        mobileHeight="auto"
       >
         <WarehouseForm
           isEdit={!!editing}

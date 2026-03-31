@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { message, Button, Row, Col } from "antd";
+import { message, Tag, Dropdown, Typography, Space, Button, type MenuProps } from "antd";
+import { PlusOutlined, MoreOutlined, EditOutlined, StopOutlined, CheckCircleOutlined, LogoutOutlined, FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import FormModal from "../../core/components/forms/FormModal"
 
@@ -15,8 +16,11 @@ import ProtectedButton from "../../core/components/common/ProtectedButton";
 import { ConfirmModal } from "../../core/components/common/ConfirmModal";
 import UserForm from "./components/UserForm";
 import SimpleTable from "../../core/components/table/SimpleTable";
+import { useDeviceType } from "../../core/hooks/useDeviceType";
 
 import { getAllowedRoles } from "../../core/utils/permissions";
+
+const { Text } = Typography;
 
 export default function Users() {
   const {
@@ -31,6 +35,7 @@ export default function Users() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const sizes = useResponsiveSizes();
+  const { isMobile } = useDeviceType();
 
   function buildExportRows(data: User[]) {
     return data
@@ -117,43 +122,80 @@ export default function Users() {
     });
   }
 
-  const columns: ColumnsType<User> = [
-    { title: "Email", dataIndex: "email" },
-    { title: "Nombre", dataIndex: "name" },
+  const exportMenu: MenuProps = {
+    items: [
+      { key: "excel", label: "Exportar Excel", icon: <FileExcelOutlined />, onClick: handleExportExcel },
+      { key: "pdf",   label: "Exportar PDF",   icon: <FilePdfOutlined />,   onClick: handleExportPdf   },
+    ],
+  };
+
+  function getRowMenu(r: User): MenuProps {
+    return {
+      items: [
+        { key: "edit", label: "Editar", icon: <EditOutlined />, onClick: () => openEdit(r) },
+        {
+          key: "toggle", danger: r.active,
+          label: r.active ? "Desactivar" : "Activar",
+          icon: r.active ? <StopOutlined /> : <CheckCircleOutlined />,
+          onClick: () => confirmToggle(r),
+        },
+        { type: "divider" as const },
+        {
+          key: "logout", label: "Logout global", icon: <LogoutOutlined />, danger: true,
+          onClick: () => confirmLogoutAll(r),
+        },
+      ],
+    };
+  }
+
+  const desktopColumns: ColumnsType<User> = [
+    { title: "Nombre",  dataIndex: "name"     },
     { title: "Usuario", dataIndex: "username" },
-    { title: "Rol", dataIndex: "role" },
-    {
-      title: "Activo",
-      dataIndex: "active",
-      render: (v) => (v ? "Sí" : "No"),
-    },
+    { title: "Email", dataIndex: "email" },
+    { title: "Rol",     dataIndex: "role"     },
+    { title: "Almacen", dataIndex: ["warehouse", "name"], render: (v) => (v ?? "-") },
+    { title: "Activo",  dataIndex: "active", render: (v) => (v ? "Sí" : "No") },
     {
       title: "Acciones",
-      render: (_, record) => (
+      render: (_, r) => (
         <>
-          <ProtectedButton
-            roles={getAllowedRoles("users", "edit")}
-            onClick={() => openEdit(record)}
-          >
-            Editar
+          <ProtectedButton roles={getAllowedRoles("users", "edit")} onClick={() => openEdit(r)}>Editar</ProtectedButton>
+          <ProtectedButton roles={getAllowedRoles("users", "delete")} danger onClick={() => confirmToggle(r)}>
+            {r.active ? "Desactivar" : "Activar"}
           </ProtectedButton>
-
-          <ProtectedButton
-            roles={getAllowedRoles("users", "delete")}
-            danger
-            onClick={() => confirmToggle(record)}
-          >
-            {record.active ? "Desactivar" : "Activar"}
-          </ProtectedButton>
-
-          <ProtectedButton
-            roles={getAllowedRoles("users", "manage")}
-            danger
-            onClick={() => confirmLogoutAll(record)}
-          >
+          <ProtectedButton roles={getAllowedRoles("users", "manage")} danger onClick={() => confirmLogoutAll(r)}>
             Logout global
           </ProtectedButton>
         </>
+      ),
+    },
+  ];
+
+  const mobileColumns: ColumnsType<User> = [
+    {
+      title: "Usuario",
+      render: (_, r) => (
+        <div>
+          <Text strong style={{ display: "block" }}>{r.name}</Text>
+          <Text type="secondary" style={{ fontSize: 11 }}>{r.username}</Text>
+          <br />
+          <div style={{ marginTop: 4 }}>
+            <Tag color={r.active ? "green" : "default"} style={{ marginRight: 4 }}>
+              {r.active ? "Activo" : "Inactivo"}
+            </Tag>
+            <Tag>{r.role}</Tag>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "",
+      align: "right",
+      width: 48,
+      render: (_, r) => (
+        <Dropdown menu={getRowMenu(r)} trigger={["click"]} placement="bottomRight">
+          <Button icon={<MoreOutlined />} size="small" style={{ border: "none", boxShadow: "none" }} />
+        </Dropdown>
       ),
     },
   ];
@@ -164,55 +206,34 @@ export default function Users() {
         title="Usuarios"
         subtitle="Gestión de usuarios del sistema"
         extra={
-          <ProtectedButton
-            roles={getAllowedRoles("users", "create")}
-            type="primary"
-            onClick={openCreate}
-          >
-            Nuevo usuario
-          </ProtectedButton>
+          isMobile ? (
+            <Space size={6}>
+              <ProtectedButton roles={getAllowedRoles("users", "create")} type="primary"
+                icon={<PlusOutlined />} size="small" onClick={openCreate}>
+                Nuevo
+              </ProtectedButton>
+              <Dropdown menu={exportMenu} trigger={["click"]} placement="bottomRight">
+                <Button icon={<MoreOutlined />} size="small" />
+              </Dropdown>
+            </Space>
+          ) : (
+            <Space wrap>
+              <Button onClick={handleExportExcel} size={sizes.button}>Exportar Excel</Button>
+              <Button onClick={handleExportPdf}   size={sizes.button}>Exportar PDF</Button>
+              <Text strong>Activos: {users.filter(u => u.active).length}</Text>
+              <ProtectedButton roles={getAllowedRoles("users", "create")} type="primary" onClick={openCreate}>
+                Nuevo usuario
+              </ProtectedButton>
+            </Space>
+          )
         }
       />
 
-      <Row
-        justify="space-between"
-        align="middle"
-        style={{ marginBottom: 16 }}
-      >
-        <Col>
-          <Row gutter={12}>
-            <Col>
-              <Button
-                type="default"
-                onClick={handleExportExcel}
-                size={sizes.button}
-              >
-                Exportar Excel
-              </Button>
-            </Col>
-
-            <Col>
-              <Button
-                type="default"
-                onClick={handleExportPdf}
-                size={sizes.button}
-              >
-                Exportar PDF
-              </Button>
-            </Col>
-          </Row>
-        </Col>
-
-        <Col>
-          <strong>
-            Activos: {users.filter(u => u.active).length}
-          </strong>
-        </Col>
-      </Row>
 
       <SimpleTable<User>
         data={users}
-        columns={columns}
+        columns={desktopColumns}
+        mobileColumns={mobileColumns}
         loading={loading}
       />
 
