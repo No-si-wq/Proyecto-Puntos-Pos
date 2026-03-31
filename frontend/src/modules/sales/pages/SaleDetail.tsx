@@ -117,7 +117,7 @@ export default function SaleDetail() {
     cancel,
   } = useSales();
 
-  const [sale, setSale] = useState<Sale | null>(null)
+  const [sale, setSale] = useState<Sale | null>(null);
   const loading = loadingDetail;
 
   async function load() {
@@ -311,7 +311,7 @@ export default function SaleDetail() {
             </Descriptions.Item>
             {sale?.priceList && (
               <Descriptions.Item label="Lista de precios">
-                {sale.priceList.name}
+                {sale?.priceList.name}
               </Descriptions.Item>
             )}
           </Descriptions>

@@ -124,7 +124,7 @@ export default function Products() {
     return {
       sku: editing.sku,
       name: editing.name,
-      description: editing.description,
+      description: editing.description ?? undefined,
       price: editing.price,
       cost: editing.cost,
       tax: editing.tax != null ? Number(editing.tax) * 100 : undefined,

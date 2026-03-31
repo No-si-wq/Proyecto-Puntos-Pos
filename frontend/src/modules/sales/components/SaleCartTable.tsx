@@ -67,7 +67,6 @@ export function SaleCartTable({
         )}
         {items.map((i) => {
           const taxPercent = (i.tax * 100).toFixed(0);
-          const taxAmount = i.price * i.quantity * i.tax;
           return (
             <div
               key={i.productId}
@@ -116,12 +115,12 @@ export function SaleCartTable({
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderTop: "1px solid #f0f0f0", paddingTop: 10, marginTop: 8 }}>
                   <div style={{ fontSize: 12, color: "#888" }}>
-                    <div>Impuesto <span style={taxBadgeStyle}>{taxPercent}%</span> {formatCurrency(taxAmount)}</div>
+                    <div>Impuesto <span style={taxBadgeStyle}>{taxPercent}%</span> {formatCurrency(i.taxAmount)}</div>
                     {i.discountAmount > 0 && <div style={{ color: "#ff4d4f", marginTop: 2 }}>−{formatCurrency(i.discountAmount)}</div>}
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: 11, color: "#999", marginBottom: 1 }}>Subtotal</div>
-                    <strong style={{ fontSize: 16 }}>{formatCurrency(i.lineSubtotal)}</strong>
+                    <strong style={{ fontSize: 16 }}>{formatCurrency(i.lineTotal)}</strong>
                   </div>
                 </div>
               </div>
