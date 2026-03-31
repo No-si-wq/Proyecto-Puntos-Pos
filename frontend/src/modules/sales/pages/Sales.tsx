@@ -19,7 +19,7 @@ import { ShoppingCartOutlined } from "@ant-design/icons";
 import { useDebouncedCallback } from "use-debounce";
 import { useCustomers } from "../../customers/useCustomers";
 import { useSales } from "../hooks/useSales";
-import { useCartSale } from "../hooks/useCartSale";
+import { saleCartStore } from "../types/saleCart.store";
 import { useBarcodeScanner } from "../../../core/hooks/useBarcodeScanner";
 import { saleStore } from "../types/sale.store";
 import { SaleCartTable } from "../components/SaleCartTable";
@@ -52,7 +52,7 @@ export default function Sales() {
   const { create, creating } = useSales();
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const selectRef = useRef<any>(null);
-  const cart = useCartSale();
+  const cart = saleCartStore();
 
   useEffect(() => {
     cart.clear();

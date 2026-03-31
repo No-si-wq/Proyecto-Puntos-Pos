@@ -18,16 +18,7 @@ export class SaleService {
 
     return prisma.sale.findMany({
       where: { warehouseId, ...dataFilter },
-      select: {
-        id: true,
-        saleNumber: true,
-        subtotal: true,
-        discount: true,
-        total: true,
-        pointsUsed: true,
-        pointsEarned: true,
-        status: true,
-        createdAt: true,
+      include: {
         customer: { select: { id: true, name: true } },
         user: { select: { id: true, name: true } },
         priceList: { select: { id: true, name: true } },
@@ -39,23 +30,7 @@ export class SaleService {
   static async getById(id: number, warehouseId: number) {
     const sale = await prisma.sale.findFirst({
       where: { id, warehouseId },
-      select: {
-        id: true,
-        saleNumber: true,
-        status: true,
-        createdAt: true,
-        grossSubtotal: true,
-        subtotal: true,
-        discount: true,
-        taxTotal: true,
-        total: true,
-        cogs: true,
-        pointsUsed: true,
-        pointsEarned: true,
-        paymentMethod: true,
-        customer: { select: { id: true, name: true } },
-        user: { select: { id: true, name: true } },
-        priceList: { select: { id: true, name: true } },
+      include: {
         items: {
           select: {
             id: true,
@@ -82,6 +57,18 @@ export class SaleService {
             amount: true,
             type: true,
             createdAt: true,
+          },
+        },
+        priceList: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
           },
         },
         receivable: { select: { id: true, total: true, balance: true, dueDate: true } },

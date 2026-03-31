@@ -22,12 +22,12 @@ import {
 import { ConfirmModal } from "../../../core/components/common/ConfirmModal";
 import PageHeader from "../../../core/components/common/PageHeader";
 import SimpleTable from "../../../core/components/table/SimpleTable";
-import http from "../../../core/http/http";
 import { formatCurrency, formatDate } from "../../../core/utils/formatters";
 import type { Sale, SaleItems } from "../types/sale";
 import type { ColumnsType } from "antd/es/table";
 import { exportToPdf } from "../../../core/utils/exportPDF";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
+import { useSales } from "../hooks/useSales";
 
 const { Text } = Typography;
 
@@ -110,17 +110,20 @@ export default function SaleDetail() {
   const navigate = useNavigate();
   const { isMobile } = useDeviceType();
 
-  const [sale, setSale] = useState<Sale | null>(null);
-  const [loading, setLoading] = useState(false);
+  const {
+    loadingDetail,
+    canceling,
+    getSaleById,
+    cancel,
+  } = useSales();
+
+  const [sale, setSale] = useState<Sale | null>(null)
+  const loading = loadingDetail;
 
   async function load() {
-    setLoading(true);
-    try {
-      const { data } = await http.get(`/sales/${id}`);
-      setSale(data);
-    } finally {
-      setLoading(false);
-    }
+    if (!id) return;
+    const data = await getSaleById(id);
+    setSale(data);
   }
 
   useEffect(() => {
@@ -134,9 +137,8 @@ export default function SaleDetail() {
       content: `¿Cancelar ${sale.saleNumber}?`,
       danger: true,
       onConfirm: async () => {
-        await http.post(`/sales/${sale.id}/cancel`);
+        await cancel(sale.id);
         message.success("Venta cancelada");
-        load();
       },
     });
   }
@@ -219,7 +221,12 @@ export default function SaleDetail() {
         PDF
       </Button>
       {!isCancelled && (
-        <Button danger icon={<CloseCircleOutlined />} onClick={handleCancel}>
+        <Button
+          danger
+          icon={<CloseCircleOutlined />}
+          onClick={handleCancel}
+          loading={canceling}
+        >
           Cancelar venta
         </Button>
       )}

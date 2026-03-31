@@ -18,7 +18,7 @@ import { useDebouncedCallback } from "use-debounce";
 
 import { usePurchases } from "../hooks/usePurchases";
 import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
-import { useCartPurchase } from "../hooks/useCartPurchase";
+import { purchaseCartStore } from "../types/purchaseCart.store";
 import { useSuppliers } from "../../suppliers/useSuppliers";
 import { formatCurrency } from "../../../core/utils/formatters";
 import { PurchaseCartTable } from "../components/PurchaseCartTable";
@@ -40,7 +40,7 @@ export default function Purchases() {
   const { products, reload: reloadProducts }  = useWarehouseProducts();
   const { create, creating, unitConversions, loadUnitConversions } = usePurchases();
   const selectRef = useRef<any>(null);
-  const cart      = useCartPurchase();
+  const cart      = purchaseCartStore();
   const sizes     = useResponsiveSizes();
   const { suppliers, loading: loadingSuppliers, setFilters: setFiltersSuppliers } = useSuppliers();
   const { isMobile, isTablet } = useDeviceType();
