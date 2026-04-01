@@ -19,7 +19,7 @@ import { formatCurrency } from "../../core/utils/formatters";
 import { exportProfitReportToExcel } from "../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
 import { useDeviceType } from "../../core/hooks/useDeviceType";
-import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
+import { useRequiredWarehouse } from "../warehouses/hooks/useRequiredWarehouse";
 
 const { Text } = Typography;
 

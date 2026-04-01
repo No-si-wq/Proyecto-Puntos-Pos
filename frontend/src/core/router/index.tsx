@@ -19,7 +19,7 @@ import PurchaseHistory from "../../modules/purchases/pages/PurchaseHistory";
 import SaleHistory from "../../modules/sales/pages/SaleHistory";
 import InventoryPage from "../../modules/inventory/pages/Inventory";
 import InventoryList from "../../modules/inventory/pages/InventroyList";
-import Warehouses from "../../modules/warehouses/warehouses";
+import Warehouses from "../../modules/warehouses/pages/warehouses";
 import AdminDashboard from "../../modules/dashboard/AdminDashboard";
 import AccountsReceivable from "../../modules/accounts-receivable/AccountsReceivable";
 import AccountsPayable from "../../modules/accounts-payable/AccountsPayable";

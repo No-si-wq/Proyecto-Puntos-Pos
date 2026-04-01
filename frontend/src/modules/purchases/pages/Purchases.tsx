@@ -17,7 +17,7 @@ import { ShoppingCartOutlined } from "@ant-design/icons";
 import { useDebouncedCallback } from "use-debounce";
 
 import { usePurchases } from "../hooks/usePurchases";
-import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
+import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehouse";
 import { purchaseCartStore } from "../types/purchaseCart.store";
 import { useSuppliers } from "../../suppliers/useSuppliers";
 import { formatCurrency } from "../../../core/utils/formatters";
@@ -25,7 +25,7 @@ import { PurchaseCartTable } from "../components/PurchaseCartTable";
 import { useBarcodeScanner } from "../../../core/hooks/useBarcodeScanner";
 import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
 import { useDeviceType } from "../../../core/hooks/useDeviceType"; // ajusta el path
-import { useWarehouseProducts } from "../../warehouses/useWarehouseProducts";
+import { useWarehouseProducts } from "../../warehouses/hooks/useWarehouseProducts";
 import type { PurchasePaymentMethod } from "../types/purchase";
 import PageHeader from "../../../core/components/common/PageHeader";
 

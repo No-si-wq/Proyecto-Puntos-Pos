@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { Modal, Form, InputNumber, Select, Alert } from "antd";
 import { useTransferInventory } from "../hooks/useTransferInventory";
-import { useWarehouses } from "../../warehouses/useWarehouse";
-import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
+import { useWarehouses } from "../../warehouses/hooks/useWarehouse";
+import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehouse";
 
 interface Props {
   open: boolean;

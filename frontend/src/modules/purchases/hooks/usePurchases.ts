@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
+import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehouse";
 import http from "../../../core/http/http";
 import type {
   Purchase,

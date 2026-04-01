@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Modal, Form, InputNumber, Select, Alert, Typography } from "antd";
 import { useTransferProduct } from "../hooks/useTransferProduct";
-import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
-import { useWarehouseProducts } from "../../warehouses/useWarehouseProducts";
+import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehouse";
+import { useWarehouseProducts } from "../../warehouses/hooks/useWarehouseProducts";
 
 const { Text } = Typography;
 

@@ -33,7 +33,7 @@ import {
   MenuOutlined,
   LineChartOutlined,
 } from "@ant-design/icons";
-import { useWarehouses } from "../../modules/warehouses/useWarehouse";
+import { useWarehouses } from "../../modules/warehouses/hooks/useWarehouse";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useLogout } from "../../modules/auth/useLogout";
 import { authStore } from "../../modules/auth/auth.store";
@@ -41,6 +41,7 @@ import { canAccess } from "../utils/permissions";
 import { useDeviceType } from "../hooks/useDeviceType";
 import { OfflineBanner } from "../../modules/OfflineBanner";
 import { useResponsiveSizes } from "../hooks/useResponsiveSizes";
+import { useVisualViewport } from "../hooks/useVisualViewport";
 
 const { Header, Sider, Content } = Layout;
 
@@ -76,6 +77,9 @@ export default function MainLayout() {
     isStandalone && isDesktopLike
 
   const showSider = isDesktopLike
+
+  const viewportHeight = useVisualViewport();
+  const headerHeight = isInstalledDesktop ? 56 : 64;
 
   const collapsed =
     isDesktop
@@ -309,16 +313,12 @@ export default function MainLayout() {
 
       <Layout
         style={{
-          marginLeft:
-            showSider
-              ? collapsed
-                ? 80
-                : 200
-              : 0,
+          marginLeft: showSider ? (collapsed ? 80 : 200) : 0,
           transition: "all 0.2s",
           display: "flex",
           flexDirection:"column",
-          minHeight: "100%",
+          height: isMobileLike ? viewportHeight : "100dvh",
+          overflow: "hidden",
         }}
       >
       <Header
@@ -438,15 +438,17 @@ export default function MainLayout() {
           </div>
         </Drawer>
       )}
-      <Content
-        style={{
-          padding: isMobileLike ? 16 : isInstalledDesktop ? 16 : 24,
-          height: `calc(100dvh - ${isInstalledDesktop ? 56 : 64}px)`,
-          overflow: "auto",
-          WebkitOverflowScrolling: "touch",
-          overscrollBehaviorY: "contain",
-        }}
-      >
+        <Content
+          style={{
+            padding: isMobileLike ? 16 : isInstalledDesktop ? 16 : 24,
+            height: isMobileLike
+              ? viewportHeight - headerHeight
+              : `calc(100dvh - ${headerHeight}px)`,
+            overflow: "auto",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehaviorY: "contain",
+          }}
+        >
             <OfflineBanner />
           <Outlet />
         </Content>

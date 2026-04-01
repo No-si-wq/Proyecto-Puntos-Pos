@@ -26,8 +26,8 @@ import { SaleCartTable } from "../components/SaleCartTable";
 import { formatCurrency } from "../../../core/utils/formatters";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
 import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
-import { useRequiredWarehouse } from "../../warehouses/useRequiredWarehouse";
-import { useWarehouseProducts } from "../../warehouses/useWarehouseProducts";
+import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehouse";
+import { useWarehouseProducts } from "../../warehouses/hooks/useWarehouseProducts";
 import { usePriceLists } from "../../priceLists/hooks/usePriceList";
 import type { SalePaymentMethod } from "../types/sale";
 

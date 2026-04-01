@@ -1,6 +1,6 @@
 import { Form, Input, Switch } from "antd";
 import FormBase from "../../../core/components/forms/FormBase";
-import type { Warehouse } from "../warehouse";
+import type { Warehouse } from "../types/warehouse";
 
 interface Props {
   isEdit: boolean;

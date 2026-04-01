@@ -4,16 +4,16 @@ import { PlusOutlined, MoreOutlined, EditOutlined, StopOutlined, CheckCircleOutl
 import type { ColumnsType } from "antd/es/table";
 import type { MenuProps } from "antd";
 
-import type { Warehouse } from "./warehouse";
-import { useWarehouses } from "./useWarehouse";
-import { getAllowedRoles } from "../../core/utils/permissions";
-import PageHeader from "../../core/components/common/PageHeader";
-import SimpleTable from "../../core/components/table/SimpleTable";
-import FormModal from "../../core/components/forms/FormModal";
-import WarehouseForm from "./components/WarehouseForm";
-import ProtectedButton from "../../core/components/common/ProtectedButton";
-import { ConfirmModal } from "../../core/components/common/ConfirmModal";
-import { useDeviceType } from "../../core/hooks/useDeviceType";
+import type { Warehouse } from "../types/warehouse";
+import { useWarehouses } from "../hooks/useWarehouse";
+import { getAllowedRoles } from "../../../core/utils/permissions";
+import PageHeader from "../../../core/components/common/PageHeader";
+import SimpleTable from "../../../core/components/table/SimpleTable";
+import FormModal from "../../../core/components/forms/FormModal";
+import WarehouseForm from "../components/WarehouseForm";
+import ProtectedButton from "../../../core/components/common/ProtectedButton";
+import { ConfirmModal } from "../../../core/components/common/ConfirmModal";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
 
 const { Text } = Typography;
 

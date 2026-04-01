@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { message } from "antd";
-import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
+import { useRequiredWarehouse } from "../warehouses/hooks/useRequiredWarehouse";
 import http from "../../core/http/http";
 
 import type {

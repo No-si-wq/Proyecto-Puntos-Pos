@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
-import { useRequiredWarehouse } from "./useRequiredWarehouse";
-import http from "../../core/http/http";
-import type { ProductWithContext } from "../products/product";
+import { useRequiredWarehouse } from "../hooks/useRequiredWarehouse";
+import http from "../../../core/http/http";
+import type { ProductWithContext } from "../../products/types/product";
 
 export function useWarehouseProducts() {
   const warehouseId = useRequiredWarehouse();

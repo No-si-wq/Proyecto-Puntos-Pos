@@ -250,6 +250,12 @@ export class InventoryService {
         ...(search && {
           OR: [
             {
+              sku: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
               name: {
                 contains: search,
                 mode: "insensitive",

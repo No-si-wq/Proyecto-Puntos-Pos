@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import http from "../../core/http/http";
-import type { Warehouse, CreateWareHouseDTO, UpdateWareHouseDTO } from "./warehouse";
+import http from "../../../core/http/http";
+import type { Warehouse, CreateWareHouseDTO, UpdateWareHouseDTO } from "../types/warehouse";
 
 export function useWarehouses() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);

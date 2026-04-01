@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useTransition } from "react";
 import http from "../../core/http/http";
-import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
+import { useRequiredWarehouse } from "../warehouses/hooks/useRequiredWarehouse";
 import type { DashboardData } from "./type/dashboard";
 
 type Status = "idle" | "loading" | "success" | "error";

@@ -15,14 +15,14 @@ import type { ColumnsType } from "antd/es/table";
 import { FilterOutlined, FileExcelOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useReports } from "./useReport";
-import { useWarehouseProducts } from "../warehouses/useWarehouseProducts";
+import { useWarehouseProducts } from "../warehouses/hooks/useWarehouseProducts";
 import ResponsiveRangePicker from "../../core/components/common/ResponsiveRangePicker";
 import { formatCurrency } from "../../core/utils/formatters";
 import type { KardexRow, KardexTableRow } from "./report";
 import { exportKardexToExcel } from "../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
 import { useDeviceType } from "../../core/hooks/useDeviceType";
-import { useRequiredWarehouse } from "../warehouses/useRequiredWarehouse";
+import { useRequiredWarehouse } from "../warehouses/hooks/useRequiredWarehouse";
 
 export default function Kardex() {
   const { products, loading: loadingProducts } = useWarehouseProducts();
