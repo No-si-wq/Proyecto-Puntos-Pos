@@ -14,11 +14,13 @@ import WarehouseForm from "../components/WarehouseForm";
 import ProtectedButton from "../../../core/components/common/ProtectedButton";
 import { ConfirmModal } from "../../../core/components/common/ConfirmModal";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
+import { usePermissions } from "../../../core/hooks/usePermissions";
 
 const { Text } = Typography;
 
 export default function Warehouses() {
   const { warehouses, loading, create, update, toggleActive } = useWarehouses();
+  const { canAccess } = usePermissions();
   const { isMobile } = useDeviceType();
 
   const [open, setOpen]       = useState(false);
@@ -45,17 +47,22 @@ export default function Warehouses() {
   }
 
   function getRowMenu(r: Warehouse): MenuProps {
-    return {
-      items: [
-        { key: "edit", label: "Editar", icon: <EditOutlined />, onClick: () => openEdit(r) },
-        {
-          key: "toggle", danger: r.active,
-          label: r.active ? "Desactivar" : "Activar",
-          icon: r.active ? <StopOutlined /> : <CheckCircleOutlined />,
-          onClick: () => confirmToggle(r),
-        },
-      ],
-    };
+    const items: MenuProps["items"] = [];
+
+    if (canAccess(...getAllowedRoles("warehouse", "edit"))) {
+      items.push({ key: "edit", label: "Editar", icon: <EditOutlined />, onClick: () => openEdit(r)})
+    }
+
+    if (canAccess(...getAllowedRoles("warehouse", "delete"))) {
+      items.push({
+        key: "toggle", danger: r.active,
+        label: r.active ? "Desactivar" : "Activar",
+        icon: r.active ? <StopOutlined /> : <CheckCircleOutlined />,
+        onClick: () => confirmToggle(r),
+      });
+    }
+
+    return { items };
   }
 
   const desktopColumns: ColumnsType<Warehouse> = [
@@ -92,11 +99,18 @@ export default function Warehouses() {
       title: "",
       align: "right",
       width: 48,
-      render: (_, r) => (
-        <Dropdown menu={getRowMenu(r)} trigger={["click"]} placement="bottomRight">
-          <Button icon={<MoreOutlined />} size="small" style={{ border: "none", boxShadow: "none" }} />
-        </Dropdown>
-      ),
+      render: (_, r) => {
+        const menu = getRowMenu(r);
+        return (
+          <div style={{ textAlign: "right" }}>
+            {menu.items && menu.items.length > 0 && (
+            <Dropdown menu={menu} trigger={["click"]} placement="bottomRight">
+              <Button icon={<MoreOutlined />} size="small" style={{ border: "none", boxShadow: "none" }} />
+            </Dropdown>
+            )}
+          </div>
+        );
+      },
     },
   ];
 

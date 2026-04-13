@@ -19,6 +19,7 @@ import CustomerForm from "./components/CustomerForm";
 import SimpleTable from "../../core/components/table/SimpleTable";
 
 import { getAllowedRoles } from "../../core/utils/permissions";
+import { usePermissions } from "../../core/hooks/usePermissions";
 
 const { Text } = Typography;
 
@@ -37,6 +38,7 @@ export default function Customers() {
   const [searchValue, setSearchValue] = useState("");
   const [editing, setEditing] = useState<Customer | null>(null);
   const sizes = useResponsiveSizes();
+  const { canAccess } = usePermissions();
   const { isMobile } = useDeviceType();
 
   useEffect(() => {
@@ -138,17 +140,22 @@ export default function Customers() {
   };
 
   function getRowMenu(r: Customer): MenuProps {
-    return {
-      items: [
-        { key: "edit", label: "Editar", icon: <EditOutlined />, onClick: () => openEdit(r) },
-        {
-          key: "toggle", danger: r.active,
-          label: r.active ? "Desactivar" : "Activar",
-          icon: r.active ? <StopOutlined /> : <CheckCircleOutlined />,
-          onClick: () => confirmToggle(r),
-        },
-      ],
-    };
+    const items: MenuProps["items"] = [];
+
+    if (canAccess(...getAllowedRoles("customers", "edit"))) {
+      items.push({ key: "edit", label: "Editar", icon: <EditOutlined />, onClick: () => openEdit(r) });
+    }
+
+    if (canAccess(...getAllowedRoles("customers", "delete"))) {
+      items.push({
+        key: "toggle", danger: r.active,
+        label: r.active ? "Desactivar" : "Activar",
+        icon: r.active ? <StopOutlined /> : <CheckCircleOutlined />,
+        onClick: () => confirmToggle(r),
+      });
+    }
+
+    return { items };
   }
 
   const desktopColumns: ColumnsType<Customer> = [
@@ -194,19 +201,24 @@ export default function Customers() {
     {
       title: "Puntos",
       align: "right",
-      render: (_, r) => (
-        <div style={{ textAlign: "right" }}>
-          <Text strong style={{ display: "block" }}>
-            {new Intl.NumberFormat("es-HN").format(r.points?.balance ?? 0)}
-          </Text>
-          <Text type="secondary" style={{ fontSize: 10 }}>pts</Text>
-          <div style={{ marginTop: 6 }}>
-            <Dropdown menu={getRowMenu(r)} trigger={["click"]} placement="bottomRight">
-              <Button icon={<MoreOutlined />} size="small" style={{ border: "none", boxShadow: "none" }} />
-            </Dropdown>
+      render: (_, r) => {
+        const menu = getRowMenu(r);
+        return (
+          <div style={{ textAlign: "right" }}>
+            <Text strong style={{ display: "block" }}>
+              {new Intl.NumberFormat("es-HN").format(r.points?.balance ?? 0)}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 10 }}>pts</Text>
+            {menu.items && menu.items.length > 0 && (
+              <div style={{ marginTop: 6 }}>
+                <Dropdown menu={menu} trigger={["click"]} placement="bottomRight">
+                  <Button icon={<MoreOutlined />} size="small" style={{ border: "none", boxShadow: "none" }} />
+                </Dropdown>
+              </div>
+            )}
           </div>
-        </div>
-      ),
+        );
+      },
     },
   ];
 

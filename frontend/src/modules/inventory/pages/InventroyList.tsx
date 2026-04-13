@@ -12,6 +12,7 @@ import ProtectedButton from "../../../core/components/common/ProtectedButton";
 import type { InventoryRow } from "../types/inventory";
 import { getAllowedRoles } from "../../../core/utils/permissions";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
+import { usePermissions } from "../../../core/hooks/usePermissions";
 import PageHeader from "../../../core/components/common/PageHeader";
 import SimpleTable from "../../../core/components/table/SimpleTable";
 import TransferInventoryModal from "../components/Transferinventorymodal";
@@ -27,6 +28,7 @@ function stockTag(value: number) {
 
 export default function InventoryList() {
   const { data, loading, setFilters, reload } = useInventoryList();
+  const { canAccess } = usePermissions();
 
   const navigate = useNavigate();
   const sizes = useResponsiveSizes();
@@ -84,13 +86,18 @@ export default function InventoryList() {
   }
 
   function getRowMenu(record: InventoryRow): MenuProps {
-    return {
-      items: [
-        {
-          key: "detail",
-          label: "Ver detalle",
-          onClick: () => navigate(`/inventory/${record.id}`),
-        },
+    const items: MenuProps["items"] = [];
+
+    if (canAccess(...getAllowedRoles("inventory", "view"))) {
+      items.push({
+        key: "detail", 
+        label: "Ver detalle", 
+        onClick: () => navigate(`/inventory/${record.id}`),
+      });
+    }
+
+    if (canAccess(...getAllowedRoles("inventory", "manage"))) {
+      items.push(
         {
           key: "transfer",
           label: "Transferir",
@@ -103,8 +110,10 @@ export default function InventoryList() {
           disabled: record.stock <= 0,
           onClick: () => setTransferProductTarget(record),
         },
-      ],
-    };
+      );
+    }
+
+    return { items };
   }
 
   const exportMenu: MenuProps = {
@@ -160,16 +169,21 @@ export default function InventoryList() {
     {
       title: "Stock",
       align: "right",
-      render: (_, r) => (
-        <div style={{ textAlign: "right" }}>
-          {stockTag(r.stock)}
-          <div style={{ marginTop: 6 }}>
-            <Dropdown menu={getRowMenu(r)} trigger={["click"]} placement="bottomRight">
-              <Button icon={<MoreOutlined />} size="small" style={{ border: "none", boxShadow: "none" }} />
-            </Dropdown>
+      render: (_, r) => {
+        const menu = getRowMenu(r);
+        return (
+          <div style={{ textAlign: "right" }}>
+            {stockTag(r.stock)}
+            {menu.items && menu.items.length > 0 && (
+              <div style={{ marginTop: 6 }}>
+                <Dropdown menu={menu} trigger={["click"]} placement="bottomRight">
+                  <Button icon={<MoreOutlined />} size="small" style={{ border: "none", boxShadow: "none" }} />
+                </Dropdown>
+              </div>
+            )}
           </div>
-        </div>
-      ),
+        );
+      },
     },
   ];
 

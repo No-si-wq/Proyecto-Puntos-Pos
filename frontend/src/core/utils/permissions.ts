@@ -66,6 +66,7 @@ export const PERMISSIONS: Record<
 
   inventory: {
     view: [Role.ADMIN, Role.USER],
+    manage: [Role.ADMIN]
   },
 
   purchases: {
