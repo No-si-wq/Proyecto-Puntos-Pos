@@ -128,11 +128,42 @@ export default function InventoryPage() {
 
   return (
     <Card
-      title={`Inventario — ${productName ?? ""}`}
+      title={
+        isMobile ? (
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              whiteSpace: "normal",
+              wordBreak: "break-word",
+              lineHeight: 1.3,
+              display: "block",
+              paddingRight: 8,
+            }}
+          >
+            {`Inventario — ${productName ?? ""}`}
+          </span>
+        ) : (
+          `Inventario — ${productName ?? ""}`
+        )
+      }
       style={{ padding: sizes.cardPadding }}
+      styles={{
+        header: isMobile
+          ? {
+              display: "flex",
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+              gap: 4,
+              minHeight: "unset",
+              paddingTop: 10,
+              paddingBottom: 10,
+            }
+          : undefined,
+      }}
       extra={
         isMobile ? (
-          <Space size={6}>
+          <Space size={6} style={{ flexShrink: 0 }}>
             <Button icon={<ArrowLeftOutlined />} size="small" onClick={() => navigate(-1)} />
             <Dropdown menu={exportMenu} trigger={["click"]} placement="bottomRight">
               <Button icon={<MoreOutlined />} size="small" />
