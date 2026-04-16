@@ -240,18 +240,6 @@ export default function Customers() {
             </Space>
           ) : (
             <Space wrap>
-                  <Input
-                    placeholder="Buscar por nombre"
-                    allowClear
-                    onChange={(e) => setSearchValue(e.target.value)}
-                  />
-                <Space>
-                  <Switch
-                    checked={filters.onlyInactive}
-                    onChange={(val) => { setFilters((prev) => ({...prev, onlyInactive: val})) }}
-                  />
-                  <Text>Mostrar inactivos</Text>
-                </Space>
               <Button onClick={handleExportExcel} size={sizes.button}>Exportar Excel</Button>
               <Button onClick={handleExportPdf}   size={sizes.button}>Exportar PDF</Button>
               <Text strong>Activos: {customers.filter(c => c.active).length}</Text>
