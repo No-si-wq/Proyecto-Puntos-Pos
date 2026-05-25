@@ -3,9 +3,10 @@ export type CustomerPhone = string;
 
 export interface CustomerBase {
   name: string;
+  dni: string;
+  direction?: string;
   email?: CustomerEmail;
   phone?: CustomerPhone;
-  dni?: string;
 }
 
 export type CreateCustomerInput = CustomerBase;

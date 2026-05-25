@@ -22,14 +22,6 @@ export default function SupplierForm({
       onCancel={onCancel}
     >
       <Form.Item
-        name="rtn"
-        label="RTN"
-        rules={[{ required: true, min: 13, message: "RTN muy corto" }]}
-      >
-        <Input autoFocus />
-      </Form.Item>
-
-      <Form.Item
         name="name"
         label="Nombre"
         rules={[{ required: true, min: 3 }]}

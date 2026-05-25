@@ -2,7 +2,6 @@ import { Role } from "../../core/auth/roles";
 
 export interface AuthUser {
   id: number;
-  email: string;
   username: string;
   name: string;
   role: Role;
@@ -11,5 +10,6 @@ export interface AuthUser {
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
+  warehouseId: number;
   user: AuthUser;
 }

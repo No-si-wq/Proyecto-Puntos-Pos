@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const loginSchema = z.object({
   body: z.object({
+    slug: z.string().min(3, "Slug inválido"),
     username: z.string().min(3, "Nombre inválido"),
     password: z.string().min(6, "Password requerido"),
   }),

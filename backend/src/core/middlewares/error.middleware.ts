@@ -12,6 +12,8 @@ import { ProductError } from "../../modules/product/product";
 import { CustomerError } from "../../modules/customer/customer";
 import { CategoryError } from "../../modules/categories/category";
 import { PurchaseError } from "../../modules/purchase/purchase";
+import { TenantError } from "../../modules/tenant/tenant";
+import { RemissionError } from '../../modules/remission/remission';
 
 export function errorMiddleware(
   err: any,
@@ -19,8 +21,8 @@ export function errorMiddleware(
   res: Response,
   _next: NextFunction
 ) {
-  
-    if (err instanceof ZodError) {
+
+  if (err instanceof ZodError) {
     return res.status(400).json({
       message: "Datos inválidos",
       errors: err.issues.map((e) => ({
@@ -32,8 +34,8 @@ export function errorMiddleware(
 
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     logger.error(
-      { 
-        code: err.code, 
+      {
+        code: err.code,
         message: err.message,
         meta: err.meta,
         stack: err.stack,
@@ -58,31 +60,24 @@ export function errorMiddleware(
     });
   }
 
-  if (typeof err?.message === "string") {
-    switch (err.message) {
+  const errorMessage = typeof err === "string" ? err : err?.message;
+
+  if (typeof errorMessage === "string") {
+    switch (errorMessage) {
       case AuthError.INVALID_CREDENTIALS:
         return res.status(401).json({ message: "Credenciales inválidas" });
+
+      case TenantError.SLUG_ALREADY_EXISTS:
+        return res.status(409).json({ message: "Ya existe identificador de empresa" });
+
+      case TenantError.TENANT_NOT_FOUND:
+        return res.status(404).json({ message: "Empresa no encontrada" });
 
       case InventoryError.INSUFFICIENT_STOCK:
         return res.status(409).json({ message: "Stock insuficiente" });
 
       case InventoryError.INVALID_QUANTITY:
         return res.status(400).json({ message: "Cantidad inválida" });
-
-      case InventoryError.INVALID_ITEM:
-        return res.status(400).json({ message: "Producto no encontrado en inventario" });
-
-      case SaleError.INSUFFICIENT_STOCK:
-        return res.status(409).json({ message: "Stock insuficiente para completar la venta" });
-
-      case SaleError.INVALID_QUANTITY:
-        return res.status(400).json({ message: "Cantidad inválida en un item de la venta" });
-
-      case SaleError.INVALID_ITEM:
-        return res.status(400).json({ message: "Item de venta inválido" });
-
-      case SaleError.INVALID_PRICE_LIST:
-        return res.status(400).json({ message: "Lista de precios inválida o inactiva" });
 
       case SaleError.PRODUCT_NOT_AVAILABLE:
         return res.status(400).json({ message: "Producto no disponible" });
@@ -99,7 +94,7 @@ export function errorMiddleware(
       case LoyaltyError.ACCOUNT_NOT_FOUND:
         return res.status(409).json({ message: "Cuenta sin puntos" });
 
-      case SupplierError.DUPLICATE_SUPPLIER: 
+      case SupplierError.DUPLICATE_SUPPLIER:
         return res.status(400).json({ message: "Proveedor duplicado" });
 
       case SupplierError.SUPPLIER_NOT_FOUND:
@@ -112,7 +107,7 @@ export function errorMiddleware(
         return res.status(409).json({ message: "Codigo duplicado" });
 
       case ProductError.CATEGORY_NOT_LEAF:
-        return res.status(400).json({ message: "La categoria no tiene hijo" });  
+        return res.status(400).json({ message: "La categoria no tiene hijo" });
 
       case CustomerError.DUPLICATE_CUSTOMER:
         return res.status(409).json({ message: "Codigo duplicado" });
@@ -125,21 +120,45 @@ export function errorMiddleware(
 
       case CategoryError.CATEGORY_NOT_FOUND:
         return res.status(404).json({ message: "Categoría no encontrada" });
-      
+
       case CategoryError.CATEGORY_HAS_CHILDREN:
         return res.status(400).json({ message: "No se puede eliminar una categoría con subcategorías activas" });
 
       case PurchaseError.PURCHASE_NOT_FOUND:
         return res.status(404).json({ message: "Compra no encontrada" });
 
-       case PurchaseError.EMPTY_ITEMS:
+      case PurchaseError.EMPTY_ITEMS:
         return res.status(400).json({ message: "La venta no tiene elementos" });
 
       case PurchaseError.INVALID_ITEM:
         return res.status(400).json({ message: "Producto invalido" });
 
       case PurchaseError.INVALID_SUPPLIER:
-        return res.status(400).json({ message: "Proveedor incorrecto" })
+        return res.status(400).json({ message: "Proveedor incorrecto" });
+
+      case PurchaseError.PURCHASE_ALREADY_CANCELLED:
+        return res.status(409).json({ message: "La compra ya fue cancelada" });
+
+      case PurchaseError.PURCHASE_HAS_PAYMENTS:
+        return res.status(409).json({ message: "La compra tiene pagos aplicados y no puede cancelarse" });
+
+      case PurchaseError.PURCHASE_HAS_LINKED_SALES:
+        return res.status(409).json({ message: "La compra tiene ventas asociadas y no puede cancelarse" });
+      
+      case RemissionError.WAREHOUSE_NOT_FOUND:
+        return res.status(404).json({ message: 'Almacén no encontrado' });
+
+      case RemissionError.INVALID_PRODUCT:
+        return res.status(400).json({ message: 'Uno o más productos no son válidos' });
+
+      case RemissionError.NOT_FOUND:
+        return res.status(404).json({ message: 'Remisión no encontrada' });
+
+      case RemissionError.ALREADY_CANCELLED:
+        return res.status(409).json({ message: 'La remisión ya está cancelada' });
+
+      case RemissionError.NOT_PENDING:
+        return res.status(400).json({ message: 'Solo se pueden entregar remisiones pendientes' });
     }
   }
 

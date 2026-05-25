@@ -135,7 +135,6 @@ export default function Kardex() {
     setHasMore(true);
     setInitialBalance(null);
     setProductId(undefined);
-    if (isMobile) setFilterOpen(false);
   }
 
   const finalBalance = useMemo(() => {
@@ -255,7 +254,7 @@ export default function Kardex() {
         optionFilterProp="label"
       />
       <ResponsiveRangePicker
-        value={range}
+        style={{ width: "100%" }}
         onChange={(dates) => setRange(dates)}
         size={sizes.input}
       />
@@ -269,11 +268,8 @@ export default function Kardex() {
         Consultar
       </Button>
       <Button
-        type="primary"
         size={sizes.button}
-        block
         onClick={clearFilter}
-        disabled={!productId || !range}
       >
         Limpiar
       </Button>
@@ -382,7 +378,7 @@ export default function Kardex() {
               />
             </div>
             <ResponsiveRangePicker
-              value={range}
+              style={{ width: "auto" }}
               onChange={(dates) => setRange(dates)}
               size={sizes.input}
             />

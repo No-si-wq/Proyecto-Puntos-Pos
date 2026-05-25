@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { message } from "antd";
 import http from "../../../core/http/http";
-import type { PriceListDetail, UpsertProductPriceDto } from "../types/pricelist";
+import type {
+  PriceListDetail,
+  UpsertProductPriceDto,
+} from "../types/pricelist";
 
 const BASE = "/priceLists";
 

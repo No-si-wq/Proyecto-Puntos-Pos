@@ -16,6 +16,7 @@ export default function ResponsiveRangePicker({
   const { isMobile, isTablet, isPortrait } = useDeviceType();
   const isMobileLike = isMobile || (isTablet && isPortrait);
 
+  // Estado interno para los dos pickers individuales
   const [startDate, setStartDate] = useState<Dayjs | null>(
     (value as [Dayjs, Dayjs])?.[0] ?? null
   );
@@ -23,6 +24,7 @@ export default function ResponsiveRangePicker({
     (value as [Dayjs, Dayjs])?.[1] ?? null
   );
 
+  // Sincronizar si el valor cambia desde afuera (ej: reset del form)
   useEffect(() => {
     setStartDate((value as [Dayjs, Dayjs])?.[0] ?? null);
     setEndDate((value as [Dayjs, Dayjs])?.[1] ?? null);
@@ -30,6 +32,7 @@ export default function ResponsiveRangePicker({
 
   const handleStartChange = (date: Dayjs | null) => {
     setStartDate(date);
+    // Si la fecha fin es anterior a la nueva fecha inicio, limpiarla
     const newEnd = endDate && date && endDate.isBefore(date) ? null : endDate;
     setEndDate(newEnd);
     if (onChange) {
@@ -50,6 +53,7 @@ export default function ResponsiveRangePicker({
     }
   };
 
+  // En desktop/tablet landscape → RangePicker normal
   if (!isMobileLike) {
     return (
       <RangePicker
@@ -62,6 +66,7 @@ export default function ResponsiveRangePicker({
     );
   }
 
+  // En móvil/tablet portrait → Dos DatePicker apilados
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
       <DatePicker
@@ -82,6 +87,7 @@ export default function ResponsiveRangePicker({
         onChange={handleEndChange}
         style={{ width: "100%" }}
         inputReadOnly
+        // No permitir fecha fin anterior a fecha inicio
         disabledDate={(d, info) => {
           if (startDate && d.isBefore(startDate, "day")) return true;
           return props.disabledDate ? props.disabledDate(d, info as any) : false;

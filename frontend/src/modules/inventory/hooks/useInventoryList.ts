@@ -1,7 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehouse";
 import http from "../../../core/http/http";
-import type { InventorySummary, Filters } from "../types/inventory";
+import type { Lot, AdjustPayload, AdjustResult, InventorySummary } from "../types/inventory";
+
+interface Filters {
+  search?: string;
+}
 
 export function useInventoryList() {
   const [data, setData] = useState<InventorySummary[]>([]);
@@ -11,15 +15,13 @@ export function useInventoryList() {
 
   const load = useCallback(async () => {
     if (!warehouseId) return;
-
     setLoading(true);
     try {
-      const { data } = await http.get("/inventory",{ 
-        params: {search: filters.search} 
+      const { data } = await http.get("/inventory", {
+        params: { search: filters.search },
       });
-
       setData(data);
-    } catch (error) {
+    } catch {
       setData([]);
     } finally {
       setLoading(false);
@@ -29,6 +31,21 @@ export function useInventoryList() {
   useEffect(() => {
     load();
   }, [load]);
+  
+  const fetchAllLots = useCallback(async (): Promise<Record<number, Lot[]>> => {
+    try {
+      const { data } = await http.get<Record<number, Lot[]>>("/inventory/lots/all");
+      await load();
+      return data;
+    } catch {
+      return {};
+    }
+  }, []);
+
+  const adjustInventory = useCallback(async (payload: AdjustPayload): Promise<AdjustResult> => {
+    const { data } = await http.post<AdjustResult>("/inventory/adjust", payload);
+    return data;
+  }, []);
 
   return {
     data,
@@ -36,5 +53,7 @@ export function useInventoryList() {
     filters,
     setFilters,
     reload: load,
+    fetchAllLots,
+    adjustInventory
   };
 }

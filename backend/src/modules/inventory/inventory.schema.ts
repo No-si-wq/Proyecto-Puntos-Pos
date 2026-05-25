@@ -30,3 +30,20 @@ export const inventoryExpiringQuerySchema = z.object({
       .optional(),
   }),
 });
+
+export const inventoryAdjustSchema = z.object({
+  body: z.object({
+    productId: z.number().int().positive(),
+    physicalQuantity: z.number().int().min(0),
+    note: z.string().min(1, "La nota es requerida"),
+  }),
+});
+
+export const transferReportSchema = z.object({
+  query: z.object({
+    warehouseId: z.coerce.number().int().positive().optional(),
+    productId: z.coerce.number().int().positive().optional(),
+    from: z.string().optional(),
+    to: z.string().optional(),
+  }),
+});

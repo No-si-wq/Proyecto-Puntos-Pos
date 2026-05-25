@@ -2,11 +2,14 @@ export interface PurchaseItemInput {
   productId: number;
   quantity: number;
   cost: number;
+  unit: string;
+  lotNumber: string;
   expiresAt?: Date | null,
 }
 
 interface BasePurchaseInput {
   supplierId: number;
+  purchaseNumber: string;
   items: PurchaseItemInput[];
 }
 
@@ -31,4 +34,7 @@ export enum PurchaseError {
   INVALID_SUPPLIER = "INVALID_SUPPLIER",
   INVALID_ITEM = "INVALID_ITEM",
   PURCHASE_NOT_FOUND = "PURCHASE_NOT_FOUND",
+  PURCHASE_ALREADY_CANCELLED = "PURCHASE_ALREADY_CANCELLED",
+  PURCHASE_HAS_PAYMENTS = "PURCHASE_HAS_PAYMENTS",
+  PURCHASE_HAS_LINKED_SALES = ".PURCHASE_HAS_LINKED_SALES",
 }

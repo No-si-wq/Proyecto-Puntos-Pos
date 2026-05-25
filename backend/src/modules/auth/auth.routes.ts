@@ -3,22 +3,19 @@ import * as controller from "./auth.controller";
 import { asyncHandler } from "../../core/utils/asyncHandler";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
 import { validate } from "../../core/middlewares/validate.middleware";
-import {
-  loginSchema,
-  refreshSchema,
-} from "./auth.schema";
+import * as schema from "./auth.schema";
 
 const router = Router();
 
 router.post(
   "/login",
-  validate(loginSchema),
+  validate(schema.loginSchema),
   asyncHandler(controller.login)
 );
 
 router.post(
   "/refresh",
-  validate(refreshSchema),
+  validate(schema.refreshSchema),
   asyncHandler(controller.refresh)
 );
 

@@ -1,5 +1,3 @@
-import type { BaseItem } from "../../../core/types/base";
-
 export type PurchasePaymentMethod =
   | "CASH"
   | "TRANSFER"
@@ -9,6 +7,7 @@ export interface PurchaseItemCreateDTO {
   productId: number;
   quantity: number;
   cost: number;
+  lotNumber?: string | null;
   expiresAt?: string | null;
 }
 
@@ -16,6 +15,7 @@ export interface PurchaseItems {
   id: number;
   quantity: number;
   cost: number;
+  lotNumber?: string;
   product: {
     id: number;
     name: string;
@@ -26,18 +26,18 @@ export interface CreatePurchaseDTO {
   supplierId: number;
   items: PurchaseItemCreateDTO[];
   paymentMethod: PurchasePaymentMethod;
+  purchaseNumber: string;
   dueDate?: string;
 }
 
-export interface PurchaseItem extends BaseItem {
-  id: number;
-  expiresAt?: string | null;
-}
+export type PurchaseStatus = "ACTIVE" | "CANCELLED";
 
 export interface Purchase {
   id: number;
   total: number;
   createdAt: string;
+  status: PurchaseStatus;
+  purchaseNumber: string;
 
   supplier: {
     id: number;

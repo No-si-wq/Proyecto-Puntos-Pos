@@ -9,6 +9,9 @@ export interface SaleItemInput {
 interface BaseSaleInput {
   items: SaleItemInput[];
   pointsUsed?: number;
+  sellerId?: number;
+  observations?: string | null;
+  priceMode?: "TAX_INCLUDED" | "TAX_EXCLUDED";
 }
 
 export interface CreateSaleCashInput
@@ -16,6 +19,7 @@ export interface CreateSaleCashInput
   paymentMethod: "CASH" | "CARD" | "TRANSFER";
   customerId?: number;
   dueDate?: never;
+  amountPaid?: number;
 }
 
 export interface CreateSaleCreditInput
@@ -29,13 +33,26 @@ export type CreateSaleInput =
   | CreateSaleCashInput
   | CreateSaleCreditInput;
 
+export interface ReturnItemInput {
+  saleItemId: number;
+  quantity: number;
+}
+
+export interface ReturnSaleInput {
+  items: ReturnItemInput[];
+  reason?: string;
+}
+
 export enum SaleError {
   EMPTY_SALE = "EMPTY_SALE",
   INSUFFICIENT_STOCK = "INSUFFICIENT_STOCK",
   PRODUCT_NOT_AVAILABLE = "PRODUCT_NOT_AVAILABLE",
   INVALID_TOTAL = "INVALID_TOTAL",
-  INVALID_QUANTITY = "INVALID_QUANTITY",
   SALE_NOT_FOUND = "SALE_NOT_FOUND",
   INVALID_PRICE_LIST = "INVALID_PRICE_LIST",
-  INVALID_ITEM = "INVALID_ITEM",
+  SALE_ALREADY_CANCELLED = "SALE_ALREADY_CANCELLED",
+  SALE_HAS_PAYMENTS = "SALE_HAS_PAYMENTS",
+  RETURN_QUANTITY_EXCEEDS = "La cantidad a devolver supera la vendida",
+  RETURN_ITEM_NOT_FOUND   = "Ítem de venta no encontrado",
+  SALE_CANCELLED          = "No se puede devolver una venta cancelada",
 }

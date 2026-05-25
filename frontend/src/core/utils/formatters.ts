@@ -9,6 +9,16 @@ export function formatCurrency(
   }).format(value);
 }
 
+export function formatPercent(
+  value: number,
+  minimumFractionDigits = 2
+): string {
+  return new Intl.NumberFormat("es-HN", {
+    style: "percent",
+    minimumFractionDigits,
+  }).format(value / 100);
+}
+
 export function formatDate(
   value: string | Date,
   withTime = true

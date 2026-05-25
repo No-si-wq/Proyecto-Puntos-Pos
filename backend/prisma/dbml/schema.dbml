@@ -1,0 +1,863 @@
+//// ------------------------------------------------------
+//// THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+//// ------------------------------------------------------
+
+Table Tenant {
+  id Int [pk, increment]
+  name String [not null]
+  active Boolean [not null, default: false]
+  createdAt DateTime [default: `now()`, not null]
+  slug String [unique, not null]
+  deletedAt DateTime
+  inviteOnly Boolean [not null, default: true]
+  maxUsers Int [not null, default: 5]
+  maxWarehouses Int [not null, default: 2]
+  registrationKey String [unique]
+  updatedAt DateTime
+  verified Boolean [not null, default: false]
+  categories Category [not null]
+  commissions Commission [not null]
+  commissionLevel CommissionLevel [not null]
+  customers Customer [not null]
+  priceLists PriceList [not null]
+  products Product [not null]
+  productPrice ProductPrice [not null]
+  purchases Purchase [not null]
+  quotations Quotation [not null]
+  remissions Remission [not null]
+  reportTemplate ReportTemplate [not null]
+  sales Sale [not null]
+  salesCommission SalesCommission [not null]
+  suppliers Supplier [not null]
+  systemConfig SystemConfig [not null]
+  users User [not null]
+  warehouses Warehouse [not null]
+}
+
+Table TenantInvite {
+  id Int [pk, increment]
+  code String [unique, not null]
+  email String
+  expiresAt DateTime [not null]
+  used Boolean [not null, default: false]
+  createdAt DateTime [default: `now()`, not null]
+  usedAt DateTime
+}
+
+Table User {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  username String [not null]
+  password String [not null]
+  name String
+  role Role [not null, default: 'USER']
+  active Boolean [not null, default: true]
+  tokenVersionAt DateTime [default: `now()`, not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  warehouseId Int
+  commissionLog Commission [not null]
+  purchases Purchase [not null]
+  quotationsAsSeller Quotation [not null]
+  quotations Quotation [not null]
+  refreshToken RefreshToken [not null]
+  remissions Remission [not null]
+  salesAsSeller Sale [not null]
+  sales Sale [not null]
+  saleReturns SaleReturn [not null]
+  commissions SalesCommission [not null]
+  tenant Tenant [not null]
+  warehouse Warehouse
+
+  indexes {
+    (tenantId, username) [unique]
+  }
+}
+
+Table PriceList {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  name String [not null]
+  description String
+  active Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  commissionLevels CommissionLevel [not null]
+  tenant Tenant [not null]
+  prices ProductPrice [not null]
+  quotations Quotation [not null]
+  sales Sale [not null]
+
+  indexes {
+    (tenantId, name) [unique]
+  }
+}
+
+Table ProductPrice {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  productId Int [not null]
+  priceListId Int [not null]
+  price Decimal [not null]
+  active Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  priceList PriceList [not null]
+  product Product [not null]
+  tenant Tenant [not null]
+
+  indexes {
+    (tenantId, productId, priceListId) [unique]
+  }
+}
+
+Table CommissionLevel {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  name String [not null]
+  description String
+  active Boolean [not null, default: true]
+  priceListId Int
+  priceList PriceList
+  tenant Tenant [not null]
+  commissions SalesCommission [not null]
+
+  indexes {
+    (tenantId, name) [unique]
+  }
+}
+
+Table SalesCommission {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  userId Int [not null]
+  levelId Int [not null]
+  percent Decimal [not null]
+  active Boolean [not null, default: true]
+  level CommissionLevel [not null]
+  tenant Tenant [not null]
+  user User [not null]
+
+  indexes {
+    (tenantId, userId, levelId) [unique]
+  }
+}
+
+Table SystemConfig {
+  id Int [pk, increment]
+  key String [not null]
+  value String [not null]
+  updatedAt DateTime [not null]
+  tenantId Int [not null]
+  tenant Tenant [not null]
+
+  indexes {
+    (tenantId, key) [unique]
+  }
+}
+
+Table Commission {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  userId Int [not null]
+  saleId Int [not null]
+  saleItemId Int
+  percent Decimal [not null]
+  amount Decimal [not null]
+  type CommissionType [not null]
+  createdAt DateTime [default: `now()`, not null]
+  sale Sale [not null]
+  saleItem SaleItem
+  tenant Tenant [not null]
+  user User [not null]
+}
+
+Table RevokedToken {
+  id Int [pk, increment]
+  token String [unique, not null]
+  expiresAt DateTime [not null]
+  createdAt DateTime [default: `now()`, not null]
+}
+
+Table RefreshToken {
+  id Int [pk, increment]
+  token String [unique, not null]
+  userId Int [not null]
+  revoked Boolean [not null, default: false]
+  expiresAt DateTime [not null]
+  createdAt DateTime [default: `now()`, not null]
+  user User [not null]
+}
+
+Table Customer {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  name String [not null]
+  email String
+  phone String
+  active Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  dni String
+  direction String
+  receivable AccountReceivable [not null]
+  tenant Tenant [not null]
+  points LoyaltyPoint
+  history LoyaltyPointHistory [not null]
+  quotations Quotation [not null]
+  sales Sale [not null]
+
+  indexes {
+    (tenantId, email, dni) [unique]
+  }
+}
+
+Table Supplier {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  name String [not null]
+  email String
+  phone String
+  active Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  payable AccountPayable [not null]
+  purchases Purchase [not null]
+  tenant Tenant [not null]
+
+  indexes {
+    (tenantId, name) [unique]
+  }
+}
+
+Table Category {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  name String [not null]
+  parentId Int
+  active Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime
+  parent Category
+  children Category [not null]
+  tenant Tenant [not null]
+  products Product [not null]
+
+  indexes {
+    (tenantId, name, parentId) [unique]
+  }
+}
+
+Table Product {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  sku String [not null]
+  name String [not null]
+  description String
+  price Decimal [not null]
+  cost Decimal [not null]
+  active Boolean [not null, default: true]
+  categoryId Int [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  reorderPoint Int [not null, default: 0]
+  tax Decimal [not null, default: 0]
+  laboratory String
+  observations String
+  barcodes Barcode [not null]
+  inventoryMovements InventoryMovement [not null]
+  category Category [not null]
+  tenant Tenant [not null]
+  prices ProductPrice [not null]
+  purchaseItems PurchaseItem [not null]
+  quotationItems QuotationItem [not null]
+  remissionItems RemissionItem [not null]
+  saleItems SaleItem [not null]
+
+  indexes {
+    (tenantId, sku) [unique]
+  }
+}
+
+Table Barcode {
+  id Int [pk, increment]
+  code String [unique, not null]
+  productId Int [not null]
+  product Product [not null]
+}
+
+Table Warehouse {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  name String [not null]
+  active Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  movements InventoryMovement [not null]
+  purchase Purchase [not null]
+  items PurchaseItem [not null]
+  quotations Quotation [not null]
+  remissions Remission [not null]
+  sale Sale [not null]
+  saleSequence SaleSequence
+  user User [not null]
+  tenant Tenant [not null]
+
+  indexes {
+    (tenantId, name) [unique]
+  }
+}
+
+Table InventoryMovement {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  productId Int [not null]
+  warehouseId Int
+  type InventoryMovementType [not null]
+  quantity Int [not null]
+  note String
+  createdAt DateTime [default: `now()`, not null]
+  product Product [not null]
+  warehouse Warehouse
+}
+
+Table InventoryLedger {
+  id BigInt [pk, increment]
+  tenantId Int [not null]
+  productId Int [not null]
+  warehouseId Int [not null]
+  type InventoryMovementType [not null]
+  quantity Int [not null]
+  movementValue Decimal [not null]
+  referenceType String
+  referenceId Int
+  createdAt DateTime [default: `now()`, not null]
+  createdBy Int
+  note String
+}
+
+Table Purchase {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  total Decimal [not null]
+  userId Int
+  supplierId Int [not null]
+  warehouseId Int [not null]
+  paymentMethod PaymentMethod [not null, default: 'CASH']
+  createdAt DateTime [default: `now()`, not null]
+  status PurchaseStatus [not null, default: 'ACTIVE']
+  purchaseNumber String
+  payable AccountPayable
+  supplier Supplier [not null]
+  tenant Tenant [not null]
+  user User
+  warehouse Warehouse [not null]
+  items PurchaseItem [not null]
+}
+
+Table PurchaseItem {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  purchaseId Int [not null]
+  productId Int [not null]
+  quantity Int [not null]
+  cost Decimal [not null]
+  expiresAt DateTime
+  warehouseId Int [not null]
+  lotNumber String
+  product Product [not null]
+  purchase Purchase [not null]
+  warehouse Warehouse [not null]
+  saleItems SaleItemLot [not null]
+}
+
+Table SaleSequence {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  current Int [not null, default: 0]
+  warehouseId Int [unique, not null]
+  warehouse Warehouse [not null]
+}
+
+Table ReportTemplate {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  name String [not null]
+  description String
+  config Json [not null]
+  isDefault Boolean [not null, default: false]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  active Boolean [not null, default: true]
+  tenant Tenant [not null]
+}
+
+Table Sale {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  saleNumber String [not null]
+  status SaleStatus [not null, default: 'COMPLETED']
+  subtotal Decimal [not null]
+  discount Decimal [not null, default: 0]
+  total Decimal [not null]
+  grossSubtotal Decimal [not null]
+  cogs Decimal [not null, default: 0]
+  pointsUsed Int [not null, default: 0]
+  pointsEarned Int [not null, default: 0]
+  customerId Int
+  userId Int [not null]
+  warehouseId Int [not null]
+  paymentMethod PaymentMethod [not null, default: 'CASH']
+  createdAt DateTime [default: `now()`, not null]
+  priceListId Int
+  sellerId Int
+  taxTotal Decimal [not null, default: 0]
+  priceMode PriceMode [not null, default: 'TAX_INCLUDED']
+  amountPaid Decimal
+  changeAmount Decimal
+  observations String
+  receivable AccountReceivable
+  commissions Commission [not null]
+  history LoyaltyPointHistory [not null]
+  quotation Quotation
+  customer Customer
+  priceList PriceList
+  seller User
+  tenant Tenant [not null]
+  user User [not null]
+  warehouse Warehouse [not null]
+  items SaleItem [not null]
+  returns SaleReturn [not null]
+
+  indexes {
+    (tenantId, saleNumber) [unique]
+  }
+}
+
+Table SaleItem {
+  id Int [pk, increment]
+  saleId Int [not null]
+  productId Int [not null]
+  quantity Int [not null]
+  price Decimal [not null]
+  discountAmount Decimal [not null, default: 0]
+  discountType DiscountType [not null, default: 'NONE']
+  discountValue Decimal [not null, default: 0]
+  lineSubtotal Decimal [not null]
+  commissionAmount Decimal
+  commissionPercent Decimal
+  priceListId Int
+  tax Decimal [not null, default: 0]
+  taxAmount Decimal [not null, default: 0]
+  lineTotal Decimal [not null, default: 0]
+  commissions Commission [not null]
+  product Product [not null]
+  sale Sale [not null]
+  lots SaleItemLot [not null]
+  returnItems SaleReturnItem [not null]
+}
+
+Table SaleItemLot {
+  saleItemId Int [not null]
+  purchaseItemId Int [not null]
+  quantity Int [not null]
+  purchaseItem PurchaseItem [not null]
+  saleItem SaleItem [not null]
+
+  indexes {
+    (saleItemId, purchaseItemId) [pk]
+  }
+}
+
+Table LoyaltyPoint {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  customerId Int [unique, not null]
+  balance Int [not null, default: 0]
+  customer Customer [not null]
+  history LoyaltyPointHistory [not null]
+}
+
+Table LoyaltyPointHistory {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  customerId Int [not null]
+  saleId Int
+  change Int [not null]
+  description String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  customer Customer [not null]
+  sale Sale
+  loyalty LoyaltyPoint [not null]
+}
+
+Table AccountReceivable {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  saleId Int [unique, not null]
+  customerId Int [not null]
+  total Decimal [not null]
+  paidAmount Decimal [not null, default: 0]
+  balance Decimal [not null]
+  dueDate DateTime
+  status AccountStatus [not null, default: 'PENDING']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  customer Customer [not null]
+  sale Sale [not null]
+  payments ReceivablePayment [not null]
+}
+
+Table ReceivablePayment {
+  id Int [pk, increment]
+  accountId Int [not null]
+  amount Decimal [not null]
+  paymentDate DateTime [default: `now()`, not null]
+  note String
+  account AccountReceivable [not null]
+}
+
+Table AccountPayable {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  purchaseId Int [unique, not null]
+  supplierId Int [not null]
+  total Decimal [not null]
+  paidAmount Decimal [not null, default: 0]
+  balance Decimal [not null]
+  dueDate DateTime
+  status AccountStatus [not null, default: 'PENDING']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  purchase Purchase [not null]
+  supplier Supplier [not null]
+  payments PayablePayment [not null]
+}
+
+Table PayablePayment {
+  id Int [pk, increment]
+  accountId Int [not null]
+  amount Decimal [not null]
+  paymentDate DateTime [default: `now()`, not null]
+  note String
+  account AccountPayable [not null]
+}
+
+Table SaleReturn {
+  id Int [pk, increment]
+  saleId Int [not null]
+  userId Int [not null]
+  reason String
+  createdAt DateTime [default: `now()`, not null]
+  sale Sale [not null]
+  user User [not null]
+  items SaleReturnItem [not null]
+}
+
+Table SaleReturnItem {
+  id Int [pk, increment]
+  returnId Int [not null]
+  saleItemId Int [not null]
+  quantity Int [not null]
+  refundAmount Decimal [not null]
+  return SaleReturn [not null]
+  saleItem SaleItem [not null]
+}
+
+Table Remission {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  remissionNumber String [not null]
+  status RemissionStatus [not null, default: 'PENDING']
+  warehouseId Int [not null]
+  userId Int [not null]
+  note String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  customerName String
+  tenant Tenant [not null]
+  user User [not null]
+  warehouse Warehouse [not null]
+  items RemissionItem [not null]
+
+  indexes {
+    (tenantId, remissionNumber) [unique]
+  }
+}
+
+Table RemissionItem {
+  id Int [pk, increment]
+  remissionId Int [not null]
+  productId Int [not null]
+  quantity Int [not null]
+  note String
+  product Product [not null]
+  remission Remission [not null]
+}
+
+Table Quotation {
+  id Int [pk, increment]
+  tenantId Int [not null]
+  quotationNumber String [not null]
+  status QuotationStatus [not null, default: 'PENDING']
+  subtotal Decimal [not null]
+  discount Decimal [not null, default: 0]
+  total Decimal [not null]
+  taxTotal Decimal [not null, default: 0]
+  customerId Int
+  userId Int [not null]
+  warehouseId Int [not null]
+  priceListId Int
+  sellerId Int
+  observations String
+  expiresAt DateTime
+  convertedSaleId Int [unique]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  convertedSale Sale
+  customer Customer
+  priceList PriceList
+  seller User
+  tenant Tenant [not null]
+  user User [not null]
+  warehouse Warehouse [not null]
+  items QuotationItem [not null]
+
+  indexes {
+    (tenantId, quotationNumber) [unique]
+  }
+}
+
+Table QuotationItem {
+  id Int [pk, increment]
+  quotationId Int [not null]
+  productId Int [not null]
+  quantity Int [not null]
+  price Decimal [not null]
+  discountAmount Decimal [not null, default: 0]
+  discountType DiscountType [not null, default: 'NONE']
+  discountValue Decimal [not null, default: 0]
+  lineSubtotal Decimal [not null]
+  tax Decimal [not null, default: 0]
+  taxAmount Decimal [not null, default: 0]
+  lineTotal Decimal [not null, default: 0]
+  product Product [not null]
+  quotation Quotation [not null]
+}
+
+Table LoyaltyPointToLoyaltyPointHistory {
+  historyId Int [ref: > LoyaltyPointHistory.id]
+  loyaltyId Int [ref: > LoyaltyPoint.id]
+}
+
+Enum QuotationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CONVERTED
+}
+
+Enum RemissionStatus {
+  PENDING
+  DELIVERED
+  CANCELLED
+}
+
+Enum CommissionType {
+  SALE
+  REVERSAL
+}
+
+Enum Role {
+  ADMIN
+  USER
+  SELLER
+}
+
+Enum SaleStatus {
+  COMPLETED
+  CANCELLED
+}
+
+Enum PurchaseStatus {
+  ACTIVE
+  CANCELLED
+}
+
+Enum InventoryMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+Enum AccountStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+Enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  CREDIT
+}
+
+Enum DiscountType {
+  NONE
+  PERCENTAGE
+  FIXED
+}
+
+Enum PriceMode {
+  TAX_INCLUDED
+  TAX_EXCLUDED
+}
+
+Ref: User.tenantId > Tenant.id
+
+Ref: User.warehouseId > Warehouse.id
+
+Ref: PriceList.tenantId > Tenant.id
+
+Ref: ProductPrice.priceListId > PriceList.id
+
+Ref: ProductPrice.productId > Product.id
+
+Ref: ProductPrice.tenantId > Tenant.id
+
+Ref: CommissionLevel.priceListId > PriceList.id
+
+Ref: CommissionLevel.tenantId > Tenant.id
+
+Ref: SalesCommission.levelId > CommissionLevel.id
+
+Ref: SalesCommission.tenantId > Tenant.id
+
+Ref: SalesCommission.userId > User.id
+
+Ref: SystemConfig.tenantId > Tenant.id
+
+Ref: Commission.saleId > Sale.id
+
+Ref: Commission.saleItemId > SaleItem.id
+
+Ref: Commission.tenantId > Tenant.id
+
+Ref: Commission.userId > User.id
+
+Ref: RefreshToken.userId > User.id
+
+Ref: Customer.tenantId > Tenant.id
+
+Ref: Supplier.tenantId > Tenant.id
+
+Ref: Category.parentId - Category.id
+
+Ref: Category.tenantId > Tenant.id
+
+Ref: Product.categoryId > Category.id
+
+Ref: Product.tenantId > Tenant.id
+
+Ref: Barcode.productId > Product.id
+
+Ref: Warehouse.tenantId > Tenant.id
+
+Ref: InventoryMovement.productId > Product.id
+
+Ref: InventoryMovement.warehouseId > Warehouse.id
+
+Ref: Purchase.supplierId > Supplier.id
+
+Ref: Purchase.tenantId > Tenant.id
+
+Ref: Purchase.userId > User.id
+
+Ref: Purchase.warehouseId > Warehouse.id
+
+Ref: PurchaseItem.productId > Product.id
+
+Ref: PurchaseItem.purchaseId > Purchase.id
+
+Ref: PurchaseItem.warehouseId > Warehouse.id
+
+Ref: SaleSequence.warehouseId - Warehouse.id
+
+Ref: ReportTemplate.tenantId > Tenant.id
+
+Ref: Sale.customerId > Customer.id
+
+Ref: Sale.priceListId > PriceList.id
+
+Ref: Sale.sellerId > User.id
+
+Ref: Sale.tenantId > Tenant.id
+
+Ref: Sale.userId > User.id
+
+Ref: Sale.warehouseId > Warehouse.id
+
+Ref: SaleItem.productId > Product.id
+
+Ref: SaleItem.saleId > Sale.id
+
+Ref: SaleItemLot.purchaseItemId > PurchaseItem.id
+
+Ref: SaleItemLot.saleItemId > SaleItem.id
+
+Ref: LoyaltyPoint.customerId - Customer.id
+
+Ref: LoyaltyPointHistory.customerId > Customer.id
+
+Ref: LoyaltyPointHistory.saleId > Sale.id
+
+Ref: AccountReceivable.customerId > Customer.id
+
+Ref: AccountReceivable.saleId - Sale.id
+
+Ref: ReceivablePayment.accountId > AccountReceivable.id
+
+Ref: AccountPayable.purchaseId - Purchase.id
+
+Ref: AccountPayable.supplierId > Supplier.id
+
+Ref: PayablePayment.accountId > AccountPayable.id
+
+Ref: SaleReturn.saleId > Sale.id
+
+Ref: SaleReturn.userId > User.id
+
+Ref: SaleReturnItem.returnId > SaleReturn.id
+
+Ref: SaleReturnItem.saleItemId > SaleItem.id
+
+Ref: Remission.tenantId > Tenant.id
+
+Ref: Remission.userId > User.id
+
+Ref: Remission.warehouseId > Warehouse.id
+
+Ref: RemissionItem.productId > Product.id
+
+Ref: RemissionItem.remissionId > Remission.id
+
+Ref: Quotation.convertedSaleId - Sale.id
+
+Ref: Quotation.customerId > Customer.id
+
+Ref: Quotation.priceListId > PriceList.id
+
+Ref: Quotation.sellerId > User.id
+
+Ref: Quotation.tenantId > Tenant.id
+
+Ref: Quotation.userId > User.id
+
+Ref: Quotation.warehouseId > Warehouse.id
+
+Ref: QuotationItem.productId > Product.id
+
+Ref: QuotationItem.quotationId > Quotation.id

@@ -21,11 +21,11 @@ export default function CustomerForm({
       onSubmit={onSubmit}
       onCancel={onCancel}
     >
-      <Form.Item
+      <Form.Item 
         name="dni"
         label="DNI"
         rules={[
-          { required: true, min: 13, message: "DNI muy corto" },
+          { required: true, min: 13, message: "DNI requerido" }
         ]}
       >
         <Input autoFocus />
@@ -53,6 +53,13 @@ export default function CustomerForm({
 
       <Form.Item name="phone" label="Teléfono">
         <Input />
+      </Form.Item>
+
+      <Form.Item
+        name="direction"
+        label="Direccion"
+      >
+        <Input autoFocus />
       </Form.Item>
 
       {isEdit && (

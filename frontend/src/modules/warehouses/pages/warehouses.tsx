@@ -20,8 +20,8 @@ const { Text } = Typography;
 
 export default function Warehouses() {
   const { warehouses, loading, create, update, toggleActive } = useWarehouses();
-  const { canAccess } = usePermissions();
   const { isMobile } = useDeviceType();
+  const { canAccess } = usePermissions();
 
   const [open, setOpen]       = useState(false);
   const [editing, setEditing] = useState<Warehouse | null>(null);

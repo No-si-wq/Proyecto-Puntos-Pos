@@ -1,11 +1,7 @@
 import { Router } from "express";
 import * as controller from "./category.controller";
 import { validate } from "../../core/middlewares/validate.middleware";
-import {
-  createCategorySchema,
-  createHierarchySchema,
-  updateCategorySchema,
-} from "./category.schema";
+import * as schema from "./category.schema";
 import { asyncHandler } from "../../core/utils/asyncHandler";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
 import { roleMiddleware } from "../../core/middlewares/role.middleware";
@@ -17,13 +13,13 @@ router.use(authMiddleware);
 
 router.post(
   "/",
-  validate(createCategorySchema),
+  validate(schema.createCategorySchema),
   asyncHandler(controller.create)
 );
 
 router.post(
   "/hierarchy",
-  validate(createHierarchySchema),
+  validate(schema.createHierarchySchema),
   asyncHandler(controller.createHierarchy)
 );
 
@@ -37,8 +33,8 @@ router.get("/:id/children", asyncHandler(controller.getChildren));
 router.put(
   "/:id",
   roleMiddleware(Role.ADMIN),
-  validate(updateCategorySchema),
-  asyncHandler(controller.update)
+  validate(schema.updateCategorySchema),
+  asyncHandler(controller.update),
 );
 
 router.patch(

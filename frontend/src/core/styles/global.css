@@ -1,15 +1,54 @@
-.ant-menu-item {
-  height: 48px !important;
-  line-height: 48px !important;
+/* ============================================================
+   BASE
+   ============================================================ */
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
 }
 
-button:active {
-  transform: scale(0.97);
+body.auth-page {
+  overflow: auto;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
 }
 
 * {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+
+.app-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  height: 100vh;
+}
+
+.content {
+  overflow: auto;
+  height: calc(100vh - 64px);
+}
+
+/* ============================================================
+   INTERACTIONS
+   ============================================================ */
+
+button:active {
+  transform: scale(0.97);
+}
+
+/* ============================================================
+   ANT DESIGN — MENU
+   ============================================================ */
 
 .ant-menu-item {
   height: 52px !important;
@@ -20,48 +59,44 @@ button:active {
   font-size: 16px;
 }
 
-@media (max-width: 1024px) {
-  .ant-menu-item {
-    height: 52px !important;
-    line-height: 52px !important;
-  }
-}
+/* ============================================================
+   ANT DESIGN — DATE PICKER (RESPONSIVE RANGE)
+   ============================================================ */
 
-.ant-picker-dropdown.responsive-range-advanced
-  .ant-picker-panels {
+.ant-picker-dropdown.responsive-range-advanced .ant-picker-panels {
   display: flex;
 }
 
-.ant-picker-dropdown.rr-mobile-portrait
-  .ant-picker-panels {
+/* Mobile portrait: columna simple, ocultar segundo panel */
+.ant-picker-dropdown.rr-mobile-portrait .ant-picker-panels {
   flex-direction: column !important;
 }
 
-.ant-picker-dropdown.rr-mobile-portrait
-  .ant-picker-panels
-  > *:nth-child(2) {
+.ant-picker-dropdown.rr-mobile-portrait .ant-picker-panels > *:nth-child(2) {
   display: none !important;
 }
 
-.ant-picker-dropdown.rr-mobile-portrait
-  .ant-picker-panel-container {
+.ant-picker-dropdown.rr-mobile-portrait .ant-picker-panel-container {
   max-width: 100vw !important;
 }
 
-.ant-picker-dropdown.rr-tablet
-  .ant-picker-panels {
+/* Tablet: columna, ancho completo */
+.ant-picker-dropdown.rr-tablet .ant-picker-panels {
   flex-direction: column !important;
 }
 
-.ant-picker-dropdown.rr-tablet
-  .ant-picker-panel-container {
+.ant-picker-dropdown.rr-tablet .ant-picker-panel-container {
   max-width: 100vw !important;
 }
 
-.ant-picker-dropdown.rr-desktop
-  .ant-picker-panels {
+/* Desktop: fila lado a lado */
+.ant-picker-dropdown.rr-desktop .ant-picker-panels {
   flex-direction: row !important;
 }
+
+/* ============================================================
+   ANT DESIGN — TREE (COMPACT)
+   ============================================================ */
 
 .compact-tree .ant-tree-treenode {
   padding: 2px 0 !important;
@@ -76,8 +111,7 @@ button:active {
   font-size: 13px;
 }
 
-.compact-tree
-  .ant-tree-node-selected {
+.compact-tree .ant-tree-node-selected {
   background-color: #e6f4ff !important;
   border-radius: 4px;
 }
@@ -86,39 +120,11 @@ button:active {
   font-size: 10px;
 }
 
-html, body {
-  overscroll-behavior: none;
-  touch-action: manipulation;
-}
-
-.app-container {
-  max-width: 1600px;
-  margin: 0 auto;
-  height: 100vh;
-}
-
-body {
-  overflow: hidden;
-}
-
-.content {
-  overflow: auto;
-  height: calc(100vh - 64px);
-}
-
-html,
-body {
-  height: 100%;
-  overscroll-behavior-y: none;
-}
-
-body {
-  margin: 0;
-  overflow: hidden;
-}
+/* ============================================================
+   PRINT
+   ============================================================ */
 
 @media print {
-
   body * {
     visibility: hidden;
   }
@@ -134,8 +140,12 @@ body {
     top: 0;
     width: 100%;
   }
+
   table {
     page-break-inside: avoid;
   }
+}
 
+.ant-menu-submenu-popup {
+  top: 102px !important; /* headerHeight exacto */
 }

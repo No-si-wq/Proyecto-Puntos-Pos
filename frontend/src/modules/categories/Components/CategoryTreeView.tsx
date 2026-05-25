@@ -1,6 +1,7 @@
 import { Tree, Input } from "antd";
 import { useMemo, useState } from "react";
 import type { Category } from "../category";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
 
 interface Props {
   categoryTree: Category[];
@@ -12,39 +13,28 @@ export default function CategoryTreeView({
   categoryTree,
   onSelectCategory,
 }: Props) {
-  const [search, setSearch] = useState("");
-  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+  const [search, setSearch]                   = useState("");
+  const [expandedKeys, setExpandedKeys]       = useState<React.Key[]>([]);
   const [autoExpandParent, setAutoExpandParent] = useState(true);
+  const { isMobile }                          = useDeviceType();
 
   const flattenTree = (nodes: Category[]): Category[] => {
     const result: Category[] = [];
-
     const traverse = (list: Category[]) => {
       for (const node of list) {
         result.push(node);
-        if (node.children) {
-          traverse(node.children);
-        }
+        if (node.children) traverse(node.children);
       }
     };
-
     traverse(nodes);
     return result;
   };
 
-  const flatList = useMemo(
-    () => flattenTree(categoryTree),
-    [categoryTree]
-  );
+  const flatList = useMemo(() => flattenTree(categoryTree), [categoryTree]);
 
-  const getParentKey = (
-    key: number,
-    tree: Category[]
-  ): number | null => {
+  const getParentKey = (key: number, tree: Category[]): number | null => {
     for (const node of tree) {
-      if (node.children?.some(child => child.id === key)) {
-        return node.id;
-      }
+      if (node.children?.some((child) => child.id === key)) return node.id;
       if (node.children) {
         const parent = getParentKey(key, node.children);
         if (parent) return parent;
@@ -55,23 +45,14 @@ export default function CategoryTreeView({
 
   const onSearch = (value: string) => {
     setSearch(value);
-
-    if (!value) {
-      setExpandedKeys([]);
-      return;
-    }
+    if (!value) { setExpandedKeys([]); return; }
 
     const matchedKeys = flatList
-      .filter(node =>
-        node.name
-          .toLowerCase()
-          .includes(value.toLowerCase())
-      )
-      .map(node => node.id);
+      .filter((node) => node.name.toLowerCase().includes(value.toLowerCase()))
+      .map((node) => node.id);
 
     const parentKeys = new Set<number>();
-
-    matchedKeys.forEach(key => {
+    matchedKeys.forEach((key) => {
       let parent = getParentKey(key, categoryTree);
       while (parent) {
         parentKeys.add(parent);
@@ -85,22 +66,15 @@ export default function CategoryTreeView({
 
   const highlight = (name: string) => {
     if (!search) return name;
-
-    const index = name
-      .toLowerCase()
-      .indexOf(search.toLowerCase());
-
+    const index = name.toLowerCase().indexOf(search.toLowerCase());
     if (index === -1) return name;
-
-    const before = name.substring(0, index);
-    const match = name.substring(index, index + search.length);
-    const after = name.substring(index + search.length);
-
     return (
       <>
-        {before}
-        <span style={{ color: "#1677ff" }}>{match}</span>
-        {after}
+        {name.substring(0, index)}
+        <span style={{ color: "#1677ff" }}>
+          {name.substring(index, index + search.length)}
+        </span>
+        {name.substring(index + search.length)}
       </>
     );
   };
@@ -111,19 +85,12 @@ export default function CategoryTreeView({
       title: highlight(cat.name),
       children: cat.children?.map(mapNode),
     });
-
     return categoryTree.map(mapNode);
   }, [categoryTree, search]);
 
   const handleSelect = (keys: React.Key[]) => {
-    if (!keys.length) {
-      onSelectCategory?.(null);
-      return;
-    }
-
-    const findCategory = (
-      nodes: Category[]
-    ): Category | undefined => {
+    if (!keys.length) { onSelectCategory?.(null); return; }
+    const findCategory = (nodes: Category[]): Category | undefined => {
       for (const node of nodes) {
         if (node.id === keys[0]) return node;
         if (node.children) {
@@ -132,10 +99,10 @@ export default function CategoryTreeView({
         }
       }
     };
-
-    const selected = findCategory(categoryTree);
-    onSelectCategory?.(selected ?? null);
+    onSelectCategory?.(findCategory(categoryTree) ?? null);
   };
+
+  const treeHeight = isMobile ? undefined : 520;
 
   return (
     <>
@@ -156,8 +123,13 @@ export default function CategoryTreeView({
         }}
         blockNode
         showLine={{ showLeafIcon: false }}
-        height={520}
-        virtual
+        height={treeHeight}
+        virtual={!isMobile}
+        style={
+          isMobile
+            ? { minHeight: 200 }
+            : undefined
+        }
         className="compact-tree"
       />
     </>

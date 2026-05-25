@@ -32,14 +32,18 @@ export function useCommissions() {
 
   const fetchByUser = useCallback(async (
     userId: number,
-    params?: { from?: Dayjs, to?: Dayjs }
+    params?: { from?: Dayjs; to?: Dayjs; month?: Dayjs }
   ) => {
     setLoading(true);
     try {
       const query = new URLSearchParams();
-      if (params?.from) query.set("from", params.from.toISOString());
-      if (params?.to) query.set("to", params.to.toISOString());
-      const { data } = await http.get<CommissionHistory[]>(
+      if (params?.month) {
+        query.set("month", params.month.format("YYYY-MM"));   // ✅ nuevo
+      } else {
+        if (params?.from) query.set("from", params.from.toISOString());
+        if (params?.to)   query.set("to",   params.to.toISOString());
+      }   
+     const { data } = await http.get<CommissionHistory[]>(
         `${BASE}/user/${userId}?${query.toString()}`
       );
       setCommissionHistory(data);

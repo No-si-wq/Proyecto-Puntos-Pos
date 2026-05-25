@@ -3,6 +3,7 @@ import { SaleService } from "./sale.service";
 
 export async function listSales(req: Request, res: Response) {
   const warehouseId = (req as any).warehouseId;
+  const { tenantId } = req.user!;
 
   const from =
     typeof req.query.from === "string"
@@ -16,6 +17,7 @@ export async function listSales(req: Request, res: Response) {
 
   const sales = await SaleService.list(
     warehouseId,
+    tenantId,
     { from, to }
   );
 
@@ -25,8 +27,9 @@ export async function listSales(req: Request, res: Response) {
 export async function getSale(req: Request, res: Response) {
   const id = Number(req.params.id);
   const warehouseId = (req as any).warehouseId;
+  const { tenantId } = req.user!;
 
-  const sale = await SaleService.getById(id, warehouseId);
+  const sale = await SaleService.getById(id, warehouseId, tenantId);
 
   res.json(sale);
 }
@@ -37,12 +40,14 @@ export async function createSale(req: Request, res: Response) {
   }
 
   const warehouseId = (req as any).warehouseId;
-  const { customerId, items, pointsUsed, paymentMethod, dueDate } = req.body;
+  const { tenantId } = req.user!;
+  const { customerId, items, pointsUsed, paymentMethod, dueDate, sellerId, amountPaid, priceMode, observations } = req.body;
 
   const sale = await SaleService.create(
-    { customerId, items, pointsUsed, paymentMethod, dueDate },
+    { customerId, items, pointsUsed, paymentMethod, dueDate, sellerId, amountPaid, priceMode, observations },
     req.user.id,
     warehouseId,
+    tenantId,
   );
 
   res.status(201).json(sale);
@@ -50,8 +55,18 @@ export async function createSale(req: Request, res: Response) {
 
 export async function cancelSale(req: Request, res: Response) {
   const id = Number(req.params.id);
+  const { tenantId } = req.user!;
 
-  await SaleService.cancel(id);
+  await SaleService.cancel(id, tenantId);
 
   res.json({ message: "Venta cancelada" });
 }
+
+export async function returnItems(req: Request, res: Response) {
+  const id = Number(req.params.id);
+  const userId = Number(req.user!.id);
+  const warehouseId = (req as any).warehouseId;
+  const { tenantId } = req.user!;
+  const result = await SaleService.returnItems(id, userId, warehouseId, tenantId, req.body);
+  res.json(result);
+};

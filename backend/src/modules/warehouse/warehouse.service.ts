@@ -3,40 +3,43 @@ import { CreateWarehouseInput, UpdateWarehouseInput } from "./warehouse";
 
 export class WarehouseService {
 
-  static async getAll() {
+  static async getAll(tenantId: number) {
     return prisma.warehouse.findMany({
-      where: { active: true },
+      where: { active: true, tenantId },
       orderBy: { name: "asc" },
     });
   }
 
-  static async getById(id: number) {
+  static async getById(id: number, tenantId: number) {
     return prisma.warehouse.findUnique({
-      where: { id },
+      where: { id, tenantId },
     });
   }
 
-  static async create(data: CreateWarehouseInput) {
+  static async create(data: CreateWarehouseInput, tenantId: number) {
     return prisma.warehouse.create({
-      data,
+      data: {
+        name: data.name,
+        tenantId,
+      },
     });
   }
 
-  static async update(id: number, data: UpdateWarehouseInput) {
+  static async update(id: number, data: UpdateWarehouseInput, tenantId: number) {
     return prisma.warehouse.update({
-      where: { id },
+      where: { id, tenantId },
       data,
     });
   }
 
-  static async toggleActive(id: number, active: boolean) {
+  static async toggleActive(id: number, tenantId: number, active: boolean) {
     const hasSales = await prisma.sale.count({ where: { warehouseId: id } });
 
     if (hasSales > 0) {
       throw new Error("No se puede eliminar almacén con ventas asociadas");
     }
     return prisma.warehouse.update({
-      where: { id },
+      where: { id, tenantId },
       data: { active },
     });
   }

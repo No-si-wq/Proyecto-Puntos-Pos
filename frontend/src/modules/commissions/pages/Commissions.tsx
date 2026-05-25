@@ -13,6 +13,7 @@ import { getAllowedRoles } from "../../../core/utils/permissions";
 import type { CommissionLevel, SalesCommission } from "../types/commission";
 import { useUsers } from "../../users/useUsers";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
+import { Role } from "../../../core/auth/roles";
 
 const { Text } = Typography;
 
@@ -354,7 +355,7 @@ export default function Commissions() {
           onSubmit={handleAssignSubmit}
           onCancel={() => setAssignFormOpen(false)}
           levels={levels}
-          users={users}
+          users={users.filter( u => u.role === Role.SELLER )}
           initial={editCommission}
         />
       </FormModal>

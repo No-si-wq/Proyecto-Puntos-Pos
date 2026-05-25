@@ -10,6 +10,7 @@ interface Props {
   loading?: boolean;
 }
 
+// Cambio: normalizar priceListId antes de enviar
 export function CommissionLevelForm({ onSubmit, onCancel, initial, loading }: Props) {
   const { priceLists = [] } = usePriceLists();
 
@@ -17,14 +18,23 @@ export function CommissionLevelForm({ onSubmit, onCancel, initial, loading }: Pr
     ? {
         name: initial.name,
         description: initial.description ?? "",
-        priceListId: initial.priceListId ?? null,
+        priceListId: initial.priceListId ?? undefined, // ← null → undefined
       }
-    : { name: "", description: "", priceListId: null };
+    : { name: "", description: "", priceListId: undefined }; // ← null → undefined
+
+  // Normalizar antes de pasar al padre
+  const handleSubmit = async (values: any) => {
+    await onSubmit({
+      ...values,
+      priceListId: values.priceListId ?? undefined, // null/undefined → omitido
+      description: values.description || undefined,  // "" → omitido
+    });
+  };
 
   return (
     <FormBase
       initialValues={initialValues}
-      onSubmit={onSubmit}
+      onSubmit={handleSubmit}   // ← handleSubmit en lugar de onSubmit directo
       onCancel={onCancel}
       loading={loading}
       submitText={initial ? "Actualizar" : "Crear"}

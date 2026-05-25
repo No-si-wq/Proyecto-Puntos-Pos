@@ -2,7 +2,7 @@ import { Router } from "express";
 import * as controller from "./Pricelist.controller";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
 import { validate } from "../../core/middlewares/validate.middleware";
-import { createPriceListSchema, updatePriceListSchema } from "./Pricelist.schema";
+import * as schema from "./Pricelist.schema";
 import { asyncHandler } from "../../core/utils/asyncHandler";
 import { roleMiddleware } from "../../core/middlewares/role.middleware";
 import { Role } from "../user/roles";
@@ -16,14 +16,14 @@ router.get("/:id", asyncHandler(controller.getById));
 
 router.post(
   "/",
-  validate(createPriceListSchema),
+  validate(schema.createPriceListSchema),
   asyncHandler(controller.create)
 );
 
 router.put(
   "/:id",
   roleMiddleware(Role.ADMIN),
-  validate(updatePriceListSchema),
+  validate(schema.updatePriceListSchema),
   asyncHandler(controller.update)
 );
 

@@ -3,9 +3,11 @@ import { z } from "zod";
 export const createSaleSchema = z.object({
   body: z.object({
     customerId:  z.number().int().positive().optional(),
-    priceListId: z.number().int().positive().optional(),
     pointsUsed:  z.number().int().nonnegative().optional(),
-
+    sellerId:    z.number().int().positive().optional(),
+    amountPaid: z.number().nonnegative().optional(),
+    observations: z.string().max(500).optional(),
+    priceMode:     z.enum(["TAX_INCLUDED", "TAX_EXCLUDED"]).optional(),
     paymentMethod: z.enum(["CASH", "CARD", "TRANSFER", "CREDIT"]),
 
     dueDate: z.string().datetime({ message: "Fecha inválida" }).optional(),
@@ -15,12 +17,18 @@ export const createSaleSchema = z.object({
         z.object({
           productId:     z.number().int().positive(),
           quantity:      z.number().int().positive(),
+          priceListId:   z.number().int().positive().optional(),
           discountType:  z.enum(["NONE", "PERCENTAGE", "FIXED"]).optional(),
           discountValue: z.number().nonnegative().optional(),
         })
       )
       .min(1),
-  })
+    }
+  )
+  .refine(
+    (data) => data.paymentMethod !== "CASH" || (data.amountPaid !== undefined && data.amountPaid >= 0),
+    { message: "El monto pagado es requerido para pagos en efectivo", path: ["amountPaid"] }
+  )
   .superRefine((data, ctx) => {
     if (data.paymentMethod === "CREDIT") {
       if (!data.customerId) {

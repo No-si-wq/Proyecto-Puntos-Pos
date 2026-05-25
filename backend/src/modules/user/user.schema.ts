@@ -3,20 +3,20 @@ import { Role } from "../user/roles";
 
 export const createUserSchema = z.object({
   body: z.object({
-    email: z.string().email("Email inválido"),
     username: z.string().min(3, "Nombre muy corto"),
     name: z.string().min(3, "Nombre muy corto"),
     password: z.string().min(6, "Password mínimo 6 caracteres"),
+    warehouseId: z.number().int().nonnegative().optional(),
     role: z.nativeEnum(Role),
   }),
 });
 
 export const updateUserSchema = z.object({
   body: z.object({
-    email: z.string().email().optional(),
     username: z.string().min(3).optional(),
     name: z.string().min(3).optional(),
     role: z.nativeEnum(Role).optional(),
+    warehouseId: z.number().int().positive().optional(),
     active: z.boolean().optional(),
   }),
 });

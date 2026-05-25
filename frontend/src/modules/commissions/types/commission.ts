@@ -1,3 +1,12 @@
+export interface CommissionRecord {
+  id: number;
+  createdAt: string;
+  type: string;
+  percent: string;
+  amount: string;
+  sale?: { saleNumber: string | number, total?: string; };
+}
+
 export interface CommissionHistory {
   id: number;
   saleId: number;
@@ -6,7 +15,7 @@ export interface CommissionHistory {
   amount: string;
   type: "SALE" | "REVERSAL";
   createdAt: string;
-  sale: { id: number, createdAt: string, saleNumber: string, };
+  sale: { id: number, createdAt: string, saleNumber: string, total: string };
   saleItem: { id: number; productId: number } | null;
 }
 
@@ -17,6 +26,9 @@ export interface CommissionRow {
   earned: number;
   reversed: number;
   net: number;
+  sellers: string[];
+  sellerNames: string;
+  sellerSalesAmount: number;
 }
 
 export interface CommissionLevel {

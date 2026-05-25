@@ -17,6 +17,7 @@ export function usePurchases() {
   const [loadingList, setLoadingList] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const [unitConversions, setUnitConversions] = useState<
     Record<number, UnitConversion[]>
   >({});
@@ -64,6 +65,16 @@ export function usePurchases() {
     }
   }
 
+  async function cancel(id: number) {
+    setCanceling(true);
+    try {
+      await http.post(`/purchases/${id}/cancel`);
+      await load();
+    } finally {
+      setCanceling(false);
+    }
+  }
+
   async function loadUnitConversions(productId: number) {
     if (unitConversions[productId]) {
       return unitConversions[productId];
@@ -96,9 +107,11 @@ export function usePurchases() {
     loadingList,
     loadingDetail,
     creating,
+    canceling,
     reload: load,
     getPurchaseById,
     create,
+    cancel,
     unitConversions,
     loadUnitConversions,
   };

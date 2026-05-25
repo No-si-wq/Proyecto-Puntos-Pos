@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Product } from "../../products/types/product";
 
 export type DiscountType = "NONE" | "PERCENTAGE" | "FIXED";
+export type PriceMode = "TAX_INCLUDED" | "TAX_EXCLUDED";
 
 export interface SaleCartItem {
   productId: number;
@@ -19,11 +20,14 @@ export interface SaleCartItem {
   lineSubtotal: number;   
   taxAmount: number;      
   lineTotal: number;      
+  priceMode: PriceMode;
 }
 
 interface SaleCartState {
   items: SaleCartItem[];
   commissionPercent: number | undefined;
+  priceMode: PriceMode;
+  amountPaid: number | null;
 
   addProduct: (product: Product, overridePrice?: number) => void;
   updateQuantity: (productId: number, quantity: number) => void;
@@ -33,37 +37,54 @@ interface SaleCartState {
   removeProduct: (productId: number) => void;
   clear: () => void;
   setCommissionPercent: (percent: number | undefined) => void;
+  setPriceMode: (mode: PriceMode) => void;
+  setAmountPaid: (amount: number | null) => void;
 
   grossSubtotal: () => number;  
   subtotal: () => number;       
   totalTax: () => number;       
   total: () => number;          
   totalCommission: () => number;
+  totalDiscount: () => number;
 }
 
 function calculateItem(
-  item: Omit<SaleCartItem, "grossLine" | "discountAmount" | "lineSubtotal" | "taxAmount" | "lineTotal">
+  item: Omit<
+    SaleCartItem,
+    "grossLine" | "discountAmount" | "lineSubtotal" | "taxAmount" | "lineTotal" | "priceMode"
+  >,
+  priceMode: PriceMode
 ): SaleCartItem {
   const grossLine = item.price * item.quantity;
 
   let discountAmount = 0;
-
   if (item.discountType === "PERCENTAGE") {
-    if (item.discountValue > 100) discountAmount = grossLine;
-    else discountAmount = grossLine * (item.discountValue / 100);
+    discountAmount = item.discountValue > 100 ? grossLine : grossLine * (item.discountValue / 100);
   }
-
   if (item.discountType === "FIXED") {
     discountAmount = Math.min(item.discountValue, grossLine);
   }
 
-  const lineSubtotal = grossLine - discountAmount;
+  // grossAfterDiscount = lo que paga el cliente antes de separar/agregar tax
+  const grossAfterDiscount = grossLine - discountAmount;
 
-  const taxAmount = lineSubtotal * item.tax;
+  let lineSubtotal: number; // siempre = base sin impuesto
+  let taxAmount: number;
+  let lineTotal: number;   // siempre = lo que paga el cliente
 
-  const lineTotal = lineSubtotal + taxAmount;
+  if (priceMode === "TAX_INCLUDED") {
+    // El precio YA incluye el impuesto → extraemos la base
+    lineSubtotal = item.tax > 0 ? grossAfterDiscount / (1 + item.tax) : grossAfterDiscount;
+    taxAmount    = grossAfterDiscount - lineSubtotal;
+    lineTotal    = grossAfterDiscount; // el cliente paga grossAfterDiscount (tax ya incluido)
+  } else {
+    // TAX_EXCLUDED: el precio es base → se suma el impuesto
+    lineSubtotal = grossAfterDiscount;
+    taxAmount    = lineSubtotal * item.tax;
+    lineTotal    = lineSubtotal + taxAmount;
+  }
 
-  return { ...item, grossLine, discountAmount, lineSubtotal, taxAmount, lineTotal };
+  return { ...item, grossLine, discountAmount, lineSubtotal, taxAmount, lineTotal, priceMode };
 }
 
 export const saleCartStore = create<SaleCartState>((set, get) => ({
@@ -80,7 +101,7 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
         return {
           items: state.items.map((i) =>
             i.productId === product.id
-              ? calculateItem({ ...existing, price, tax, quantity: existing.quantity + 1 })
+              ? calculateItem({ ...existing, price, tax, quantity: existing.quantity + 1 }, get().priceMode)
               : i
           ),
         };
@@ -98,7 +119,7 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
             priceListId: undefined,
             discountType: "NONE",
             discountValue: 0,
-          }),
+          }, get().priceMode),
         ],
       };
     }),
@@ -107,7 +128,7 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
     set((state) => ({
       items: state.items.map((i) =>
         i.productId === productId
-          ? calculateItem({ ...i, quantity: quantity > 0 ? quantity : 1 })
+          ? calculateItem({ ...i, quantity: quantity > 0 ? quantity : 1 }, get().priceMode)
           : i
       ),
     })),
@@ -116,7 +137,7 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
     set((state) => ({
       items: state.items.map((i) =>
         i.productId === productId
-          ? calculateItem({ ...i, discountType, discountValue: Math.max(discountValue, 0) })
+          ? calculateItem({ ...i, discountType, discountValue: Math.max(discountValue, 0) }, get().priceMode)
           : i
       ),
     })),
@@ -124,7 +145,7 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
   updatePrice: (productId, price) =>
     set((state) => ({
       items: state.items.map((i) =>
-        i.productId === productId ? calculateItem({ ...i, price }) : i
+        i.productId === productId ? calculateItem({ ...i, price }, get().priceMode) : i
       ),
     })),
 
@@ -140,7 +161,18 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
       items: state.items.filter((i) => i.productId !== productId),
     })),
 
-  clear: () => set({ items: [] }),
+    priceMode: "TAX_INCLUDED" as PriceMode,
+
+    // Nueva acción:
+    setPriceMode: (mode) => set((state) => ({
+      priceMode: mode,
+      items: state.items.map((i) => calculateItem(i, mode)),
+    })),
+
+  amountPaid: null,
+  setAmountPaid: (amount) => set({ amountPaid: amount }),
+
+  clear: () => set({ items: [], amountPaid: null }),
 
   setCommissionPercent: (percent) => set({ commissionPercent: percent }),
 
@@ -151,6 +183,8 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
   totalTax: () => get().items.reduce((sum, i) => sum + i.taxAmount, 0),
 
   total: () => get().items.reduce((sum, i) => sum + i.lineTotal, 0),
+
+  totalDiscount: () => get().items.reduce((sum, i) => sum + i.discountAmount, 0),
 
   totalCommission: () => {
     const percent = get().commissionPercent;

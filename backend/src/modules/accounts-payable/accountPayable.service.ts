@@ -2,16 +2,16 @@ import prisma from "../../core/prisma";
 import { Prisma } from "@prisma/client";
 
 class AccountPayableService {
-  async create(data: { purchaseId: number; dueDate?: Date }) {
+  async create(data: { purchaseId: number; dueDate?: Date, tenantId: number }) {
     return prisma.$transaction(async (tx) => {
       const purchase = await tx.purchase.findUnique({
-        where: { id: data.purchaseId },
+        where: { id: data.purchaseId, tenantId: data.tenantId },
       });
 
       if (!purchase) throw new Error("Compra no encontrada");
 
       const existing = await tx.accountPayable.findUnique({
-        where: { purchaseId: data.purchaseId },
+        where: { purchaseId: data.purchaseId, tenantId: data.tenantId },
       });
 
       if (existing) throw new Error("Ya existe cuenta por pagar");
@@ -23,12 +23,13 @@ class AccountPayableService {
           total: purchase.total,
           balance: purchase.total,
           dueDate: data.dueDate,
+          tenantId: data.tenantId,
         },
       });
     });
   }
 
-  async list(filters: any) {
+  async list(filters: any, tenantId: number) {
     const where: Prisma.AccountPayableWhereInput = {};
 
     if (filters.status) where.status = filters.status;
@@ -41,7 +42,7 @@ class AccountPayableService {
     }
 
     return prisma.accountPayable.findMany({
-      where,
+      where: { tenantId },
       include: {
         supplier: true,
         purchase: true,
@@ -51,13 +52,14 @@ class AccountPayableService {
   }
 
   async registerPayment(
+    tenantId: number,
     accountId: number,
     amount: Prisma.Decimal,
     note?: string
   ) {
     return prisma.$transaction(async (tx) => {
       const account = await tx.accountPayable.findUnique({
-        where: { id: accountId },
+        where: { id: accountId, tenantId },
       });
 
       if (!account) throw new Error("Cuenta no encontrada");

@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
-import { message, Tooltip, Form, Button, Upload, Badge, Tag, Dropdown, Typography, Space, Input, type MenuProps } from "antd";
+import { message, Tooltip, Form, Button, Upload, Badge, Tag, Dropdown, Typography, Space, Input, Switch } from "antd";
 import { TagsOutlined, ReloadOutlined, MoreOutlined, PlusOutlined, FileExcelOutlined, FilePdfOutlined, FileTextOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import type { MenuProps } from "antd";
 
-import type { Product } from "../types/product";
+import type { Product, ProductFormValues } from "../types/product";
 
 import { useProducts } from "../hooks/useProducts";
 import FormModal from "../../../core/components/forms/FormModal";
@@ -13,6 +14,7 @@ import ProtectedButton from "../../../core/components/common/ProtectedButton";
 import { ConfirmModal } from "../../../core/components/common/ConfirmModal";
 import ProductForm from "../components/ProductForm";
 import ProductPricesModal from "../components/ProductPricesModal";
+import ReorderPointModal from "../components/ReorderPointModal";
 import SimpleTable from "../../../core/components/table/SimpleTable";
 import { buildCategoryPath, buildCategoryBreadcrumb } from "../../../core/utils/category";
 
@@ -23,14 +25,13 @@ import { exportToExcel } from "../../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
 
-import ReorderPointModal from "../components/ReorderPointModal";
-
 const { Text } = Typography;
 
 export default function Products() {
   const {
     products,
     loading,
+    filters,
     create,
     update,
     toggleActive,
@@ -40,26 +41,33 @@ export default function Products() {
   } = useProducts();
 
   const [open, setOpen] = useState(false);
-  const [form] = Form.useForm<Product>();
-  const [searchValue, setSearchValue] = useState("");
+  const [form] = Form.useForm<ProductFormValues>();
   const [editing, setEditing] = useState<Product | null>(null);
   const sizes = useResponsiveSizes();
-  const { categoryTree } = useCategories();
   const { isMobile } = useDeviceType();
+  const { categoryTree } = useCategories();
 
   const [pricesOpen, setPricesOpen] = useState(false);
   const [pricingProduct, setPricingProduct] = useState<Product | null>(null);
+  const [searchValue, setSearchValue] = useState("");
 
   const [reorderOpen, setReorderOpen] = useState(false);
   const [reorderProduct, setReorderProduct] = useState<Product | null>(null);
 
+  const allPriceListNames = useMemo(() => {
+    const names = new Set<string>();
+    products.forEach(p =>
+      p.prices?.forEach(pp => {
+        if (pp.priceList?.active) names.add(pp.priceList.name);
+      })
+    );
+    return Array.from(names).sort();
+  }, [products]);
+
   useEffect(() => {
     const timeout = setTimeout(() => {
-      setFilters({
-        search: searchValue || undefined,
-      });
+      setFilters({ search: searchValue || undefined });
     }, 400);
-
     return () => clearTimeout(timeout);
   }, [searchValue]);
 
@@ -81,14 +89,28 @@ export default function Products() {
   function buildExportRows(data: Product[]) {
     return data
       .filter(p => p.active)
-      .map((p) => ({
-        Codigo: p.sku,
-        Nombre: p.name,
-        Descripcion: p.description ?? "-",
-        Precio: p.price,
-        Costo: p.cost,
-        Categorias: buildBreadcrumbFromId(p.categoryId),
-      }));
+      .map((p) => {
+        const priceListColumns = Object.fromEntries(
+          allPriceListNames.map(name => {
+            const match = p.prices?.find(pp => pp.priceList?.name === name);
+            return [`Lista_${name}`, match ? Number(match.price) : ""];
+          })
+        );
+
+        return {
+          Codigo: p.sku,
+          Nombre: p.name,
+          Descripcion: p.description ?? "-",
+          Laboratorio: p.laboratory ?? "-",
+          Observaciones: p.observations ?? "-",
+          Precio: p.price,
+          Costo: p.cost,
+          Impuesto: p.tax != null ? Number((p.tax * 100).toFixed(0)) : 0,
+          Categorias: buildBreadcrumbFromId(p.categoryId),
+          Codigos: p.barcodes?.map((b) => b.code).join(", ") ?? "",
+          ...priceListColumns,
+        };
+      });
   }
 
   function handleExportExcel() {
@@ -96,15 +118,25 @@ export default function Products() {
   }
 
   function handleExportPdf() {
+    const priceListCols = allPriceListNames.map(name => ({
+      header: name,
+      dataKey: `Lista_${name}`,
+    }));
+
     exportToPdf(
       "Productos",
       [
         { header: "Codigo", dataKey: "Codigo" },
         { header: "Nombre", dataKey: "Nombre" },
         { header: "Descripcion", dataKey: "Descripcion" },
-        { header: "Precio", dataKey: "Precio" },
-        { header: "Costo", dataKey: "Costo" },
+        { header: "Laboratorio", dataKey: "Laboratorio" },
+        { header: "Observaciones", dataKey: "Observaciones" },
+        { header: "Precios", dataKey: "Precio" },
+        { header: "Costos", dataKey: "Costo" },
+        { header: "Impuestos", dataKey: "Impuesto" },
         { header: "Categorias", dataKey: "Categorias" },
+        { header: "Minimo", dataKey: "PuntoReorden" },
+        ...priceListCols,
       ],
       buildExportRows(products),
       "Productos"
@@ -116,7 +148,7 @@ export default function Products() {
     setOpen(true);
   }
 
-  const formInitialValues = useMemo<Partial<Product> | undefined>(() => {
+  const formInitialValues = useMemo<ProductFormValues | undefined>(() => {
     if (!editing || !categoryTree.length) return undefined;
 
     const path = buildCategoryPath(categoryTree, editing.categoryId);
@@ -128,7 +160,9 @@ export default function Products() {
       price: editing.price,
       cost: editing.cost,
       tax: editing.tax != null ? Number(editing.tax) * 100 : undefined,
-      barcodes: editing.barcodes ?? undefined,
+      laboratory: editing.laboratory ?? undefined,
+      observations: editing.observations ?? undefined,
+      barcodes: editing.barcodes?.map((b) => b.code) ?? undefined,
       categoryPath: path.map(c => c.id),
       active: editing.active,
     };
@@ -174,9 +208,11 @@ export default function Products() {
         sku: values.sku,
         name: values.name,
         description: values.description,
+        observations: values.observations,
         price: values.price,
         cost: values.cost,
         tax: values.tax != null ? values.tax / 100 : values.tax,
+        laboratory: values.laboratory,
         active: values.active,
         categoryId,
         ...(values.barcodes !== undefined && {
@@ -386,6 +422,14 @@ export default function Products() {
           onChange={(e) => setSearchValue(e.target.value)}
           style={{ width: "100%" }}
         />
+
+        <Space style={{ marginTop: 12 }}> 
+          <Switch
+            checked={filters.onlyInactive}
+            onChange={(val) => { setFilters((prev) => ({...prev, onlyInactive: val})) }}
+          />
+          <Text>Mostrar inactivos</Text>
+        </Space>
       </div>
 
       <input

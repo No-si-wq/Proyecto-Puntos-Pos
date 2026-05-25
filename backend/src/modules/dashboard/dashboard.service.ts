@@ -1,10 +1,15 @@
 import prisma from "../../core/prisma";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export class DashboardService {
-  static async getSummary(warehouseId: number) {
-    const todayStart = dayjs().startOf("day").toDate();
-    const todayEnd = dayjs().endOf("day").toDate();
+  static async getSummary(warehouseId: number, tenantId: number) {
+    const todayStart = dayjs().tz("America/Tegucigalpa").startOf("day").toDate();
+    const todayEnd = dayjs().tz("America/Tegucigalpa").endOf("day").toDate();
 
     const [
       todaySales,
@@ -16,6 +21,7 @@ export class DashboardService {
 
       prisma.sale.aggregate({
         where: {
+          tenantId,
           warehouseId,
           status: "COMPLETED",
           createdAt: {
@@ -29,6 +35,7 @@ export class DashboardService {
 
       prisma.purchase.aggregate({
         where: {
+          tenantId,
           warehouseId,
           createdAt: {
             gte: todayStart,
@@ -53,7 +60,7 @@ export class DashboardService {
         p."sku",
         COALESCE(SUM(pi."quantity"), 0)::int AS stock
       FROM "Product" p
-      LEFT JOIN "PurchaseItem" pi
+      INNER JOIN "PurchaseItem" pi
         ON pi."productId" = p."id"
         AND pi."warehouseId" = ${warehouseId}
       WHERE p."active" = true
@@ -65,11 +72,12 @@ export class DashboardService {
       prisma.purchaseItem.findMany({
         where: {
           quantity: { gt: 0 },
+          tenantId,
           warehouseId,
-          AND: [
-            { expiresAt: { not: null } },
-            { expiresAt: { lte: dayjs().add(60, "day").endOf("day").toDate() } },
-          ],
+          expiresAt: {
+            not: null,
+            lte: dayjs().add(60, "day").toDate(),
+          },
         },
         include: {
           product: {

@@ -5,7 +5,6 @@ export interface SupplierBase {
   name: string;
   email?: SupplierEmail;
   phone?: SupplierPhone;
-  rtn?: string;
 }
 
 export type CreateSupplierInput = SupplierBase;

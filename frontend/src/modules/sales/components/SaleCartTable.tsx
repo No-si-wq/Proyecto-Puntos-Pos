@@ -115,12 +115,26 @@ export function SaleCartTable({
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderTop: "1px solid #f0f0f0", paddingTop: 10, marginTop: 8 }}>
                   <div style={{ fontSize: 12, color: "#888" }}>
-                    <div>Impuesto <span style={taxBadgeStyle}>{taxPercent}%</span> {formatCurrency(i.taxAmount)}</div>
-                    {i.discountAmount > 0 && <div style={{ color: "#ff4d4f", marginTop: 2 }}>−{formatCurrency(i.discountAmount)}</div>}
+                    <div>
+                      ISV <span style={taxBadgeStyle}>{taxPercent}%</span>{" "}
+                      {formatCurrency(i.taxAmount)}
+                    </div>
+                    {i.discountAmount > 0 && (
+                      <div style={{ color: "#ff4d4f", marginTop: 2 }}>−{formatCurrency(i.discountAmount)}</div>
+                    )}
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 11, color: "#999", marginBottom: 1 }}>Subtotal</div>
-                    <strong style={{ fontSize: 16 }}>{formatCurrency(i.lineTotal)}</strong>
+                    <div style={{ fontSize: 11, color: "#999", marginBottom: 1 }}>
+                      {i.priceMode === "TAX_INCLUDED" ? "Base" : "Subtotal"}
+                    </div>
+                    <strong style={{ fontSize: 16 }}>
+                      {formatCurrency(i.lineSubtotal)}
+                    </strong>
+                    {i.tax > 0 && (
+                      <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+                        Total: {formatCurrency(i.lineTotal)}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -171,7 +185,6 @@ export function SaleCartTable({
 
           {items.map((i, idx) => {
             const taxPercent = (i.tax * 100).toFixed(0);
-            const taxAmount  = i.price * i.quantity * i.tax;
             const isLast     = idx === items.length - 1;
             const td = (extra?: React.CSSProperties): React.CSSProperties => ({
               padding: "10px 10px",
@@ -227,7 +240,7 @@ export function SaleCartTable({
                     <div style={{ marginTop: 3, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 3 }}>
                       <span style={taxBadgeStyle}>{taxPercent}%</span>
                       <span style={{ fontSize: 11, color: "#aaa", fontVariantNumeric: "tabular-nums" }}>
-                        {formatCurrency(taxAmount)}
+                        {formatCurrency(i.taxAmount)}
                       </span>
                     </div>
                   )}
@@ -258,13 +271,14 @@ export function SaleCartTable({
                 </td>
 
                 <td style={td({ textAlign: "right" })}>
-                  {i.discountAmount > 0 && (
+                  {i.discountAmount > 0 && (  
                     <div style={{ fontSize: 11, color: "#ff4d4f", fontVariantNumeric: "tabular-nums", marginBottom: 1 }}>
                       −{formatCurrency(i.discountAmount)}
                     </div>
                   )}
+                  {/* Base sin impuesto */}
                   <strong style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a", fontVariantNumeric: "tabular-nums" }}>
-                    {formatCurrency(i.lineSubtotal)}
+                    {formatCurrency(i.lineTotal)}
                   </strong>
                 </td>
 

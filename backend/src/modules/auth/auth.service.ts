@@ -12,36 +12,32 @@ import { AuthError } from "./auth";
 export interface LoginInput {
   username: string;
   password: string;
+  tenantId: number;
 }
 
 export interface AuthUser {
   id: number;
-  email: string | null;
-  username: string;
   name: string | null;
+  warehouseId: number | null;
+  username: string;
   role: Role;
+  tenantId: number;
 }
 
 export interface LoginResult {
   accessToken: string;
   refreshToken: string;
   user: AuthUser;
+  warehouseId: number | null;
 }
 
 export class AuthService {
   static async login(input: LoginInput): Promise<LoginResult> {
-    const { username, password } = input;
+    const { username, password, tenantId } = input;
 
     const user = await prisma.user.findUnique({
-      where: { username },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        name: true,
-        password: true,
-        role: true,
-        active: true,
+      where: {
+        tenantId_username: { tenantId, username },
       },
     });
 
@@ -56,24 +52,29 @@ export class AuthService {
 
     const accessToken = signAccessToken({
       sub: user.id,
+      tenantId: user.tenantId,
       username: user.username,
       role: user.role,
+      warehouseId: user.warehouseId,
     });
 
     const refreshToken = signRefreshToken({
       sub: user.id,
+      tenantId: user.tenantId,
     });
 
     return {
       user: {
         id: user.id,
-        email: user.email,
-        role: user.role,
+        tenantId: user.tenantId,
         name: user.name,
+        warehouseId: user.warehouseId,
+        role: user.role,
         username: user.username,
       },
       accessToken,
       refreshToken,
+      warehouseId: user.warehouseId,
     };
   }
 
@@ -101,16 +102,23 @@ export class AuthService {
 
   static async issueTokens(user: {
     id: number;
+    tenantId: number;
     username: string;
     role: Role;
+    warehouseId: number | null;
   }): Promise<{ accessToken: string; refreshToken: string }> {
     const accessToken = signAccessToken({
       sub: user.id,
+      tenantId: user.tenantId,
       username: user.username,
       role: user.role,
+      warehouseId: user.warehouseId,
     });
 
-    const refreshToken = signRefreshToken({ sub: user.id });
+    const refreshToken = signRefreshToken({
+      sub: user.id,
+      tenantId: user.tenantId,
+    });
 
     const payload = verifyRefreshToken(refreshToken);
 
@@ -150,7 +158,14 @@ export class AuthService {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, username: true, role: true, active: true },
+      select: {
+        id: true,
+        tenantId: true,
+        warehouseId: true,
+        username: true,
+        role: true,
+        active: true,
+      },
     });
 
     if (!user || !user.active) {

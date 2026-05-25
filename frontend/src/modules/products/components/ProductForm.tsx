@@ -1,7 +1,9 @@
 import { Form, Input, InputNumber, Switch, Button, Space } from "antd";
-import type { ProductFormProps } from "../product";
+import type { ProductFormProps } from "../types/product";
 import FormBase from "../../../core/components/forms/FormBase";
 import { CategoryCascader } from "../../categories/Components/CategoryCascader";
+
+const { TextArea } = Input;
 
 export default function ProductForm({
   isEdit,
@@ -40,6 +42,19 @@ export default function ProductForm({
         <Input />
       </Form.Item>
 
+      <Form.Item name="laboratory" label="LB">
+        <Input />
+      </Form.Item>
+
+      <Form.Item name="observations" label="Observaciones">
+        <TextArea
+          rows={4}
+          placeholder="Ej: Por la compra de 3 recibe 1 GRATIS"
+          maxLength={1000}
+          showCount
+        />
+      </Form.Item>
+
       <Form.Item
         name="cost"
         label="Costo"
@@ -70,7 +85,7 @@ export default function ProductForm({
         <InputNumber
           min={0}
           max={100}
-          step={1}
+          step={0.01}
           formatter={(value) => `${value}%`}
           parser={(value) => value?.replace("%", "") as any}
           style={{ width: "100%" }}

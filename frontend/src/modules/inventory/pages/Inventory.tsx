@@ -1,5 +1,6 @@
-import { Tag, Button, Card, Spin, Dropdown, Typography, Space, type MenuProps } from "antd";
+import { Tag, Button, Card, Spin, Dropdown, Typography, Space } from "antd";
 import { ArrowLeftOutlined, MoreOutlined, FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
+import type { MenuProps } from "antd";
 import dayjs from "dayjs";
 import { useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -8,10 +9,10 @@ import type { ColumnsType } from "antd/es/table";
 import SimpleTable from "../../../core/components/table/SimpleTable";
 import { useInventory } from "../hooks/useInventory";
 import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
 import { exportToPdf } from "../../../core/utils/exportPDF";
 import { exportToExcel } from "../../../core/utils/exportExcel";
 import type { Lot } from "../types/inventory";
-import { useDeviceType } from "../../../core/hooks/useDeviceType";
 
 const { Text } = Typography;
 
@@ -25,54 +26,32 @@ function expiryTag(expiresAt?: string | null) {
 
 export default function InventoryPage() {
   const { productId } = useParams();
-  const navigate = useNavigate();
-  const sizes = useResponsiveSizes();
-  const { isMobile } = useDeviceType();
+  const navigate      = useNavigate();
+  const sizes         = useResponsiveSizes();
+  const { isMobile }  = useDeviceType();
 
   const id = productId ? Number(productId) : undefined;
+  const { stock, lots, productName, loading } = useInventory(id);
 
-  const {
-    stock,
-    lots,
-    productName,
-    loading,
-  } = useInventory(id);
+  if (!id) return <Card>ID de producto inválido</Card>;
 
-  if (!id) {
-    return <Card>ID de producto inválido</Card>;
-  }
+  const exportRows = useMemo(() => lots.map((l) => ({
+    N_Lote:  `#${l.lotNumber}`,
+    Cantidad:  l.quantity,
+    Costo:     l.cost,
+    Expira:    l.expiresAt ? dayjs(l.expiresAt).format("DD/MM/YYYY") : "-",
+    Creado_el: dayjs(l.purchase.createdAt).format("DD/MM/YYYY HH:mm"),
+  })), [lots]);
 
-  const exportRows = useMemo(() => {
-    return lots.map((l) => ({
-      N_Compra: `#${l.purchase.id}`,
-      Cantidad: l.quantity,
-      Costo: l.cost,
-      Expira: l.expiresAt
-        ? dayjs(l.expiresAt).format("DD/MM/YYYY")
-        : "-",
-      Creado_el: dayjs(l.purchase.createdAt).format(
-        "DD/MM/YYYY HH:mm"
-      ),
-    }));
-  }, [lots]);
-
-  function handleExportExcel() {
-    exportToExcel(exportRows, "Lote_Compras");
-  }
-
+  function handleExportExcel() { exportToExcel(exportRows, "Lote_Compras"); }
   function handleExportPdf() {
-    exportToPdf(
-      "Lotes de Compra",
-      [
-        { header: "N° Compra", dataKey: "N_Compra" },
-        { header: "Cantidad", dataKey: "Cantidad" },
-        { header: "Costo", dataKey: "Costo" },
-        { header: "Expira", dataKey: "Expira" },
-        { header: "Creado el", dataKey: "Creado_el" },
-      ],
-      exportRows,
-      "Lote_Compras"
-    );
+    exportToPdf("Lotes de Compra", [
+      { header: "N° Lote", dataKey: "N_Lote"  },
+      { header: "Cantidad",  dataKey: "Cantidad"  },
+      { header: "Costo",     dataKey: "Costo"     },
+      { header: "Expira",    dataKey: "Expira"    },
+      { header: "Creado el", dataKey: "Creado_el" },
+    ], exportRows, "Lote_Compras");
   }
 
   const exportMenu: MenuProps = {
@@ -83,6 +62,7 @@ export default function InventoryPage() {
   };
 
   const desktopColumns: ColumnsType<Lot> = useMemo(() => [
+    { title: "Compra",    render: (_, r) => `#${r.lotNumber ?? "-"}` },
     { title: "Cantidad",  dataIndex: "quantity" },
     { title: "Costo",     dataIndex: "cost" },
     { title: "Creado el", render: (_, r) => dayjs(r.purchase.createdAt).format("DD/MM/YYYY HH:mm") },
@@ -95,7 +75,7 @@ export default function InventoryPage() {
       title: "Lote",
       render: (_, r) => (
         <div>
-          <Text strong>Compra #{r.purchase.id}</Text>
+          <Text strong>Lote #{r.lotNumber}</Text>
           <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
             {dayjs(r.purchase.createdAt).format("DD/MM/YYYY HH:mm")}
           </div>
@@ -179,6 +159,7 @@ export default function InventoryPage() {
       }
     >
       <Spin spinning={loading}>
+        {/* Stock actual destacado */}
         <div
           style={{
             display: "flex",

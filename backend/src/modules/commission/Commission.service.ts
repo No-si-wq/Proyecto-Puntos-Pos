@@ -6,14 +6,15 @@ import {
   UpdateCommissionLevelDto,
   AssignCommissionDto,
   UpdateCommissionDto,
-  CommissionReportRow
+  CommissionReportRow,
 } from "./Commission";
 
-const userSelect = { id: true, name: true, username: true };
+const userSelect = { id: true, name: true, username: true, tenantId: true };
 
 export class CommissionService {
-  async getAllLevels() {
+  async getAllLevels(tenantId: number) {
     return prisma.commissionLevel.findMany({
+      where: { tenantId },
       orderBy: { name: "asc" },
       include: {
         _count: { select: { commissions: true } },
@@ -22,9 +23,9 @@ export class CommissionService {
     });
   }
 
-  async getLevelById(id: number) {
-    const level = await prisma.commissionLevel.findUnique({
-      where: { id },
+  async getLevelById(id: number, tenantId: number) {
+    const level = await prisma.commissionLevel.findFirst({
+      where: { id, tenantId },
       include: {
         priceList: { select: { id: true, name: true } },
         commissions: {
@@ -36,39 +37,47 @@ export class CommissionService {
     return level;
   }
 
-  async createLevel(data: CreateCommissionLevelDto) {
-    const existing = await prisma.commissionLevel.findUnique({ where: { name: data.name } });
+  async createLevel(data: CreateCommissionLevelDto, tenantId: number) {
+    const existing = await prisma.commissionLevel.findUnique({
+      where: { tenantId_name: { tenantId, name: data.name } },
+    });
     if (existing) throw new DomainError("Ya existe una comision con ese nombre");
-    return prisma.commissionLevel.create({data});
+    return prisma.commissionLevel.create({
+      data: {
+        ...data,
+        tenantId,
+      },
+    });
   }
 
-  async updateLevel(id: number, data: UpdateCommissionLevelDto) {
-    await this.getLevelById(id);
+  async updateLevel(id: number, data: UpdateCommissionLevelDto, tenantId: number) {
+    await this.getLevelById(id, tenantId);
     if (data.name) {
       const existing = await prisma.commissionLevel.findFirst({
-        where: { name: data.name, NOT: { id } },
+        where: { tenantId, name: data.name, NOT: { id } },
       });
       if (existing) throw new DomainError("Ya existe una comision con este nombre");
     }
-    return prisma.commissionLevel.update({ where: { id }, data });
+    return prisma.commissionLevel.update({ where: { id, tenantId }, data });
   }
 
-  async removeLevel(id: number, active: boolean) {
-    await this.getLevelById(id);
-    const count = await prisma.salesCommission.count({ where: { levelId: id } });
+  async removeLevel(id: number, tenantId: number, active: boolean) {
+    await this.getLevelById(id, tenantId);
+    const count = await prisma.salesCommission.count({ where: { levelId: id, tenantId } });
     if (count > 0) {
       throw new DomainError(
         "No se puede eliminar un un comision con usuario asignado",
       );
     }
     return prisma.commissionLevel.update({ 
-      where: { id },
+      where: { id, tenantId },
       data: { active },
     });
   }
 
-  async getAllCommissions() {
+  async getAllCommissions(tenantId: number) {
     return prisma.salesCommission.findMany({
+      where: { tenantId },
       include: {
         user: { select: userSelect },
         level: {
@@ -80,22 +89,31 @@ export class CommissionService {
   }
 
   async getCommissionsByUser(
-    userId: number,
-    params?: { from?: Date; to?: Date }
+    userId: number, 
+    tenantId: number,
+    params?: { from?: Date; to?: Date },
   ) {
-    const dateFilter =
-      params?.from && params?.to
-        ? { createdAt: { gte: params.from, lte: params.to } }
-        : {};
+  const dateFilter: Prisma.CommissionWhereInput =
+    params?.from || params?.to
+      ? {
+          createdAt: {
+            ...(params.from && { gte: params.from }),
+            ...(params.to   && { lte: params.to   }),
+          },
+        }
+      : {};
 
     return prisma.commission.findMany({
-      where: {
-        userId,
+      where: { 
+        sale: {
+          sellerId: userId,
+        },
+        tenantId,
         ...dateFilter,
       },
       include: {
         sale: {
-          select: { id: true, createdAt: true, saleNumber: true },
+          select: { id: true, createdAt: true, saleNumber: true, total: true },
         },
         saleItem: {
           select: { id: true, productId: true },
@@ -105,19 +123,23 @@ export class CommissionService {
     });
   }
 
-  async assignCommission(dto: AssignCommissionDto) {
-    const user = await prisma.user.findUnique({ where: { id: dto.userId } });
+  async assignCommission(dto: AssignCommissionDto, tenantId: number) {
+    const user = await prisma.user.findFirst({ where: { id: dto.userId, tenantId } });
     if (!user) throw new DomainError("Usuario no encontrado");
 
-    const level = await prisma.commissionLevel.findUnique({ where: { id: dto.levelId } });
-    if (!level) throw new DomainError("Nivel de Comision no encontrada");
+    const level = await prisma.commissionLevel.findFirst({ where: { id: dto.levelId, tenantId } });
+    if (!level) throw new DomainError("Nivel de Comision no encontrado");
 
     return prisma.salesCommission.upsert({
       where: {
-        userId_levelId: { userId: dto.userId, levelId: dto.levelId },
+        tenantId_userId_levelId: {
+          tenantId,
+          userId: dto.userId,
+          levelId: dto.levelId,
+        },
       },
       update: { percent: dto.percent },
-      create: { userId: dto.userId, levelId: dto.levelId, percent: dto.percent },
+      create: { tenantId, userId: dto.userId, levelId: dto.levelId, percent: dto.percent },
       include: {
         user: { select: userSelect },
         level: true,
@@ -125,44 +147,46 @@ export class CommissionService {
     });
   }
 
-  async updateCommission(id: number, dto: UpdateCommissionDto) {
-    const commission = await prisma.salesCommission.findUnique({ where: { id } });
-    if (!commission) throw new DomainError("Commission assignment not found");
+  async updateCommission(id: number, dto: UpdateCommissionDto, tenantId: number) {
+    const commission = await prisma.salesCommission.findFirst({ where: { id, tenantId } });
+    if (!commission) throw new DomainError("No fue encontrada la comision");
     return prisma.salesCommission.update({
-      where: { id },
+      where: { id, tenantId },
       data: { percent: dto.percent },
       include: { user: { select: userSelect }, level: true },
     });
   }
 
-  async removeCommission(id: number, active: boolean) {
-    const commission = await prisma.salesCommission.findUnique({ where: { id } });
-    if (!commission) throw new DomainError("Commission assignment not found");
+  async removeCommission(id: number, tenantId: number, active: boolean) {
+    const commission = await prisma.salesCommission.findFirst({ where: { id, tenantId } });
+    if (!commission) throw new DomainError("No fue encontrada la comision");
     return prisma.salesCommission.update({ 
-      where: { id },
+      where: { id, tenantId },
       data: { active }
     });
   }
 
-  async resolveCommissionPercent(userId: number, levelName: string): Promise<number | null> {
+  async resolveCommissionPercent(userId: number, levelName: string, tenantId: number): Promise<number | null> {
     const commission = await prisma.salesCommission.findFirst({
       where: {
         userId,
         level: { name: levelName },
+        tenantId,
       },
     });
     return commission ? Number(commission.percent) : null;
   }
-  
-  async getSummary(params?: {
-      from?: Date;
-      to?: Date;
-    }
-  ): Promise<CommissionReportRow[]> {
+
+  async getSummary(
+    tenantId: number,
+    params?: {
+    from?: Date;
+    to?: Date;
+  }): Promise<CommissionReportRow[]> {
     const dateFilter =
       params?.from && params?.to
-        ? { createdAt: { gte: params.from, lte: params.to } }
-        : {};
+        ? { createdAt: { gte: params.from, lte: params.to }, tenantId }
+        : {tenantId};
 
     const commissions = await prisma.commission.findMany({
       where: dateFilter,
@@ -172,32 +196,47 @@ export class CommissionService {
         amount: true,
         saleId: true,
         user: { select: { name: true } },
+        sale: {
+          select: {
+            sellerId: true,
+            seller: { select: { name: true } },
+            total: true,
+          },
+        },
       },
     });
 
-    const map = new Map<
-      number,
-      {
-        userId: number;
-        userName: string;
-        saleIds: Set<number>;
-        earned: Prisma.Decimal;
-        reversed: Prisma.Decimal;
-      }
-    >();
+    const map = new Map<number, {
+      sellerId: number;
+      sellerName: string;
+      saleIds: Set<number>;
+      earned: Prisma.Decimal;
+      reversed: Prisma.Decimal;
+      sellerSalesAmount: Prisma.Decimal;
+    }>();
 
     for (const c of commissions) {
-      if (!map.has(c.userId)) {
-        map.set(c.userId, {
-          userId: c.userId,
-          userName: c.user.name ?? `Usuario ${c.userId}`,
+      if (!c.sale.sellerId) continue; // omite comisiones sin vendedor asignado
+
+      const sellerId = c.sale.sellerId;
+      const sellerName = c.sale.seller?.name ?? `Vendedor ${sellerId}`;
+
+      if (!map.has(sellerId)) {
+        map.set(sellerId, {
+          sellerId,
+          sellerName,
           saleIds: new Set(),
           earned: new Prisma.Decimal(0),
           reversed: new Prisma.Decimal(0),
+          sellerSalesAmount: new Prisma.Decimal(0),
         });
       }
 
-      const entry = map.get(c.userId)!;
+      const entry = map.get(sellerId)!;
+
+      if (!entry.saleIds.has(c.saleId)) {
+        entry.sellerSalesAmount = entry.sellerSalesAmount.add(c.sale.total);
+      }
       entry.saleIds.add(c.saleId);
 
       if (c.type === CommissionType.SALE) {
@@ -211,12 +250,15 @@ export class CommissionService {
 
     for (const entry of map.values()) {
       rows.push({
-        userId: entry.userId,
-        userName: entry.userName,
+        userId: entry.sellerId,       // ← reutiliza el campo userId para la navegación
+        userName: entry.sellerName,   // ← nombre del vendedor
         totalSales: entry.saleIds.size,
         earned: entry.earned,
         reversed: entry.reversed,
         net: entry.earned.sub(entry.reversed),
+        sellers: [entry.sellerName],
+        sellerCount: 1,
+        sellerSalesAmount: entry.sellerSalesAmount,
       });
     }
 

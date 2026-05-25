@@ -4,33 +4,18 @@ import { Prisma } from "@prisma/client";
 import { DomainError } from "../../core/errors/domain-error";
 
 export class CustomerService {
-  static async list(
-    params: { search?: string, onlyInactive?: boolean },
-  ) {
-    
-    const { search, onlyInactive } = params;
-
+  static async list(tenantId: number) {
     return prisma.customer.findMany({
-      where: {
-        active: onlyInactive ? false : true,
-        ...(search && {
-          OR: [
-            {
-              dni: {
-                contains: search,
-                mode: "insensitive",
-              },
-            },
-            {
-              name: {
-                contains: search,
-                mode: "insensitive",
-              },
-            },
-          ],
-        }),
-       },
-      include: {
+      where: { active: true, tenantId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        dni: true,
+        phone: true,
+        direction: true,
+        active: true,
+        createdAt: true,
         points: {
           select: {
             balance: true,
@@ -41,14 +26,16 @@ export class CustomerService {
     });
   }
 
-  static async getById(id: number) {
+  static async getById(id: number, tenantId: number) {
     return prisma.customer.findUnique({
-      where: { id },
+      where: { id, tenantId },
       select: {
         id: true,
         name: true,
         email: true,
         phone: true,
+        dni: true,
+        direction: true,
         active: true,
         createdAt: true,
         points: {
@@ -60,13 +47,19 @@ export class CustomerService {
     });
   }
 
-  static async create(data: CreateCustomerInput) {
+  static async create(data: CreateCustomerInput, tenantId: number) {
     try {
       return prisma.$transaction(async (tx) => {
-        const customer = await tx.customer.create({data});
+        const customer = await tx.customer.create({
+          data: {
+            ...data,
+            tenantId,
+          },
+        });
 
         await tx.loyaltyPoint.create({
           data: {
+            tenantId,
             customerId: customer.id,
             balance: 0,
           },
@@ -86,10 +79,10 @@ export class CustomerService {
       }
   }
 
-  static async update(id: number, data: UpdateCustomerInput) {
+  static async update(id: number, tenantId: number, data: UpdateCustomerInput) {
     try {
       return prisma.customer.update({
-        where: { id },
+        where: { id, tenantId },
         data,
       });
     } catch (error) {
@@ -104,9 +97,9 @@ export class CustomerService {
     }
   }
 
-  static async toggleActive(id: number, active: boolean) {
+  static async toggleActive(id: number, tenantId: number, active: boolean) {
     return prisma.customer.update({
-      where: { id },
+      where: { id, tenantId },
       data: { active },
     });
   }

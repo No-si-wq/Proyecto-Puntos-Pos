@@ -1,6 +1,14 @@
-import type { Category } from "../categories/category";
-import type { ProductPrice } from "../priceLists/pricelist";
+import type { Category } from "../../categories/category";
+import type { ProductPrice } from "../../priceLists/types/pricelist";
 
+export interface productSearch {
+  search?: string,
+  onlyInactive?: boolean,
+};
+
+export interface Barcode {
+  code: string;
+}
 
 export interface Product {
   id: number;
@@ -10,10 +18,12 @@ export interface Product {
   price: number;
   cost: number;
   tax: number;
+  laboratory?: string;
+  observations?: string;
   stock: number;
   reorderPoint: number;
 
-  barcodes: string[];
+  barcodes: Barcode[];
 
   categoryId: number;
   category: Category;
@@ -27,9 +37,15 @@ export interface ProductWithContext extends Product {
   stock: number;
 }
 
+export interface ProductFormValues
+  extends Omit<Partial<Product>, "barcodes" | "categoryId" | "category"> {
+  barcodes?: string[];
+  categoryPath?: number[];
+}
+
 export interface ProductFormProps {
   isEdit: boolean;
-  initialValues?: Partial<Product>;
+  initialValues?: ProductFormValues;
   onSubmit: (values: any) => Promise<void>;
   onCancel: () => void;
 }
@@ -38,8 +54,11 @@ export interface CreateProductDTO {
   sku: string;
   name: string;
   description?: string;
+  observations?: string;
   price: number;
   cost: number;
+  tax: number;
+  laboratory?: string;
   categoryId: number;
 
   barcodes?: string[];
@@ -51,6 +70,9 @@ export interface UpdateProductDTO {
   description?: string;
   price?: number;
   cost?: number;
+  tax: number;
+  laboratory?: string;
+  observations?: string;
   categoryId?: number;
   active?: boolean;
 
@@ -58,13 +80,16 @@ export interface UpdateProductDTO {
 }
 
 export interface ApiProduct extends Omit<Product, "barcodes"> {
-  barcodes?: { code: string }[];
+  barcodes?: (Barcode | string)[];
   [key: string]: any;
 }
 
 export function mapProduct(apiProduct: ApiProduct): Product {
   return {
     ...apiProduct,
-    barcodes: apiProduct.barcodes?.map(b => b.code) ?? [],
+    barcodes:
+      apiProduct.barcodes?.map((barcode) =>
+        typeof barcode === "string" ? { code: barcode } : barcode
+      ) ?? [],
   };
 }

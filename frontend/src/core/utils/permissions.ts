@@ -29,6 +29,9 @@ export type PermissionModule =
   | "priceList"
   | "commission"
   | "commissionReport"
+  | "settings"
+  | "remissions"
+  | "quotations"
 
 export const PERMISSIONS: Record<
   PermissionModule,
@@ -66,7 +69,8 @@ export const PERMISSIONS: Record<
 
   inventory: {
     view: [Role.ADMIN, Role.USER],
-    manage: [Role.ADMIN]
+    export: [Role.ADMIN, Role.USER],
+    manage: [Role.ADMIN],
   },
 
   purchases: {
@@ -75,8 +79,8 @@ export const PERMISSIONS: Record<
   },
 
   sales: {
-    view: [Role.ADMIN, Role.USER],
-    create: [Role.ADMIN, Role.USER],
+    view: [Role.ADMIN, Role.USER, Role.SELLER],
+    create: [Role.ADMIN, Role.USER, Role.SELLER],
     delete: [Role.ADMIN],
     export: [Role.ADMIN],
   },
@@ -134,8 +138,8 @@ export const PERMISSIONS: Record<
   },
 
   commission: {
-    view: [Role.ADMIN],
-    create: [Role.ADMIN],
+    view: [Role.ADMIN, Role.USER],
+    create: [Role.ADMIN, Role.USER],
     edit: [Role.ADMIN],
     delete: [Role.ADMIN],
   },
@@ -143,6 +147,19 @@ export const PERMISSIONS: Record<
   commissionReport: {
     view: [Role.ADMIN]
   },
+
+  settings: {
+    view: [Role.ADMIN],
+  },
+
+  remissions: {
+    view: [Role.ADMIN, Role.USER]
+  },
+
+  quotations: {
+    view: [Role.ADMIN, Role.USER]
+  },
+
 };
 
 export function getAllowedRoles(

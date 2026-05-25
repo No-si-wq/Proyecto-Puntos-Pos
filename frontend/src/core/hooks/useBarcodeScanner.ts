@@ -1,6 +1,6 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { message } from "antd";
-import type { Product } from "../../modules/products/product";
+import type { Product } from "../../modules/products/types/product";
 import { useProducts } from "../../modules/products/hooks/useProducts";
 import { parseScannedCode } from "../utils/parseScannedCode";
 
@@ -57,20 +57,28 @@ export function useBarcodeScanner({
     }
   }, [findByBarcode, onProductFound]);
 
-  const onKey = useCallback(
-    (char: string) => {
-      bufferRef.current += char;
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Si el foco está en un input/select/textarea, ignorar
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
 
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
+      if (e.key === "Enter") {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        processBuffer();
+        return;
       }
 
-      timerRef.current = setTimeout(processBuffer, delay);
-    },
-    [processBuffer, delay]
-  );
+      if (e.key.length === 1) {
+        bufferRef.current += e.key;
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(processBuffer, delay);
+      }
+    };
 
-  return {
-    onKey,
-  };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [processBuffer, delay]);
+
+  return {};
 }

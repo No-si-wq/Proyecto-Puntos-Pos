@@ -4,22 +4,23 @@ import {
   Card, 
   Select, 
   InputNumber,
-  message, 
-  Input, 
+  message,
   Row, 
   Col,
   Button,
   DatePicker,
   Tag,
   Divider,
+  Modal,
   Drawer,
+  Input,
+  type InputRef,
 } from "antd";
-import { ShoppingCartOutlined } from "@ant-design/icons";
+import { PrinterOutlined, ShoppingCartOutlined } from "@ant-design/icons";
 
-import { useDebouncedCallback } from "use-debounce";
 import { useCustomers } from "../../customers/useCustomers";
 import { useSales } from "../hooks/useSales";
-import { saleCartStore } from "../types/saleCart.store";
+import { useUsers } from "../../users/useUsers";
 import { useBarcodeScanner } from "../../../core/hooks/useBarcodeScanner";
 import { saleStore } from "../types/sale.store";
 import { SaleCartTable } from "../components/SaleCartTable";
@@ -30,11 +31,21 @@ import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehous
 import { useWarehouseProducts } from "../../warehouses/hooks/useWarehouseProducts";
 import { usePriceLists } from "../../priceLists/hooks/usePriceList";
 import type { SalePaymentMethod } from "../types/sale";
+import type { Sale } from "../types/sale";
+import { saleCartStore } from "../types/saleCart.store";
+import { Role } from "../../../core/auth/roles";
+import { useReportTemplates } from "../../report-templates/hooks/useReportTemplates";
+import { buildSaleHtml, resolveWindowSize } from "../../report-templates/utils/resolveTemplate";
+import { useSettings } from "../../settings/hooks/useSettings";
+import http from "../../../core/http/http";
 
 import PageHeader from "../../../core/components/common/PageHeader";
 
 export default function Sales() {
-  const { customers, reload: reloadCustomers, loading: loadingCustomers, setFilters: setFiltersCustomer } = useCustomers();
+  const { customers, reload: reloadCustomers } = useCustomers();
+  const { priceMode } = useSettings();
+  const { users = [] } = useUsers();
+  const sellers = users.filter((u) => u.role === Role.SELLER);
   const [sellerId, setSellerId] = useState<number | undefined>();
   const warehouseId = useRequiredWarehouse();
   const { products, reload: reloadProducts } = useWarehouseProducts();
@@ -42,11 +53,14 @@ export default function Sales() {
 
   const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>("CASH");
   const [dueDate, setDueDate] = useState<string>();
-  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [amountPaid, setAmountPaid] = useState<number | null>(null);
 
   const { isMobile, isTablet, device } = useDeviceType();
   const tableSpan   = device === "desktop" ? 16 : device === "tablet" ? 14 : 24;
   const summarySpan = device === "desktop" ? 8  : device === "tablet" ? 10 : 24;
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [observations, setObservations] = useState<string>("");
+  const inputRef = useRef<InputRef>(null);
   const sizes = useResponsiveSizes();
 
   const { create, creating } = useSales();
@@ -54,11 +68,77 @@ export default function Sales() {
   const selectRef = useRef<any>(null);
   const cart = saleCartStore();
 
+  const { getDefault, getById, templates = [] } = useReportTemplates();
+  const [printModalOpen,   setPrintModalOpen]   = useState(false);
+  const [pendingPrintSale, setPendingPrintSale] = useState<Sale | null>(null);
+  const [printing,         setPrinting]         = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
+
+  async function openPrintForSale(sale: Sale) {
+    setPendingPrintSale(sale);
+    setPrintModalOpen(true);
+  }
+
+  async function handleConfirmPrint() {
+    if (!pendingPrintSale) return;
+    setPrinting(true);
+    try {
+      const { data: fullSale } = await http.get<Sale>(`/sales/${pendingPrintSale.id}`);
+      let defaultT = selectedTemplate
+        ? await getById(selectedTemplate).catch(() => null)
+        : await getDefault();
+
+      if (!defaultT) {
+        message.warning("No hay plantilla por defecto configurada");
+        setPrintModalOpen(false);
+        return;
+      }
+
+      const html = buildSaleHtml(fullSale, defaultT.config);
+      const { width, height } = resolveWindowSize(defaultT.config);
+
+      const win = window.open(
+        "",
+        "_blank",
+        `width=${width},height=${height},menubar=no,toolbar=no,location=no,status=no`
+      );
+      if (!win) {
+        message.error("No se pudo abrir la ventana. Verifica que no esté bloqueada.");
+        return;
+      }
+
+      win.document.write(html);
+      win.document.close();
+      win.onload = () => {
+        win.focus();
+        win.print();
+        win.onafterprint = () => win.close();
+      };
+
+    } catch (err) {
+      console.error("[handleConfirmPrint] error:", err);
+      message.error("Error al cargar la plantilla de impresión");
+    } finally {
+      setPrinting(false);
+      setPrintModalOpen(false);
+      setPendingPrintSale(null);
+      setSelectedTemplate(null);
+    }
+  }
+
   useEffect(() => {
     cart.clear();
   }, [warehouseId]);
 
-  const { onKey } = useBarcodeScanner({
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    cart.setPriceMode(priceMode);
+  }, [priceMode]);
+
+  useBarcodeScanner({
     onProductFound: (product) => {
       const item = cart.items.find((i) => i.productId === product.id);
       if (item) {
@@ -72,25 +152,28 @@ export default function Sales() {
   const sale = saleStore();
   const selectedCustomer = customers.find((c) => c.id === sale.customerId);
   const availablePoints = selectedCustomer?.points?.balance ?? 0;
+
   const estimatedCommission = cart.totalCommission();
 
-  const handleSearch = useDebouncedCallback((value: string) => {
-    setFiltersCustomer({ search: value });
-  }, 400);
+  const pointsDiscount = sale.pointsUsed * 0.01;
+  const totalFinal = cart.total() - pointsDiscount;
 
   const isSubmitDisabled =
     cart.items.length === 0 ||
-    (paymentMethod === "CREDIT" && (!sale.customerId || !dueDate));
+    (paymentMethod === "CREDIT" && (!sale.customerId || !dueDate)) ||
+    (paymentMethod === "CASH" && (amountPaid === null || amountPaid < totalFinal));
 
   async function submitSale() {
     if (cart.items.length === 0) {
       message.warning("El carrito está vacío");
       return;
     }
+
     if (sale.pointsUsed > availablePoints) {
       message.error("Puntos insuficientes");
       return;
     }
+
     if (paymentMethod === "CREDIT") {
       if (!sale.customerId) {
         message.error("Debe seleccionar cliente para crédito");
@@ -102,11 +185,17 @@ export default function Sales() {
       }
     }
 
-    const pointsDiscount = sale.pointsUsed;
-    const finalTotal = cart.subtotal() - pointsDiscount;
+    const finalTotal = cart.total() - pointsDiscount;
     if (finalTotal < 0) {
       message.error("Total inválido");
       return;
+    }
+
+    if (paymentMethod === "CASH") {
+      if (amountPaid === null || amountPaid === undefined || amountPaid < totalFinal) {
+        message.error("El monto recibido es insuficiente");
+        return;
+      }
     }
 
     try {
@@ -114,6 +203,7 @@ export default function Sales() {
         customerId: sale.customerId,
         pointsUsed: sale.pointsUsed,
         sellerId,
+        observations,
         items: cart.items.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -123,6 +213,8 @@ export default function Sales() {
         })),
         paymentMethod,
         dueDate,
+        priceMode,
+        amountPaid: paymentMethod === "CASH" && amountPaid !== null ? amountPaid : undefined,
       });
 
       await Promise.all([reloadProducts(), reloadCustomers()]);
@@ -132,42 +224,77 @@ export default function Sales() {
       setPaymentMethod("CASH");
       setSellerId(undefined);
       setDueDate(undefined);
-      setSummaryOpen(false);
+      setAmountPaid(null);
+      setObservations("");
 
       message.success(
         result?.pointsEarned
           ? `Venta realizada. Puntos ganados: ${result.pointsEarned}`
           : "Venta realizada"
       );
+
+      if (result) openPrintForSale(result as Sale);
     } catch (err: any) {
       message.error(err?.response?.data?.message ?? "Error creando venta");
     }
   }
 
-  const totalFinal = cart.subtotal() - (sale.pointsUsed) + cart.totalTax();
-
   const summaryPanel = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
 
-      <div>
-        <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>CLIENTE</div>
+    <Row gutter={8}>
+      <Col span={12}>
+        <div style={{ fontSize: 11, color: "#888", marginBottom: 3 }}>VENDEDOR</div>
         <Select
           showSearch
           allowClear
           listHeight={sizes.selectListHeight}
           size={sizes.select}
-          placeholder="Seleccionar cliente"
+          placeholder="Vendedor"
+          value={sellerId}
+          onChange={(v) => setSellerId(v ?? undefined)}
+          style={{ width: "100%" }}
+          filterOption={(input, option) =>
+            (option?.label as string).toLowerCase().includes(input.toLowerCase())
+          }
+          options={sellers
+            .filter((u) => u.active)
+            .map((u) => ({ value: u.id, label: `${u.name}` }))}
+        />
+      </Col>
+      <Col span={12}>
+        <div style={{ fontSize: 11, color: "#888", marginBottom: 3 }}>CLIENTE</div>
+        <Select
+          showSearch
+          allowClear
+          listHeight={sizes.selectListHeight}
+          size={sizes.select}
+          placeholder="Cliente"
           value={sale.customerId}
           onChange={(v) => sale.setCustomer(v ?? undefined)}
           style={{ width: "100%" }}
-          loading={loadingCustomers}
-          onSearch={handleSearch}
-          filterOption={false}
+          filterOption={(input, option) =>
+            (option?.label as string).toLowerCase().includes(input.toLowerCase())
+          }
           options={customers
             .filter((c) => c.active)
             .map((c) => ({ value: c.id, label: `${c.dni} - ${c.name}` }))}
         />
-      </div>
+      </Col>
+    </Row>
+
+    <div>
+      <div style={{ fontSize: 11, color: "#888", marginBottom: 3 }}>OBSERVACIONES</div>
+      <Input.TextArea
+        rows={1}
+        maxLength={500}
+        size={sizes.input}
+        placeholder="Notas internas, instrucciones de entrega..."
+        value={observations}
+        onChange={(e) => setObservations(e.target.value)}
+        style={{ resize: "none" }}
+      />
+    </div>
 
       {selectedCustomer && (
         <div style={{ padding: "8px 10px", background: "#f6ffed", borderRadius: 6, border: "1px solid #b7eb8f" }}>
@@ -203,6 +330,7 @@ export default function Sales() {
               onChange={(value) => {
                 setPaymentMethod(value);
                 if (value !== "CREDIT") setDueDate(undefined);
+                if (value !== "CASH") setAmountPaid(null);
               }}
               size={sizes.select}
               style={{ width: "100%" }}
@@ -230,32 +358,68 @@ export default function Sales() {
         )}
       </div>
 
+      {paymentMethod === "CASH" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ fontSize: 11, color: "#888" }}>MONTO RECIBIDO</div>
+          <InputNumber
+            style={{ width: "100%" }}
+            size={sizes.input}
+            min={0}
+            precision={2}
+            value={amountPaid}
+            onChange={(v) => setAmountPaid(v ?? null)}
+            placeholder="0.00"
+          />
+          {amountPaid !== null && amountPaid >= totalFinal && (
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+              <span style={{ color: "#666" }}>Cambio</span>
+              <strong style={{ color: "#52c41a" }}>
+                {formatCurrency(amountPaid - totalFinal)}
+              </strong>
+            </div>
+          )}
+          {amountPaid !== null && amountPaid < totalFinal && (
+            <span style={{ color: "#ff4d4f", fontSize: 12 }}>
+              Monto insuficiente
+            </span>
+          )}
+        </div>
+      )}
+
       <Divider style={{ margin: "0" }} />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {/* Base sin impuesto — solo en TAX_INCLUDED */}
+        {cart.priceMode === "TAX_INCLUDED" && cart.totalTax() > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ color: "#666" }}>Base gravable</span>
+            <strong>{formatCurrency(cart.subtotal())}</strong>
+          </div>
+        )}
+
+        {cart.totalTax() > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ color: "#666" }}>ISV</span>
+            <strong style={{ color: "#faad14" }}>{formatCurrency(cart.totalTax())}</strong>
+          </div>
+        )}
+
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span style={{ color: "#666" }}>Subtotal bruto</span>
           <strong>{formatCurrency(cart.grossSubtotal())}</strong>
         </div>
 
-        {cart.totalTax() > 0 && (
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ color: "#666" }}>Impuestos</span>
-            <strong style={{ color: "#faad14" }}>{formatCurrency(cart.totalTax())}</strong>
-          </div>
-        )}
-
-        {cart.grossSubtotal() !== cart.subtotal() && (
+        {cart.totalDiscount() > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span style={{ color: "#666" }}>Descuento productos</span>
-            <strong style={{ color: "#ff4d4f" }}>−{formatCurrency(cart.grossSubtotal() - cart.subtotal())}</strong>
+            <strong style={{ color: "#ff4d4f" }}>−{formatCurrency(cart.totalDiscount())}</strong>
           </div>
         )}
 
         {sale.pointsUsed > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span style={{ color: "#666" }}>Descuento puntos</span>
-            <strong style={{ color: "#ff4d4f" }}>−{formatCurrency(sale.pointsUsed)}</strong>
+            <strong style={{ color: "#ff4d4f" }}>−{formatCurrency(sale.pointsUsed * 0.01)}</strong>
           </div>
         )}
 
@@ -320,13 +484,13 @@ export default function Sales() {
                 .filter((p) => p.active)
                 .map((p) => ({
                   value: p.id,
-                  label: `${p.sku} - ${p.name} - ${p.stock}`,
+                  label: `${p.barcodes[0]?.code ?? ""} - ${p.name} - ${p.stock}`,
                   disabled: p.stock <= 0,
                 }))}
             />
           </div>
 
-          <div style={{ flex: 1, overflowY: "auto", padding: 16, background: "#fafafa" }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 16, background: "#fafafa" }}>
             <SaleCartTable
               items={cart.items}
               onQuantityChange={cart.updateQuantity}
@@ -403,16 +567,6 @@ export default function Sales() {
       <Row gutter={sizes.gutter} align="top">
         <Col span={tableSpan}>
           <Card title="Productos" bodyStyle={{ padding: sizes.cardPadding }}>
-            <Input
-              autoFocus={!isMobile}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value) onKey(value[value.length - 1]);
-                e.target.value = "";
-              }}
-              style={{ position: "absolute", opacity: 0, height: 0, width: 0 }}
-            />
-
             <div style={{ marginBottom: 20 }}>
               <Select
                 ref={selectRef}
@@ -443,7 +597,7 @@ export default function Sales() {
                   .filter((p) => p.active)
                   .map((p) => ({
                     value: p.id,
-                    label: `${p.sku} - ${p.name} - Existencia: ${p.stock}`,
+                    label: `${p.sku} ${p.barcodes[0]?.code ?? ""} - ${p.name} - ${p.stock}`,
                     disabled: p.stock <= 0,
                   }))}
               />
@@ -463,21 +617,55 @@ export default function Sales() {
             />
           </Card>
         </Col>
-
-        {!isMobile && (
-          <Col span={summarySpan}>
-            <div style={{ position: "sticky", top: 0, display: "flex", flexDirection: "column", gap: sizes.gap }}>
-              <Card
-                size="small"
-                bodyStyle={{ padding: sizes.cardPadding }}
-                style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
-              >
-                {summaryPanel}
-              </Card>
-            </div>
-          </Col>
-        )}
+          {!isMobile && (
+            <Col span={summarySpan}>
+              <div style={{ position: "sticky", top: 0, display: "flex", flexDirection: "column", gap: sizes.gap }}>
+                <Card
+                  size="small"
+                  bodyStyle={{ padding: sizes.cardPadding }}
+                  style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+                >
+                  {summaryPanel}
+                </Card>
+              </div>
+            </Col>
+          )}
       </Row>
+
+      <Modal
+        open={printModalOpen}
+        title={<span><PrinterOutlined style={{ marginRight: 8 }} />Imprimir factura</span>}
+        onOk={handleConfirmPrint}
+        onCancel={() => {
+          setPrintModalOpen(false);
+          setPendingPrintSale(null);
+          setSelectedTemplate(null);   // ← limpia al cancelar también
+        }}
+        okText="Imprimir"
+        cancelText="Omitir"
+        confirmLoading={printing}
+        width={360}
+      >
+        <p style={{ marginBottom: 8 }}>
+          Venta <strong>{pendingPrintSale?.saleNumber}</strong> creada correctamente.
+        </p>
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>FORMATO DE FACTURA</div>
+          <Select
+            style={{ width: "100%" }}
+            placeholder="Plantilla por defecto"
+            allowClear
+            value={selectedTemplate}
+            onChange={(v) => setSelectedTemplate(v ?? null)}
+            options={templates.map((t) => ({ value: t.id, label: t.name }))}
+          />
+        </div>
+        <p style={{ color: "#888", fontSize: 13 }}>
+          {selectedTemplate
+            ? "Se usará la plantilla seleccionada."
+            : "Se usará la plantilla por defecto."}
+        </p>
+      </Modal>
     </>
   );
 }

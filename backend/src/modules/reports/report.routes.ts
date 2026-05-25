@@ -12,5 +12,7 @@ router.use(requireWarehouse);
 router.get("/purchase", asyncHandler(controller.getPurchaseLotsReport));
 router.get("/kardex", asyncHandler(controller.getKardex));
 router.get("/profit", asyncHandler(controller.getProfitReport));
+router.get('/sold-products', asyncHandler(controller.getSoldProductsReport));
+router.get("/product-outputs", controller.getProductOutputsReport);
 
 export default router;

@@ -7,6 +7,9 @@ export interface CommissionReportRow {
   earned: Prisma.Decimal;
   reversed: Prisma.Decimal;
   net: Prisma.Decimal;
+  sellers: string[];
+  sellerCount: number;
+  sellerSalesAmount: Prisma.Decimal;
 }
 
 export interface CommissionLevel {

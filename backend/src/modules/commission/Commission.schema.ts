@@ -4,6 +4,7 @@ export const createCommissionLevelSchema = z.object({
   body: z.object({
     name: z.string().min(1, "Name is required"),
     description: z.string().optional(),
+    priceListId:   z.number().int().positive().optional(),
   }),
 });
 
@@ -11,6 +12,7 @@ export const updateCommissionLevelSchema = z.object({
   body: z.object({
     name: z.string().min(1).optional(),
     description: z.string().optional(),
+    priceListId:   z.number().int().positive().optional(),
   }),
 });
 

@@ -3,7 +3,7 @@ import FormBase from "../../../core/components/forms/FormBase";
 import type { PriceList, CreatePriceListDto, UpdatePriceListDto } from "../types/pricelist";
 
 interface Props {
-  isEdit: boolean;
+  isEdit: boolean,
   onSubmit: (data: CreatePriceListDto | UpdatePriceListDto) => Promise<void>;
   onCancel: () => void;
   initial?: PriceList | null;

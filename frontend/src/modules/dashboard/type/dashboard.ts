@@ -69,13 +69,14 @@ export interface AdminDashboardData {
   }[];
   metrics: {
     averageTicket: number;
-    inventoryTurnover: number;
+    inventoryTurnover: number,
   };
   reorderAlerts: {
     count: number;   
     items: {
       productId: number;
       productName: string;
+      laboratory: string;
       sku: string;
       currentStock: number;
       reorderPoint: number;

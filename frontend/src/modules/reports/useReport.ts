@@ -7,6 +7,8 @@ import type {
   ProfitDetail,
   ProfitSummary,
   PurchaseLotReportItem,
+  SoldProductRow,
+  ProductOutputRow,
 } from "./report";
 
 export function useReports() {
@@ -14,6 +16,8 @@ export function useReports() {
 
   const [purchaseLots, setPurchaseLots] = useState<PurchaseLotReportItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [soldProducts, setSoldProducts] = useState<SoldProductRow[]>([]);
+  const [productOutputs, setProductOutputs] = useState<ProductOutputRow[]>([]);
 
   const fetchPurchaseLots = useCallback(
     async (filters?: { product?: string }) => {
@@ -118,17 +122,12 @@ export function useReports() {
       from: string;
       to: string;
     }): Promise<{
-      summary: ProfitSummary;
+      summary: ProfitSummary[];
       details: ProfitDetail[];
     }> => {
       if (!warehouseId) {
         return {
-          summary: {
-            totalSales: 0,
-            totalCogs: 0,
-            totalProfit: 0,
-            margin: 0,
-          },
+          summary: [],
           details: [],
         };
       }
@@ -144,12 +143,54 @@ export function useReports() {
     [warehouseId]
   );
 
+  const fetchSoldProducts = useCallback(
+    async (params: { from: string; to: string; warehouseId?: number }) => {
+      setLoading(true);
+      try {
+        const query = new URLSearchParams({
+          from: params.from,
+          to: params.to,
+          ...(params.warehouseId ? { warehouseId: String(params.warehouseId) } : {}),
+        });
+        const res = await http.get<SoldProductRow[]>(`/reports/sold-products?${query}`);
+        setSoldProducts(res.data);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [warehouseId]
+  );
+
+  const fetchProductOutputs = useCallback(
+    async (params: { from: string; to: string }) => {
+      if (!warehouseId) return;
+      setLoading(true);
+      try {
+        const { data } = await http.get<ProductOutputRow[]>("/reports/product-outputs", {
+          params,
+        });
+        setProductOutputs(data);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [warehouseId]
+  );
+
   return {
     purchaseLots,
     loading,
+    soldProducts,
 
     fetchPurchaseLots,
     fetchKardex,
     fetchProfit,
+    fetchSoldProducts,
+
+    clearSoldProducts: () => setSoldProducts([]),
+    clearProductOutputs: () => setProductOutputs([]),
+
+    productOutputs,
+    fetchProductOutputs,
   };
 }

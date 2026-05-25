@@ -7,6 +7,5 @@ export interface LoyaltyConfig {
   redeem: {
     enabled: boolean;
     pointValue: number;
-    maxPercentagePerSale: number;
   };
 }

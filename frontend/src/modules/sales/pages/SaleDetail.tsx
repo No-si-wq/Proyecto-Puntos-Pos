@@ -1,33 +1,28 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Button, Card, Space, message, Tag, Alert, Dropdown, Typography, Divider, Descriptions, type MenuProps } from "antd";
 import {
-  Button,
-  Card,
-  Space,
-  message,
-  Tag,
-  Alert,
-  Descriptions,
-  Divider,
-  Typography,
-  Dropdown,
-} from "antd";
-import {
-  ArrowLeftOutlined,
   PrinterOutlined,
   FilePdfOutlined,
-  CloseCircleOutlined,
+  DownOutlined,
+  ArrowLeftOutlined,
   MoreOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
 import { ConfirmModal } from "../../../core/components/common/ConfirmModal";
 import PageHeader from "../../../core/components/common/PageHeader";
-import SimpleTable from "../../../core/components/table/SimpleTable";
 import { formatCurrency, formatDate } from "../../../core/utils/formatters";
 import type { Sale, SaleItems } from "../types/sale";
-import type { ColumnsType } from "antd/es/table";
 import { exportToPdf } from "../../../core/utils/exportPDF";
+import { useReportTemplates } from "../../report-templates/hooks/useReportTemplates";
+import { buildSaleHtml } from "../../report-templates/utils/resolveTemplate";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
 import { useSales } from "../hooks/useSales";
+import SimpleTable from "../../../core/components/table/SimpleTable";
+import { RollbackOutlined } from "@ant-design/icons";
+import ReturnItemsModal from "../components/ReturnItemsModal";
+import type { ReturnItemInput } from "../types/sale";
 
 const { Text } = Typography;
 
@@ -56,7 +51,15 @@ function SaleItemMobileCard({ item }: { item: SaleItems }) {
           gap: "4px 12px",
         }}
       >
-        <MiniStat label="Cantidad" value={String(item.quantity)} />
+        <MiniStat
+          label="Cantidad"
+          value={
+            (item.returnedQuantity ?? 0) > 0
+              ? `${item.quantity} (-${item.returnedQuantity} dev.)`
+              : String(item.quantity)
+          }
+          color={(item.returnedQuantity ?? 0) > 0 ? "#ff4d4f" : undefined}
+        />
         <MiniStat label="Precio" value={formatCurrency(item.price)} />
         <MiniStat label="Descuento" value={formatCurrency(item.discountAmount)} />
         <MiniStat label="Subtotal" value={formatCurrency(item.lineSubtotal)} />
@@ -106,19 +109,18 @@ function MiniStat({
 }
 
 export default function SaleDetail() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { id }     = useParams();
+  const navigate   = useNavigate();
+  const { getSaleById, cancel, canceling, loadingDetail,returnItems, returning } = useSales();
   const { isMobile } = useDeviceType();
 
-  const {
-    loadingDetail,
-    canceling,
-    getSaleById,
-    cancel,
-  } = useSales();
-
-  const [sale, setSale] = useState<Sale | null>(null);
+  const [sale, setSale]       = useState<Sale | null>(null);
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
   const loading = loadingDetail;
+  
+
+  const { templates, loadingList, getById: getTemplateById, getDefault } =
+    useReportTemplates();
 
   async function load() {
     if (!id) return;
@@ -126,9 +128,7 @@ export default function SaleDetail() {
     setSale(data);
   }
 
-  useEffect(() => {
-    load();
-  }, [id]);
+  useEffect(() => { load(); }, [id]);
 
   async function handleCancel() {
     if (!sale) return;
@@ -143,7 +143,68 @@ export default function SaleDetail() {
     });
   }
 
-  function handleExportPdf() {
+  async function handleReturn(items: ReturnItemInput[], reason: string) {
+    if (!sale) return;
+    await returnItems(sale.id, { items, reason });
+    message.success("Devolución registrada correctamente");
+    setReturnModalOpen(false);
+    await load(); // refrescar la venta
+  }
+
+  async function handlePrint(templateId?: number) {
+    if (!sale) return;
+    let config;
+    try {
+      if (templateId) {
+        const t = await getTemplateById(templateId);
+        config = t.config;
+      } else {
+        const defaultT = await getDefault();
+        if (!defaultT) { window.print(); return; }
+        config = defaultT.config;
+      }
+    } catch {
+      message.error("No se pudo cargar la plantilla");
+      window.print();
+      return;
+    }
+    const html = buildSaleHtml(sale, config);
+    const win = window.open("", "_blank", "width=700,height=900");
+    if (!win) { message.error("No se pudo abrir la ventana de impresión"); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
+    win.onafterprint = () => win.close();
+  }
+
+  async function handleExportPdf(templateId?: number) {
+    if (!sale) return;
+    let config;
+    try {
+      if (templateId) {
+        const t = await getTemplateById(templateId);
+        config = t.config;
+      } else {
+        const defaultT = await getDefault();
+        if (!defaultT) { exportToPdfFallback(); return; }
+        config = defaultT.config;
+      }
+    } catch {
+      message.error("No se pudo cargar la plantilla");
+      exportToPdfFallback();
+      return;
+    }
+    const html = buildSaleHtml(sale, config);
+    const win = window.open("", "_blank", "width=700,height=900");
+    if (!win) { message.error("No se pudo abrir la ventana"); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
+  }
+
+  function exportToPdfFallback() {
     if (!sale) return;
     const rows = sale.items.map((i) => ({
       Producto: i.product.name,
@@ -156,7 +217,7 @@ export default function SaleDetail() {
       [
         { header: "Producto", dataKey: "Producto" },
         { header: "Cantidad", dataKey: "Cantidad" },
-        { header: "Precio", dataKey: "Precio" },
+        { header: "Precio",   dataKey: "Precio"   },
         { header: "Subtotal", dataKey: "Subtotal" },
       ],
       rows,
@@ -164,27 +225,68 @@ export default function SaleDetail() {
     );
   }
 
-  function handlePrint() {
-    window.print();
+  function buildTemplateMenuItems(action: "print" | "pdf"): MenuProps["items"] {
+    if (!templates.length) {
+      return [
+        {
+          key: "fallback",
+          label: action === "print" ? "Imprimir vista actual" : "PDF genérico",
+          onClick: () =>
+            action === "print" ? window.print() : exportToPdfFallback(),
+        },
+      ];
+    }
+    return [
+      {
+        key: "default",
+        label: "Plantilla por defecto",
+        onClick: () =>
+          action === "print" ? handlePrint() : handleExportPdf(),
+      },
+      { type: "divider" as const },
+      ...templates.map((t) => ({
+        key: String(t.id),
+        label: (
+          <span>
+            {t.name}
+            {t.isDefault && (
+              <Tag color="success" style={{ marginLeft: 8, fontSize: 10 }}>
+                Default
+              </Tag>
+            )}
+          </span>
+        ),
+        onClick: () =>
+          action === "print" ? handlePrint(t.id) : handleExportPdf(t.id),
+      })),
+    ];
   }
 
+  const isCompleted = sale?.status === "COMPLETED";
   const isCancelled = sale?.status === "CANCELLED";
 
-  const moreMenuItems = [
+  const mobileMenuItems: MenuProps["items"] = [
     {
       key: "print",
       label: "Imprimir",
       icon: <PrinterOutlined />,
-      onClick: handlePrint,
+      children: buildTemplateMenuItems("print") ?? [],
     },
     {
       key: "pdf",
       label: "Exportar PDF",
       icon: <FilePdfOutlined />,
-      onClick: handleExportPdf,
+      children: buildTemplateMenuItems("pdf") ?? [],
     },
-    ...(!isCancelled
+    ...(isCompleted
       ? [
+          {
+            key: "return",
+            label: "Registrar devolución",
+            icon: <RollbackOutlined />,
+            onClick: () => setReturnModalOpen(true),
+          },
+          { type: "divider" as const },
           {
             key: "cancel",
             label: "Cancelar venta",
@@ -197,13 +299,21 @@ export default function SaleDetail() {
   ];
 
   const headerExtra = isMobile ? (
-    <Space size={8}>
+    <Space size={6}>
       <Tag color={isCancelled ? "red" : "green"}>
         {isCancelled ? "Cancelada" : "Completada"}
       </Tag>
-      <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
-      <Dropdown menu={{ items: moreMenuItems }} trigger={["click"]} placement="bottomRight">
-        <Button icon={<MoreOutlined />} />
+      <Button
+        icon={<ArrowLeftOutlined />}
+        size="small"
+        onClick={() => navigate(-1)}
+      />
+      <Dropdown
+        menu={{ items: mobileMenuItems }}
+        trigger={["click"]}
+        placement="bottomRight"
+      >
+        <Button icon={<MoreOutlined />} size="small" loading={loadingList} />
       </Dropdown>
     </Space>
   ) : (
@@ -211,31 +321,59 @@ export default function SaleDetail() {
       <Tag color={isCancelled ? "red" : "green"}>
         {isCancelled ? "Cancelada" : "Completada"}
       </Tag>
-      <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-        Volver
-      </Button>
-      <Button icon={<PrinterOutlined />} onClick={handlePrint}>
-        Imprimir
-      </Button>
-      <Button icon={<FilePdfOutlined />} onClick={handleExportPdf}>
-        PDF
-      </Button>
-      {!isCancelled && (
-        <Button
-          danger
-          icon={<CloseCircleOutlined />}
-          onClick={handleCancel}
-          loading={canceling}
-        >
-          Cancelar venta
+
+      <Button onClick={() => navigate(-1)}>Volver</Button>
+
+      <Dropdown menu={{ items: buildTemplateMenuItems("print") }} trigger={["click"]}>
+        <Button icon={<PrinterOutlined />} loading={loadingList}>
+          Imprimir <DownOutlined style={{ fontSize: 10 }} />
         </Button>
-      )}
+      </Dropdown>
+
+      <Dropdown menu={{ items: buildTemplateMenuItems("pdf") }} trigger={["click"]}>
+        <Button icon={<FilePdfOutlined />} loading={loadingList}>
+          PDF <DownOutlined style={{ fontSize: 10 }} />
+        </Button>
+      </Dropdown>
+        {!isCancelled && (
+          <>
+            <Button
+              icon={<RollbackOutlined />}
+              onClick={() => setReturnModalOpen(true)}
+              loading={returning}
+            >
+              Devolución
+            </Button>
+            <Button
+              danger
+              icon={<CloseCircleOutlined />}
+              onClick={handleCancel}
+              loading={canceling}
+            >
+              Cancelar venta
+            </Button>
+          </>
+        )}
     </Space>
   );
 
   const columns: ColumnsType<SaleItems> = [
     { title: "Producto", dataIndex: ["product", "name"] },
-    { title: "Cant.", dataIndex: "quantity" },
+    {
+      title: "Cant.",
+      dataIndex: "quantity",
+      render: (v: number, record: SaleItems) => {
+        const returned = (record.returnedQuantity ?? 0);
+        return returned > 0 ? (
+          <span>
+            {v}{" "}
+            <Tag color="red" style={{ fontSize: 10, marginLeft: 4 }}>
+              -{returned} dev.
+            </Tag>
+          </span>
+        ) : v;
+      },
+    },
     {
       title: "Precio",
       dataIndex: "price",
@@ -304,14 +442,29 @@ export default function SaleDetail() {
               {sale?.customer?.name ?? "Consumidor final"}
             </Descriptions.Item>
             <Descriptions.Item label="Vendedor">
-              {sale?.user?.name}
+              {sale?.seller?.name}
             </Descriptions.Item>
             <Descriptions.Item label="Método de pago">
               {sale?.paymentMethod}
             </Descriptions.Item>
+            {sale?.paymentMethod === "CASH" && sale?.amountPaid != null && (
+              <Descriptions.Item label="Monto recibido">
+                {formatCurrency(sale.amountPaid)}
+              </Descriptions.Item>
+            )}
+            {sale?.paymentMethod === "CASH" && sale?.changeAmount != null && (
+              <Descriptions.Item label="Cambio">
+                <Text style={{ color: "#52c41a" }}>
+                  {formatCurrency(sale.changeAmount)}
+                </Text>
+              </Descriptions.Item>
+            )}
+            <Descriptions.Item label="Observaciones">
+              {sale?.observations ?? "-"}
+            </Descriptions.Item>
             {sale?.priceList && (
               <Descriptions.Item label="Lista de precios">
-                {sale?.priceList.name}
+                {sale.priceList.name}
               </Descriptions.Item>
             )}
           </Descriptions>
@@ -342,11 +495,44 @@ export default function SaleDetail() {
             <Descriptions.Item label="Impuestos">
               {formatCurrency(sale?.taxTotal ?? 0)}
             </Descriptions.Item>
-            <Descriptions.Item label="Total">
-              <Text strong style={{ fontSize: 16 }}>
-                {formatCurrency(sale?.total ?? 0)}
-              </Text>
-            </Descriptions.Item>
+            {(sale?.totalRefunded ?? 0) <= 0 && (
+              <Descriptions.Item label="Total">
+                <Text strong style={{ fontSize: 16 }}>
+                  {formatCurrency(sale?.total ?? 0)}
+                </Text>
+              </Descriptions.Item>
+            )}
+            {(sale?.totalRefunded ?? 0) > 0 && (
+              <>
+                <Descriptions.Item label="Total antes devolucion">
+                  <Text strong style={{ fontSize: 16, color: "#13c413" }}>
+                    {formatCurrency(Number(sale?.total ?? 0) + Number(sale?.totalRefunded ?? 0))}
+                  </Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Devuelto">
+                  <Text style={{ color: "#ff4d4f" }}>
+                    -{formatCurrency(sale?.totalRefunded ?? 0)}
+                  </Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Total">
+                  <Text strong style={{ fontSize: 16, color: "#1677ff" }}>
+                    {formatCurrency((sale?.total ?? 0))}
+                  </Text>
+                </Descriptions.Item>
+              </>
+            )}
+            {sale?.paymentMethod === "CASH" && sale?.amountPaid != null && (
+              <Descriptions.Item label="Efectivo recibido">
+                {formatCurrency(sale.amountPaid)}
+              </Descriptions.Item>
+            )}
+            {sale?.paymentMethod === "CASH" && sale?.changeAmount != null && (
+              <Descriptions.Item label="Cambio">
+                <Text style={{ color: "#52c41a" }}>
+                  {formatCurrency(sale.changeAmount)}
+                </Text>
+              </Descriptions.Item>
+            )}
             {(sale?.totalCommission ?? 0) > 0 && (
               <Descriptions.Item label="Comisión total">
                 <Text style={{ color: "#52c41a" }}>
@@ -357,6 +543,15 @@ export default function SaleDetail() {
           </Descriptions>
         </Card>
       </div>
+
+      <ReturnItemsModal
+        open={returnModalOpen}
+        items={sale?.items ?? []}
+        onConfirm={handleReturn}
+        onCancel={() => setReturnModalOpen(false)}
+        loading={returning}
+      />
+
     </>
   );
 }

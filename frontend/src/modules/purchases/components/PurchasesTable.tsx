@@ -1,4 +1,4 @@
-import { Button, Typography } from "antd";
+import { Button, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { Purchase } from "../types/purchase";
 import { formatCurrency, formatDate } from "../../../core/utils/formatters";
@@ -16,7 +16,7 @@ export default function PurchasesTable({ data, loading, onView }: Props) {
   const columns: ColumnsType<Purchase> = [
     {
       title: "Compra",
-      render: (_, r) => `#${r.id ?? "-"}`,
+      render: (_, r) => `#${r.purchaseNumber ?? "-"}`,
     },
     {
       title: "Fecha",
@@ -38,6 +38,14 @@ export default function PurchasesTable({ data, loading, onView }: Props) {
       render: (_, r) => r.itemsCount ?? "—",
     },
     {
+      title: "Estado",
+      dataIndex: "status",
+      render: (status: Purchase["status"]) =>
+        status === "CANCELLED"
+          ? <Tag color="red">Cancelada</Tag>
+          : <Tag color="green">Completada</Tag>,
+    },
+    {
       title: "Acciones",
       render: (_: any, r: Purchase) =>
         onView ? <Button onClick={() => onView(r)}>Ver</Button> : null,
@@ -53,9 +61,12 @@ export default function PurchasesTable({ data, loading, onView }: Props) {
             {r.supplier.name}
           </Text>
           <Text type="secondary" style={{ fontSize: 11 }}>
-            #{r.id ?? "-"} · {formatDate(r.createdAt)}
+            #{r.purchaseNumber ?? "-"} · {formatDate(r.createdAt)}
           </Text>
           <div style={{ marginTop: 4 }}>
+            {r.status === "CANCELLED"
+              ? <Tag color="red">Cancelada</Tag>
+              : <Tag color="green">Completada</Tag>}
             {r.itemsCount != null && (
               <Text type="secondary" style={{ fontSize: 11, marginLeft: 6 }}>
                 {r.itemsCount} ítems

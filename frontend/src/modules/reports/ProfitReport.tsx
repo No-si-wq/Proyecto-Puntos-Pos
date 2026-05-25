@@ -1,11 +1,8 @@
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   Card,
   Button,
-  Statistic,
-  Row,
-  Col,
   Tag,
   Space,
   Drawer,
@@ -28,7 +25,7 @@ export default function ProfitReport() {
 
   const [range, setRange]       = useState<any>();
   const [data, setData]         = useState<any[]>([]);
-  const [summary, setSummary]   = useState<any>(null);
+  const [summary, setSummary]   = useState<any[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
 
   const sizes    = useResponsiveSizes();
@@ -48,25 +45,14 @@ export default function ProfitReport() {
 
   useEffect(() => {
     setData([]);
-    setSummary(null);
+    setSummary([]);
   }, [warehouseId])
 
   function clearFilter() {
     setData([]);
-    setSummary(null);
+    setSummary([]);
     setRange(null);
-    if (isMobile) setFilterOpen(false)
   }
-
-  const totalMarginColor = useMemo(() => {
-    if (!summary) return "default";
-    if (summary.margin >= 30) return "green";
-    if (summary.margin >= 15) return "gold";
-    return "red";
-  }, [summary]);
-
-  const marginLabel = (margin: number) =>
-    margin >= 30 ? "Margen Alto" : margin >= 15 ? "Margen Medio" : "Margen Bajo";
 
   const marginTagColor = (margin: number) =>
     margin >= 30 ? "green" : margin >= 15 ? "gold" : "red";
@@ -161,7 +147,7 @@ export default function ProfitReport() {
             <Button
               icon={<FileExcelOutlined />}
               size="small"
-              disabled={!summary}
+              disabled={!summary.length}
               onClick={() =>
                 exportProfitReportToExcel(
                   summary,
@@ -242,56 +228,73 @@ export default function ProfitReport() {
             Consultar
           </Button>
           <Button
-            type="primary"
-            block
             size={sizes.button}
             onClick={clearFilter}
-            disabled={!range}
           >
             Limpiar
           </Button>
         </Space>
       </Drawer>
 
-      {summary && (
+      {summary.length > 0 && (
         <Card size="small" style={{ marginBottom: 16 }}>
-          <Row gutter={[12, 12]}>
-            <Col xs={12} md={6}>
-              <Statistic
-                title="Ventas Totales"
-                value={formatCurrency(summary.totalSales)}
-                valueStyle={{ fontSize: isMobile ? 14 : undefined }}
-              />
-            </Col>
-            <Col xs={12} md={6}>
-              <Statistic
-                title="Costo Total"
-                value={formatCurrency(summary.totalCogs)}
-                valueStyle={{ fontSize: isMobile ? 14 : undefined }}
-              />
-            </Col>
-            <Col xs={12} md={6}>
-              <Statistic
-                title="Utilidad Bruta"
-                value={formatCurrency(summary.totalProfit)}
-                valueStyle={{
-                  color: summary.totalProfit >= 0 ? "#3f8600" : "#cf1322",
-                  fontSize: isMobile ? 14 : undefined,
-                }}
-              />
-            </Col>
-            <Col xs={12} md={6}>
-              <Statistic
-                title="Margen %"
-                value={Number(summary.margin ?? 0).toFixed(2)}
-                suffix="%"
-                valueStyle={{ fontSize: isMobile ? 14 : undefined }}
-              />
-              <Tag color={totalMarginColor} style={{ marginTop: 4 }}>
-                {marginLabel(summary.margin)}
-              </Tag>
-            </Col>
-          </Row>
+          <Table
+            dataSource={summary}
+            rowKey="seller"
+            pagination={false}
+            size="small"
+            columns={[
+              { title: "Vendedor", dataIndex: "seller" },
+              {
+                title: "Ventas",
+                align: "right",
+                render: (_: any, r: any) => formatCurrency(r.totalSales),
+              },
+              {
+                title: "Costo",
+                align: "right",
+                render: (_: any, r: any) => formatCurrency(r.totalCogs),
+              },
+              {
+                title: "Utilidad",
+                align: "right",
+                render: (_: any, r: any) => (
+                  <span style={{ color: r.totalProfit >= 0 ? "#3f8600" : "#cf1322", fontWeight: 500 }}>
+                    {formatCurrency(r.totalProfit)}
+                  </span>
+                ),
+              },
+              {
+                title: "Margen %",
+                align: "right",
+                render: (_: any, r: any) => {
+                  const margin = Number(r.margin ?? 0);
+                  return <Tag color={marginTagColor(margin)}>{margin.toFixed(2)}%</Tag>;
+                },
+              },
+            ]}
+            summary={(pageData) => {
+              const totalSales  = pageData.reduce((s, r) => s + Number(r.totalSales), 0);
+              const totalCogs   = pageData.reduce((s, r) => s + Number(r.totalCogs), 0);
+              const totalProfit = pageData.reduce((s, r) => s + Number(r.totalProfit), 0);
+              const margin      = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
+              return (
+                <Table.Summary.Row>
+                  <Table.Summary.Cell index={0}><strong>Total</strong></Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} align="right"><strong>{formatCurrency(totalSales)}</strong></Table.Summary.Cell>
+                  <Table.Summary.Cell index={2} align="right"><strong>{formatCurrency(totalCogs)}</strong></Table.Summary.Cell>
+                  <Table.Summary.Cell index={3} align="right">
+                    <strong style={{ color: totalProfit >= 0 ? "#3f8600" : "#cf1322" }}>
+                      {formatCurrency(totalProfit)}
+                    </strong>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={4} align="right">
+                    <Tag color={marginTagColor(margin)}>{margin.toFixed(2)}%</Tag>
+                  </Table.Summary.Cell>
+                </Table.Summary.Row>
+              );
+            }}
+          />
         </Card>
       )}
 

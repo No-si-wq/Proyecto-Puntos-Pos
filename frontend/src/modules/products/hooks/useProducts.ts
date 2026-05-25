@@ -1,25 +1,27 @@
 import { useEffect, useState, useCallback } from "react";
 import http from "../../../core/http/http";
-import type { Product, CreateProductDTO, UpdateProductDTO, ApiProduct } from "../types/product";
-import type { Filters } from "../../inventory/types/inventory";
+import type { Product, CreateProductDTO, UpdateProductDTO, ApiProduct, productSearch } from "../types/product";
 import { mapProduct } from "../types/product";
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [filters, setFilters] = useState<Filters>({});
+  const [filters, setFilters] = useState<productSearch>({});
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await http.get<Product[]>("/products", {
-        params: {search: filters.search}
+      const { data } = await http.get<ApiProduct[]>("/products", {
+        params: { 
+          search: filters.search,
+          onlyInactive: filters.onlyInactive ? "true" : undefined,
+        },
       });
-      setProducts(data);
+      setProducts(data.map(mapProduct));
     } finally {
       setLoading(false);
     }
-  }, [filters.search]);
+  }, [filters.search, filters.onlyInactive]);
 
   useEffect(() => { load(); }, [load]);
 

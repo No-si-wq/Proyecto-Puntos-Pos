@@ -60,7 +60,6 @@ export default function SimpleTable<T extends { id: number }>({
       dataSource={data}
       size={isCompact ? "small" : sizes.table}
       loading={loading}
-      pagination={{ simple: isCompact }}
       scroll={isCompact && !mobileColumns ? { x: "max-content" } : undefined}
     />
   );

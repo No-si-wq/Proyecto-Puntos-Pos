@@ -3,25 +3,25 @@ import { Prisma } from "@prisma/client";
 
 export class CategoryRepository {
 
-  static create(data: Prisma.CategoryCreateInput) {
+  static create(data: Prisma.CategoryUncheckedCreateInput) {
     return prisma.category.create({ data });
   }
 
-  static findById(id: number) {
-    return prisma.category.findUnique({
-      where: { id },
-    });
-  }
-
-  static findActiveById(id: number) {
+  static findById(id: number, tenantId: number) {
     return prisma.category.findFirst({
-      where: { id, active: true },
+      where: { id, tenantId },
     });
   }
 
-  static findChildren(parentId: number | null) {
+  static findActiveById(id: number, tenantId: number) {
+    return prisma.category.findFirst({
+      where: { id, tenantId, active: true },
+    });
+  }
+
+  static findChildren(parentId: number | null, tenantId: number) {
     return prisma.category.findMany({
-      where: { parentId, active: true },
+      where: { parentId, tenantId, active: true },
       orderBy: { name: "asc" },
       select: {
         id: true,
@@ -32,16 +32,16 @@ export class CategoryRepository {
     });
   }
 
-  static findAllActive() {
+  static findAllActive(tenantId: number) {
     return prisma.category.findMany({
-      where: { active: true },
+      where: { tenantId, active: true },
       orderBy: { name: "asc" },
     });
   }
 
-  static update(id: number, data: Prisma.CategoryUpdateInput) {
-    return prisma.category.update({
-      where: { id },
+  static update(id: number, tenantId: number, data: Prisma.CategoryUncheckedUpdateInput) {
+    return prisma.category.updateMany({
+      where: { id, tenantId },
       data,
     });
   }

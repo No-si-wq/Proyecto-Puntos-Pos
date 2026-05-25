@@ -3,6 +3,7 @@ import { PurchaseService } from "./purchase.service";
 
 export async function listPurchases(req: Request, res: Response) {
   const warehouseId = (req as any).warehouseId;
+  const { tenantId } = req.user!;
   const from =
     typeof req.query.from === "string"
       ? new Date(req.query.from)
@@ -14,6 +15,7 @@ export async function listPurchases(req: Request, res: Response) {
       : undefined;
 
   const purchases = await PurchaseService.list(
+    tenantId,
     warehouseId,
     {from, to}
   );
@@ -23,14 +25,16 @@ export async function listPurchases(req: Request, res: Response) {
 export async function getById(req:Request, res:Response) {
   const id = Number(req.params.id);
   const warehouseId = (req as any).warehouseId;
+  const { tenantId } = req.user!;
 
-  const purchase = await PurchaseService.getById(id, warehouseId);
+  const purchase = await PurchaseService.getById(id, warehouseId, tenantId);
 
   res.json(purchase);
 }
 
 export async function createPurchase(req: Request, res: Response) {
   const warehouseId = (req as any).warehouseId;
+  const { tenantId } = req.user!;
 
   if (!warehouseId) {
     return res.status(400).json({
@@ -44,7 +48,7 @@ export async function createPurchase(req: Request, res: Response) {
     });
   }
 
-  const { supplierId, items, paymentMethod, dueDate } = req.body;
+  const { supplierId, items, paymentMethod, dueDate, purchaseNumber } = req.body;
 
   if (!supplierId) {
     return res.status(400).json({
@@ -59,9 +63,24 @@ export async function createPurchase(req: Request, res: Response) {
   }
 
   const purchase = await PurchaseService.create(
-    { supplierId, items, paymentMethod, dueDate },
+    { supplierId, items, paymentMethod, dueDate, purchaseNumber },
+    tenantId,
     req.user?.id,
     warehouseId,
+  );
+
+  res.status(201).json(purchase);
+}
+
+export async function cancelPurchase(req: Request, res: Response) {
+  const id = Number(req.params.id);
+  const warehouseId = (req as any).warehouseId;
+  const { tenantId } = req.user!;
+
+  const purchase = await PurchaseService.cancel(
+    id,
+    warehouseId,
+    tenantId,
   );
 
   res.status(201).json(purchase);

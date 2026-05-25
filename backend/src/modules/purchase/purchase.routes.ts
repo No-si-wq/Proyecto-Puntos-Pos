@@ -1,12 +1,10 @@
 import { Router } from "express";
 import * as controller from "./purchase.controller";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
-import { validate } from "../../core/middlewares/validate.middleware";
 import { requireWarehouse } from "../../core/middlewares/warehouse.middleware";
 import { asyncHandler } from "../../core/utils/asyncHandler";
-import {
-  createPurchaseSchema,
-} from "./purchase.schema";
+import { validate } from "../../core/middlewares/validate.middleware";
+import * as schema from "./purchase.schema";
 
 const router = Router();
 
@@ -23,8 +21,13 @@ router.get("/:id",
 
 router.post(
   "/",
-  validate(createPurchaseSchema),
+  validate(schema.createPurchaseSchema),
   asyncHandler(controller.createPurchase)
+);
+
+router.post(
+  "/:id/cancel",
+  asyncHandler(controller.cancelPurchase),
 );
 
 export default router;

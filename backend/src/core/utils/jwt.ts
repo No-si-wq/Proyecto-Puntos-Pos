@@ -10,14 +10,17 @@ const REFRESH_SECRET = ENV.REFRESH_SECRET;
 
 export interface AccessTokenPayload {
   sub: number;
+  tenantId: number;
   role: string;
   username: string;
+  warehouseId: number | null;
   exp: number;
   iat: number;
 }
 
 export interface RefreshTokenPayload {
   sub: number;
+  tenantId: number;
   exp: number;
   iat: number;
 }
@@ -27,6 +30,7 @@ function isAccessTokenPayload(payload: unknown): payload is AccessTokenPayload {
     typeof payload === "object" &&
     payload !== null &&
     typeof (payload as any).sub === "number" &&
+    typeof (payload as any).tenantId === "number" &&
     typeof (payload as any).role === "string" &&
     typeof (payload as any).username === "string"
   );
@@ -36,7 +40,8 @@ function isRefreshTokenPayload(payload: unknown): payload is RefreshTokenPayload
   return (
     typeof payload === "object" &&
     payload !== null &&
-    typeof (payload as any).sub === "number"
+    typeof (payload as any).sub === "number" &&
+    typeof (payload as any).tenantId === "number"
   );
 }
 
@@ -48,7 +53,7 @@ export function signAccessToken(
 }
 
 export function signRefreshToken(
-  payload: Pick<RefreshTokenPayload, "sub">,
+  payload: Pick<RefreshTokenPayload, "sub" | "tenantId">,
   expiresIn: SignOptions["expiresIn"] = "8h"
 ): string {
   return jwt.sign(payload, REFRESH_SECRET, { expiresIn });

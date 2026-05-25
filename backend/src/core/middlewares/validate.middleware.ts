@@ -1,24 +1,27 @@
 import { Request, Response, NextFunction } from "express";
-import { ZodSchema } from "zod";
+import { ZodObject } from "zod";
 
-export function validate(schema: ZodSchema) {
+export function validate(schema: ZodObject<any>) {
   return (req: Request, res: Response, next: NextFunction) => {
-    try {
-      schema.parse({
-        body: req.body,
-        params: req.params,
-        query: req.query,
-      });
+    const result = schema.safeParse({
+      body: req.body,
+      params: req.params,
+      query: req.query,
+    });
 
-      next();
-    } catch (error: any) {
+    if (!result.success) {
       return res.status(400).json({
         message: "Datos inválidos",
-        errors: error.errors?.map((e: any) => ({
+        errors: result.error.issues.map((e) => ({
           path: e.path.join("."),
           message: e.message,
         })),
       });
     }
+
+    req.body = result.data.body ?? req.body;
+    req.params = (result.data.params ?? req.params) as Record<string, string>;
+
+    next();
   };
 }

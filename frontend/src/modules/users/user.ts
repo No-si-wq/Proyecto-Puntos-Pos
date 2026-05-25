@@ -1,13 +1,14 @@
 export enum Role {
   ADMIN = "ADMIN",
   USER = "USER",
+  SELLER = "SELLER",
 }
 
 export interface User {
   id: number;
-  email: string;
   name: string;
   username: string;
+  warehouse: { id: number, name: string }
   role: Role;
   active: boolean;
   createdAt?: string;
@@ -16,25 +17,24 @@ export interface User {
 
 export interface AuthUser {
   id: number;
-  email: string;
   username: string;
   name: string;
   role: Role;
 }
 
 export interface CreateUserDTO {
-  email: string;
   name: string;
   password: string;
   username: string;
+  warehouseId: number;
   role: Role;
 }
 
 export interface UpdateUserDTO {
-  email?: string;
   name?: string;
   role?: Role;
   username?: string;
+  warehouseId?: number;
   active?: boolean;
 }
 

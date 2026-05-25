@@ -46,6 +46,7 @@ function exportExcel(data: PurchaseLotReportItem[]) {
       Producto:    r.product.name,
       SKU:         r.product.sku,
       Proveedor:   r.purchase.supplier.name,
+      Lote:        r.lotNumber,
       Cantidad:    r.quantity,
       Costo:       r.cost,
       Vencimiento: r.expiresAt ?? "N/A",
@@ -81,12 +82,13 @@ export default function PurchaseLotsReportPage() {
   // ── Columnas desktop ──────────────────────────────────────────────────────
   const desktopColumns: ColumnsType<PurchaseLotReportItem> = useMemo(
     () => [
+      { title: "Lote",  render: (_, r) => r.lotNumber ?? "-"           },
       { title: "Producto",  render: (_, r) => r.product.name           },
       { title: "Codigo",    render: (_, r) => r.product.sku            },
       { title: "Proveedor", render: (_, r) => r.purchase.supplier.name },
       { title: "Cantidad",  dataIndex: "quantity"                       },
       { title: "Costo",     dataIndex: "cost"                           },
-      { title: "Compra",    render: (_, r) => `#${r.purchase.id}`      },
+      { title: "Compra",    render: (_, r) => `#${r.purchase.purchaseNumber ?? "-"}`      },
       {
         title: "Vence",
         render: (_, r) =>
@@ -111,6 +113,9 @@ export default function PurchaseLotsReportPage() {
             <Text type="secondary" style={{ fontSize: 11 }}>
               {r.product.sku} · {r.purchase.supplier.name}
             </Text>
+            <div style={{ marginTop: 4, fontSize: 12 }}>
+              Lote <Text code style={{ fontSize: 11 }}>#{r.lotNumber ?? "-"}</Text>
+            </div>
           </div>
         ),
       },

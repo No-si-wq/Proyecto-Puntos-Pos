@@ -25,8 +25,37 @@ import { useAdminDashboard } from "./useAdminDashboard";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
 import type { AdminDashboardData } from "./type/dashboard";
 import { formatCurrency } from "../../core/utils/formatters";
+import * as XLSX from "xlsx";
+import { Button } from "antd";
+import { DownloadOutlined } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
+
+// Función de exportación
+function exportReorderAlertsToExcel(items: AdminDashboardData["reorderAlerts"]["items"]) {
+  const rows = items.map((item) => ({
+    SKU: item.sku,
+    Producto: item.productName,
+    "Stock Actual": item.currentStock,
+    "Punto de Reorden": item.reorderPoint,
+    "LB": item.laboratory ?? "-",
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Alertas de Reorden");
+
+  // Ajustar ancho de columnas automáticamente
+  worksheet["!cols"] = [
+    { wch: 14 },  // SKU
+    { wch: 40 },  // Producto
+    { wch: 16 },  // Stock Actual
+    { wch: 20 },  // Punto de Reorden
+    { wch: 20 },  // Laboratorio
+  ];
+
+  XLSX.writeFile(workbook, `alertas_reorden_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
 
 type MetricCardProps = {
   title: string;
@@ -401,6 +430,18 @@ export default function AdminDashboard() {
                   />
                 )}
               </span>
+            }
+        
+            extra={
+              alertCount > 0 && (
+                <Button
+                  icon={<DownloadOutlined />}
+                  size="small"
+                  onClick={() => exportReorderAlertsToExcel(reorderAlerts?.items ?? [])}
+                >
+                  Exportar Excel
+                </Button>
+              )
             }
           >
             {alertCount === 0 && !loading ? (

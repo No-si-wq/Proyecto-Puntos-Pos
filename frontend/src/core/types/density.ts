@@ -53,7 +53,7 @@ export function getDensity(device: DeviceType): UIDensity {
         modalFullscreen: false,
       };
 
-    default: // desktop 
+    default: // desktop
       return {
         button: "middle",
         input: "middle",

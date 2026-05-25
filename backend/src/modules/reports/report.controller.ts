@@ -1,8 +1,10 @@
 import { Request, Response } from "express";
+import { asyncHandler } from "../../core/utils/asyncHandler";
 import { ReportService } from "./report.service";
 
 export async function getPurchaseLotsReport(req: Request, res: Response) {
   const warehouseId = (req as any).warehouseId;
+  const { tenantId } = req.user!;
 
   const days = req.query.days
     ? Number(req.query.days)
@@ -17,6 +19,7 @@ export async function getPurchaseLotsReport(req: Request, res: Response) {
 
   const data = await ReportService.listLots(
     warehouseId,
+    tenantId,
     { days, expired, product }
   );
 
@@ -26,6 +29,7 @@ export async function getPurchaseLotsReport(req: Request, res: Response) {
 export async function getKardex(req: Request, res: Response) {
 
   const warehouseId = (req as any).warehouseId;
+  const { tenantId } = req.user!;
 
   const { productId, from, to, pageSize, cursorCreatedAt, cursorId } = req.query;
 
@@ -41,7 +45,7 @@ export async function getKardex(req: Request, res: Response) {
         }
       : undefined;
 
-  const result = await ReportService.getKardexRaw(warehouseId, {
+  const result = await ReportService.getKardexRaw(warehouseId, tenantId, {
     productId: Number(productId),
     from: new Date(String(from)),
     to: new Date(String(to)),
@@ -54,16 +58,48 @@ export async function getKardex(req: Request, res: Response) {
 
 export async function getProfitReport (req: Request, res: Response) {
   const warehouseId = (req as any).warehouseId;
+  const { tenantId } = req.user!;
   const { from, to } = req.query;
 
   if (!from || !to) {
     return res.status(400).json({ message: "Missing parameters" });
   }
 
-  const result = await ReportService.getProfitReportRaw(warehouseId, {
+  const result = await ReportService.getProfitReportRaw(warehouseId, tenantId, {
     from: new Date(from as string),
     to: new Date(to as string),
   });
 
   res.json(result);
 };
+
+export const getSoldProductsReport = asyncHandler(async (req: Request, res: Response) => {
+  const { from, to } = req.query;
+  const warehouseId = (req as any).warehouseId;
+  
+  const data = await ReportService.getSoldProductsReport({
+    from: new Date(from as string),
+    to: new Date(to as string),
+    warehouseId,
+  });
+  res.json(data);
+});
+
+export const getProductOutputsReport = asyncHandler(async (req: Request, res: Response) => {
+  const { tenantId } = req.user!;
+  const warehouseId = (req as any).warehouseId;
+  const { from, to } = req.query;
+
+  if (!from || !to) {
+    return res.status(400).json({ message: "Missing parameters" });
+  }
+
+  const data = await ReportService.getProductOutputsReport({
+    tenantId,
+    warehouseId,
+    from: new Date(from as string),
+    to:   new Date(to   as string),
+  });
+
+  res.json(data);
+});

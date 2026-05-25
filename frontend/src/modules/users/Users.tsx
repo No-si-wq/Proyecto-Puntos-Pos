@@ -1,126 +1,79 @@
 import { useState } from "react";
-import { message, Tag, Dropdown, Typography, Space, Button, type MenuProps } from "antd";
+import { message, Tag, Dropdown, Typography, Space, Button } from "antd";
 import { PlusOutlined, MoreOutlined, EditOutlined, StopOutlined, CheckCircleOutlined, LogoutOutlined, FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import FormModal from "../../core/components/forms/FormModal"
+import type { MenuProps } from "antd";
+import FormModal from "../../core/components/forms/FormModal";
 
 import type { User } from "./user";
-
 import { useUsers } from "./useUsers";
 import { exportToPdf } from "../../core/utils/exportPDF";
 import { exportToExcel } from "../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
-
+import { useDeviceType } from "../../core/hooks/useDeviceType";
 import PageHeader from "../../core/components/common/PageHeader";
 import ProtectedButton from "../../core/components/common/ProtectedButton";
 import { ConfirmModal } from "../../core/components/common/ConfirmModal";
 import UserForm from "./components/UserForm";
 import SimpleTable from "../../core/components/table/SimpleTable";
-import { useDeviceType } from "../../core/hooks/useDeviceType";
-import { usePermissions } from "../../core/hooks/usePermissions";
-
 import { getAllowedRoles } from "../../core/utils/permissions";
+import { usePermissions } from "../../core/hooks/usePermissions";
 
 const { Text } = Typography;
 
 export default function Users() {
-  const {
-    users,
-    loading,
-    create,
-    update,
-    toggleActive,
-    logoutAll,
-  } = useUsers();
+  const { users, loading, create, update, toggleActive, logoutAll } = useUsers();
+  const sizes      = useResponsiveSizes();
+  const { isMobile } = useDeviceType();
   const { canAccess } = usePermissions();
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]       = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
-  const sizes = useResponsiveSizes();
-  const { isMobile } = useDeviceType();
 
   function buildExportRows(data: User[]) {
-    return data
-      .filter(u => u.active)
-      .map((u) => ({
-        Nombre: u.name,
-        Email: u.email ?? "-",
-        Usuario: u.username,
-        Rol: u.role,
-      }));
+    return data.filter(u => u.active).map((u) => ({
+      Nombre: u.name, Usuario: u.username, Rol: u.role, Almacen: u.warehouse.name,
+    }));
   }
 
-  function handleExportExcel() {
-    exportToExcel(
-      buildExportRows(users),
-      "Usuarios"
-    );
-  }
-
+  function handleExportExcel() { exportToExcel(buildExportRows(users), "Usuarios"); }
   function handleExportPdf() {
-    exportToPdf(
-      "Usuarios",
-      [
-        { header: "Nombre", dataKey: "Nombre" },
-        { header: "Email", dataKey: "Email" },
-        { header: "Usuario", dataKey: "Usuario" },
-        { header: "Rol", dataKey: "Rol" },
-      ],
-      buildExportRows(users),
-      "Usuarios"
-    );
+    exportToPdf("Usuarios", [
+      { header: "Nombre", dataKey: "Nombre" }, { header: "Usuario", dataKey: "Usuario" },
+      { header: "Rol", dataKey: "Rol" }, { header: "Almacen", dataKey: "Almacen" }
+    ], buildExportRows(users), "Usuarios");
   }
 
-  function openCreate() {
-    setEditing(null);
-    setOpen(true);
-  }
-
-  function openEdit(user: User) {
-    setEditing(user);
-    setOpen(true);
-  }
+  function openCreate() { setEditing(null); setOpen(true); }
+  function openEdit(u: User) { setEditing(u); setOpen(true); }
 
   async function submit(values: any) {
     try {
-      if (editing) {
-        await update(editing.id, values);
-        message.success("Usuario actualizado");
-      } else {
-        await create(values);
-        message.success("Usuario creado");
-      }
+      const payload = {
+        ...values,
+        warehouseId: values.warehouseId ?? undefined,  // convierte null/0/"" → undefined
+      };
+      if (editing) { await update(editing.id, payload); message.success("Usuario actualizado"); }
+      else { await create(payload); message.success("Usuario creado"); }
       setOpen(false);
-    } catch {
-      message.error("Error guardando usuario");
-    }
+    } catch { message.error("Error guardando usuario"); }
   }
 
-  function confirmToggle(user: User) {
+  function confirmToggle(u: User) {
     ConfirmModal({
-      title: user.active
-        ? "Desactivar proveedor"
-        : "Activar Proveedor",
-      content: `¿Seguro que deseas ${
-        user.active ? "desactivar" : "activar"
-      } a ${user.name}?`,
-      danger: user.active,
-      onConfirm: async () => {
-        await toggleActive(user.id, !user.active);
-        message.success("Estado actualizado");
-      },
+      title: u.active ? "Desactivar usuario" : "Activar usuario",
+      content: `¿Seguro que deseas ${u.active ? "desactivar" : "activar"} a ${u.name}?`,
+      danger: u.active,
+      onConfirm: async () => { await toggleActive(u.id, !u.active); message.success("Estado actualizado"); },
     });
   }
 
-  function confirmLogoutAll(user: User) {
+  function confirmLogoutAll(u: User) {
     ConfirmModal({
       title: "Cerrar todas las sesiones",
-      content: `¿Cerrar todas las sesiones de ${user.name}?`,
+      content: `¿Cerrar todas las sesiones de ${u.name}?`,
       danger: true,
-      onConfirm: async () => {
-        await logoutAll(user.id);
-        message.success("Sesiones cerradas");
-      },
+      onConfirm: async () => { await logoutAll(u.id); message.success("Sesiones cerradas"); },
     });
   }
 
@@ -163,7 +116,6 @@ export default function Users() {
   const desktopColumns: ColumnsType<User> = [
     { title: "Nombre",  dataIndex: "name"     },
     { title: "Usuario", dataIndex: "username" },
-    { title: "Email", dataIndex: "email" },
     { title: "Rol",     dataIndex: "role"     },
     { title: "Almacen", dataIndex: ["warehouse", "name"], render: (v) => (v ?? "-") },
     { title: "Activo",  dataIndex: "active", render: (v) => (v ? "Sí" : "No") },
@@ -191,6 +143,7 @@ export default function Users() {
           <Text strong style={{ display: "block" }}>{r.name}</Text>
           <Text type="secondary" style={{ fontSize: 11 }}>{r.username}</Text>
           <br />
+          <Text type="secondary" style={{ fontSize: 11 }}>{r.warehouse?.name ?? "-"}</Text>
           <div style={{ marginTop: 4 }}>
             <Tag color={r.active ? "green" : "default"} style={{ marginRight: 4 }}>
               {r.active ? "Activo" : "Inactivo"}
@@ -248,25 +201,10 @@ export default function Users() {
         }
       />
 
+      <SimpleTable<User> data={users} columns={desktopColumns} mobileColumns={mobileColumns} loading={loading} />
 
-      <SimpleTable<User>
-        data={users}
-        columns={desktopColumns}
-        mobileColumns={mobileColumns}
-        loading={loading}
-      />
-
-      <FormModal
-        open={open}
-        title={editing ? "Editar usuario" : "Nuevo usuario"}
-        onClose={() => setOpen(false)}
-      >
-        <UserForm
-          isEdit={!!editing}
-          initialValues={editing ?? undefined}
-          onSubmit={submit}
-          onCancel={() => setOpen(false)}
-        />
+      <FormModal open={open} title={editing ? "Editar usuario" : "Nuevo usuario"} onClose={() => setOpen(false)}>
+        <UserForm isEdit={!!editing} initialValues={editing ?? undefined} onSubmit={submit} onCancel={() => setOpen(false)} />
       </FormModal>
     </>
   );

@@ -5,6 +5,7 @@ export type SalePaymentMethod =
   | "CREDIT";
 
 export type DiscountType = "NONE" | "PERCENTAGE" | "FIXED";
+export type PriceMode = "TAX_INCLUDED" | "TAX_EXCLUDED";
 
 export interface SaleItemDTO {
   productId: number;
@@ -32,6 +33,8 @@ export interface SaleItems {
   discountValue?: number;
   commissionPercent?: number;
   commissionAmount?: number;
+  returnedQuantity?: number;
+  refundedAmount?: number;
 }
 
 export interface CreateSaleDTO {
@@ -42,6 +45,9 @@ export interface CreateSaleDTO {
   items: SaleItemDTO[];
   paymentMethod: SalePaymentMethod;
   dueDate?: string;
+  priceMode: PriceMode;
+  amountPaid?: number;
+  observations?: string | null;
 }
 
 export type SaleStatus = "COMPLETED" | "CANCELLED";
@@ -59,10 +65,17 @@ export interface Sale {
   status: SaleStatus;
   paymentMethod: SalePaymentMethod;
   priceListId?: number | null;
+  amountPaid?: number | null;
+  changeAmount?: number | null;
+  totalRefunded?: number;
+  observations?: string | null;
 
   customer?: {
     id: number;
     name: string;
+    dni: string;
+    direction: string;
+    phone: string;
   };
 
   user: {
@@ -85,4 +98,31 @@ export interface Sale {
 
   itemsCount?: number;
   items: SaleItems[];
+}
+
+// Agregar a los tipos existentes
+
+export interface ReturnItemInput {
+  saleItemId: number;
+  quantity: number;
+}
+
+export interface ReturnSaleDTO {
+  items: ReturnItemInput[];
+  reason?: string;
+}
+
+export interface SaleReturnItem {
+  id: number;
+  saleItemId: number;
+  quantity: number;
+  refundAmount: number;
+}
+
+export interface SaleReturn {
+  id: number;
+  saleId: number;
+  reason?: string;
+  createdAt: string;
+  items: SaleReturnItem[];
 }

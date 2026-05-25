@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
-import { useRequiredWarehouse } from "../hooks/useRequiredWarehouse";
+import { useRequiredWarehouse } from "./useRequiredWarehouse";
 import http from "../../../core/http/http";
-import type { ProductWithContext } from "../../products/types/product";
+import type { ApiProduct, ProductWithContext } from "../../products/types/product";
+import { mapProduct } from "../../products/types/product";
 
 export function useWarehouseProducts() {
   const warehouseId = useRequiredWarehouse();
@@ -17,10 +18,10 @@ export function useWarehouseProducts() {
 
     setLoading(true);
     try {
-      const { data } = await http.get<ProductWithContext[]>(
+      const { data } = await http.get<ApiProduct[]>(
       "/products/by-warehouse"
     );
-      setProducts(data);
+      setProducts(data.map((product) => mapProduct(product) as ProductWithContext));
     } finally {
       setLoading(false);
     }

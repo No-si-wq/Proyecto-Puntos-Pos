@@ -1,13 +1,7 @@
 import { useState, useCallback } from "react";
 import { message } from "antd";
 import http from "../../../core/http/http";
-
-export interface TransferPayload {
-  productId: number;
-  fromWarehouseId: number;
-  toWarehouseId: number;
-  quantity: number;
-}
+import type { TransferPayload } from "../types/inventory";
 
 export function useTransferInventory(onSuccess?: () => void) {
   const [loading, setLoading] = useState(false);

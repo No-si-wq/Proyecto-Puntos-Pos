@@ -11,9 +11,11 @@ export interface ProductBase {
   sku: SKU;
   name: string;
   description?: string;
+  laboratory?: string;
   cost: number;
   price: number;
   tax: number;
+  observations?: string;
   categoryId: CategoryId;
   prices: ProductPriceInput[];
   barcodes?: Barcode[];

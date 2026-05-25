@@ -31,6 +31,15 @@ import PriceLists from "../../modules/priceLists/pages/PriceLists";
 import Commissions from "../../modules/commissions/pages/Commissions";
 import CommissionReport from "../../modules/commissions/pages/CommissionReport";
 import CommissionUserDetail from "../../modules/commissions/pages/CommissionUserDetail";
+import ReportDesigner from "../../modules/report-templates/pages/Reportdesigner";
+import Settings from "../../modules/settings/pages/Settings";
+import SoldProductsReport from "../../modules/reports/SoldProductsReport";
+import TransferReport from "../../modules/inventory/pages/TransferReport";
+import Remissions from "../../modules/remissions/pages/Remissions";
+import RemissionDetail from "../../modules/remissions/pages/RemissionDetail";
+import Quotations from "../../modules/quotations/pages/Quotations";
+import QuotationDetail from "../../modules/quotations/pages/QuotationDetail";
+import ProductOutputsReport from "../../modules/reports/ProductOutputsReport";
 
 import Unauthorized from "../../modules/Unauthorized";
 
@@ -114,6 +123,24 @@ export default function AppRouter() {
           />
 
           <Route
+            path="/remissions"
+            element={
+              <ProtectedRoute module="remissions">
+                <Remissions />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/remissions/:id"
+            element={
+              <ProtectedRoute module="remissions">
+                <RemissionDetail />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/inventory"
             element={
               <ProtectedRoute module="inventory">
@@ -127,6 +154,15 @@ export default function AppRouter() {
             element={
               <ProtectedRoute>
                 <InventoryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/inventory/transfers/report"
+            element={
+              <ProtectedRoute module="inventory">
+                <TransferReport />
               </ProtectedRoute>
             }
           />
@@ -235,6 +271,15 @@ export default function AppRouter() {
           />
 
           <Route 
+            path="/reports/design"
+            element={
+              <ProtectedRoute module="reports">
+                <ReportDesigner />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
             path="/price-lists"
             element={
               <ProtectedRoute module="priceList">
@@ -251,6 +296,51 @@ export default function AppRouter() {
               </ProtectedRoute>
             }
           />
+
+          <Route 
+            path="/quotations"
+            element={
+              <ProtectedRoute module="commission">
+                <Quotations />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/quotations/:id"
+            element={
+              <ProtectedRoute module="commission">
+                <QuotationDetail />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/settings"
+            element={
+              <ProtectedRoute module="commission">
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/reports/sold-products"
+            element={
+              <ProtectedRoute module="reports">
+                <SoldProductsReport />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/reports/product-outputs"
+            element={
+              <ProtectedRoute module="reports">
+                <ProductOutputsReport />
+              </ProtectedRoute>
+            }
+          />    
 
           <Route path="/403" element={<Unauthorized />} />
         </Route>

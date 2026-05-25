@@ -14,7 +14,6 @@ import {
   Drawer,
 } from "antd";
 import { ShoppingCartOutlined } from "@ant-design/icons";
-import { useDebouncedCallback } from "use-debounce";
 
 import { usePurchases } from "../hooks/usePurchases";
 import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehouse";
@@ -22,7 +21,6 @@ import { purchaseCartStore } from "../types/purchaseCart.store";
 import { useSuppliers } from "../../suppliers/useSuppliers";
 import { formatCurrency } from "../../../core/utils/formatters";
 import { PurchaseCartTable } from "../components/PurchaseCartTable";
-import { useBarcodeScanner } from "../../../core/hooks/useBarcodeScanner";
 import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
 import { useDeviceType } from "../../../core/hooks/useDeviceType"; // ajusta el path
 import { useWarehouseProducts } from "../../warehouses/hooks/useWarehouseProducts";
@@ -34,6 +32,7 @@ export default function Purchases() {
   const [paymentMethod, setPaymentMethod] = useState<PurchasePaymentMethod>("CASH");
   const [dueDate, setDueDate]           = useState<string>();
   const [summaryOpen, setSummaryOpen]   = useState(false);
+  const [purchaseNumber, setPurchaseNumber] = useState<string>("");
 
   const warehouseId                     = useRequiredWarehouse();
   const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
@@ -42,27 +41,9 @@ export default function Purchases() {
   const selectRef = useRef<any>(null);
   const cart      = purchaseCartStore();
   const sizes     = useResponsiveSizes();
-  const { suppliers, loading: loadingSuppliers, setFilters: setFiltersSuppliers } = useSuppliers();
+  const { suppliers } = useSuppliers();
   const { isMobile, isTablet } = useDeviceType();
   const isCompact = isMobile || isTablet;
-
-  const { onKey } = useBarcodeScanner({
-    onProductFound: (product, meta) => {
-      const item = cart.items.find((i) => i.productId === product.id);
-      if (item) {
-        cart.updateQuantity(product.id, item.quantity + 1);
-        return;
-      }
-      cart.addProduct(product, product.cost, {
-        lot: meta?.lot,
-        expiresAt: meta?.expiresAt,
-      });
-    },
-  });
-
-  const handleSearch = useDebouncedCallback((value: string) => {
-    setFiltersSuppliers({ search: value });
-  }, 400);
 
   useEffect(() => {
     cart.clear();
@@ -71,6 +52,7 @@ export default function Purchases() {
   const isSubmitDisabled =
     !supplierId ||
     cart.items.length === 0 ||
+    !purchaseNumber ||
     (paymentMethod === "CREDIT" && !dueDate);
 
   async function submitPurchase() {
@@ -88,10 +70,12 @@ export default function Purchases() {
         supplierId,
         paymentMethod,
         dueDate,
+        purchaseNumber,
         items: cart.items.map((i) => ({
           productId: i.productId,
           quantity: Number(i.quantity),
           cost: Number(i.cost),
+          lotNumber: i.lotNumber ?? undefined,
           expiresAt: i.expiresAt ? i.expiresAt.toISOString() : undefined,
         })),
       });
@@ -103,6 +87,7 @@ export default function Purchases() {
       setPaymentMethod("CASH");
       setDueDate(undefined);
       setSummaryOpen(false);
+      setPurchaseNumber("");
     } catch (err: any) {
       message.error(
         err?.response?.data?.message ?? "Error registrando compra"
@@ -192,28 +177,28 @@ export default function Purchases() {
               value={supplierId}
               style={{ width: "100%" }}
               size={sizes.select}
+              dropdownMatchSelectWidth
               onChange={setSupplierId}
               status={supplierId ?? undefined}
-              loading={loadingSuppliers}
-              filterOption={false}
-              onSearch={handleSearch}
+              optionFilterProp="label"
+              filterOption={(input, option) => {
+                const label = option?.label as string;
+                return label?.toLowerCase().includes(input.toLowerCase());
+              }}
               options={suppliers
                 .filter((s) => s.active)
                 .map((s) => ({ value: s.id, label: s.name }))}
             />
+            <Input
+              placeholder="Número de compra (ej: FAC-001)"
+              size={sizes.select}
+              value={purchaseNumber}
+              onChange={(e) => setPurchaseNumber(e.target.value)}
+              style={{ marginTop: 8 }}
+            />
           </Card>
 
           <Card type="inner" title="Productos" style={{ marginBottom: 0 }}>
-            <Input
-              autoFocus={!isMobile}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value) onKey(value[value.length - 1]);
-                e.target.value = "";
-              }}
-              style={{ position: "absolute", opacity: 0, height: 0, width: 0 }}
-            />
-
             <Select
               ref={selectRef}
               showSearch
@@ -248,7 +233,7 @@ export default function Purchases() {
                 .filter((p) => p.active)
                 .map((p) => ({
                   value: p.id,
-                  label: `${p.name} · Existencias: ${p.stock}`,
+                  label: ` ${p.sku} · ${p.name} · ${p.barcodes}`,
                 }))}
             />
 
@@ -256,6 +241,7 @@ export default function Purchases() {
               items={cart.items}
               onQuantityChange={cart.updateQuantity}
               onCostChange={cart.updateCost}
+              onLotChange={cart.updateLot}
               onExpirationChange={cart.updateExpiration}
               onRemove={cart.removeProduct}
             />

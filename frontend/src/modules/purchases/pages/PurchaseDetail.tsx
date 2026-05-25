@@ -4,26 +4,31 @@ import {
   Card,
   Button,
   Space,
-  Descriptions,
+  message,
+  Alert,
   Typography,
-  Divider,
+  Tag,
   Dropdown,
+  Divider,
+  type MenuProps,
+  Descriptions,
 } from "antd";
-import type { MenuProps } from "antd";
-import type { ColumnsType } from "antd/es/table";
 import {
   ArrowLeftOutlined,
   FilePdfOutlined,
   PrinterOutlined,
+  CloseCircleOutlined,
   MoreOutlined,
 } from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
 import PageHeader from "../../../core/components/common/PageHeader";
-import SimpleTable from "../../../core/components/table/SimpleTable";
 import { formatDate, formatCurrency } from "../../../core/utils/formatters";
 import type { Purchase, PurchaseItems } from "../types/purchase";
 import { exportToPdf } from "../../../core/utils/exportPDF";
 import { usePurchases } from "../hooks/usePurchases";
+import { ConfirmModal } from "../../../core/components/common/ConfirmModal";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
+import SimpleTable from "../../../core/components/table/SimpleTable";
 
 const { Text } = Typography;
 
@@ -38,7 +43,7 @@ function PurchaseItemMobileCard({ item }: { item: PurchaseItems }) {
       styles={{ body: { padding: "10px 14px" } }}
     >
       <Text strong style={{ fontSize: 14 }}>
-        {item.product.name}
+        {item.lotNumber} - {item.product.name}
       </Text>
 
       <Divider style={{ margin: "8px 0" }} />
@@ -85,9 +90,9 @@ function MiniStat({
 }
 
 export default function PurchaseDetail() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { getPurchaseById, loadingDetail } = usePurchases();
+  const { id }       = useParams();
+  const navigate     = useNavigate();
+  const { getPurchaseById, loadingDetail, cancel } = usePurchases();
   const { isMobile } = useDeviceType();
 
   const [purchase, setPurchase] = useState<Purchase | null>(null);
@@ -101,15 +106,15 @@ export default function PurchaseDetail() {
       Subtotal: i.quantity * i.cost,
     }));
     exportToPdf(
-      `Compra #${purchase.id}`,
+      `Compra #${purchase.purchaseNumber}`,
       [
-        { header: "Producto", dataKey: "Producto" },
-        { header: "Cantidad", dataKey: "Cantidad" },
-        { header: "Precio", dataKey: "Precio" },
-        { header: "Subtotal", dataKey: "Subtotal" },
+        { header: "Producto",  dataKey: "Producto"  },
+        { header: "Cantidad",  dataKey: "Cantidad"  },
+        { header: "Precio",    dataKey: "Precio"    },
+        { header: "Subtotal",  dataKey: "Subtotal"  },
       ],
       rows,
-      `Compra_#${purchase.id}`
+      `Compra_#${purchase.purchaseNumber}`
     );
   }
 
@@ -119,13 +124,26 @@ export default function PurchaseDetail() {
     setPurchase(data);
   }
 
-  useEffect(() => {
-    load();
-  }, [id]);
+  useEffect(() => { load(); }, [id]);
 
-  function handlePrint() {
-    window.print();
+  function handlePrint() { window.print(); }
+
+  async function handleCancel() {
+    if (!purchase) return;
+    ConfirmModal({
+      title: "Cancelar compra",
+      content: `¿Cancelar #${purchase.purchaseNumber}?`,
+      danger: true,
+      onConfirm: async () => {
+        await cancel(purchase.id);
+        message.success("Compra cancelada");
+        load();
+      },
+    });
   }
+
+  const isActive    = purchase?.status === "ACTIVE";
+  const isCancelled = purchase?.status === "CANCELLED";
 
   const mobileMenuItems: MenuProps["items"] = [
     {
@@ -140,26 +158,53 @@ export default function PurchaseDetail() {
       icon: <PrinterOutlined />,
       onClick: handlePrint,
     },
+    ...(isActive
+      ? [
+          {
+            key: "cancel",
+            label: "Cancelar compra",
+            icon: <CloseCircleOutlined />,
+            danger: true,
+            onClick: handleCancel,
+          },
+        ]
+      : []),
   ];
 
   const headerExtra = isMobile ? (
     <Space size={6}>
-      <Button icon={<ArrowLeftOutlined />} size="small" onClick={() => navigate(-1)} />
-      <Dropdown menu={{ items: mobileMenuItems }} trigger={["click"]} placement="bottomRight">
+      <Tag color={isCancelled ? "red" : "green"}>
+        {isCancelled ? "Cancelada" : "Activa"}
+      </Tag>
+      <Button
+        icon={<ArrowLeftOutlined />}
+        size="small"
+        onClick={() => navigate(-1)}
+      />
+      <Dropdown
+        menu={{ items: mobileMenuItems }}
+        trigger={["click"]}
+        placement="bottomRight"
+      >
         <Button icon={<MoreOutlined />} size="small" />
       </Dropdown>
     </Space>
   ) : (
     <Space wrap>
-      <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-        Volver
-      </Button>
-      <Button icon={<FilePdfOutlined />} onClick={handleExportPdf}>
-        PDF
-      </Button>
-      <Button icon={<PrinterOutlined />} onClick={handlePrint}>
-        Imprimir
-      </Button>
+      <Tag color={isCancelled ? "red" : "green"}>
+        {isCancelled ? "Cancelada" : "Activa"}
+      </Tag>
+      <Button onClick={() => navigate(-1)}>Volver</Button>
+      <Button icon={<FilePdfOutlined />} onClick={handleExportPdf}>PDF</Button>
+      <Button icon={<PrinterOutlined />} onClick={handlePrint}>Imprimir</Button>
+      {isActive && (
+        <Button danger onClick={handleCancel}>
+          Cancelar Compra
+        </Button>
+      )}
+      {isCancelled && (
+        <Alert message="Esta factura fue cancelada" type="error" showIcon />
+      )}
     </Space>
   );
 
@@ -181,7 +226,7 @@ export default function PurchaseDetail() {
   return (
     <>
       <PageHeader
-        title={`Compra #${purchase?.id ?? ""}`}
+        title={`Compra #${purchase?.purchaseNumber ?? ""}`}
         subtitle="Detalle de compra"
         extra={headerExtra}
       />
@@ -193,6 +238,9 @@ export default function PurchaseDetail() {
             size="small"
             labelStyle={{ fontWeight: 600, whiteSpace: "nowrap" }}
           >
+            <Descriptions.Item label="Proveedor">
+              {purchase?.purchaseNumber}
+            </Descriptions.Item>
             <Descriptions.Item label="Proveedor">
               {purchase?.supplier?.name}
             </Descriptions.Item>

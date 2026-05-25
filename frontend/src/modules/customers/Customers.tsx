@@ -1,134 +1,75 @@
-import { useState, useEffect } from "react";
-import { message, Button, Input, Typography, Dropdown, Tag, type MenuProps, Space, Switch } from "antd";
+import { useState } from "react";
+import { message, Tag, Dropdown, Typography, Space, Button } from "antd";
 import { PlusOutlined, MoreOutlined, EditOutlined, StopOutlined, CheckCircleOutlined, FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import type { MenuProps } from "antd";
 
 import type { Customer } from "./customer";
 import FormModal from "../../core/components/forms/FormModal";
-
 import { useCustomers } from "./useCustomers";
-
 import PageHeader from "../../core/components/common/PageHeader";
 import ProtectedButton from "../../core/components/common/ProtectedButton";
 import { ConfirmModal } from "../../core/components/common/ConfirmModal";
-import { useDeviceType } from "../../core/hooks/useDeviceType";
 import { exportToPdf } from "../../core/utils/exportPDF";
 import { exportToExcel } from "../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
+import { useDeviceType } from "../../core/hooks/useDeviceType";
 import CustomerForm from "./components/CustomerForm";
 import SimpleTable from "../../core/components/table/SimpleTable";
-
 import { getAllowedRoles } from "../../core/utils/permissions";
 import { usePermissions } from "../../core/hooks/usePermissions";
 
 const { Text } = Typography;
 
 export default function Customers() {
-  const {
-    customers,
-    filters,
-    loading,
-    setFilters,
-    create,
-    update,
-    toggleActive,
-  } = useCustomers();
-
-  const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-  const [editing, setEditing] = useState<Customer | null>(null);
-  const sizes = useResponsiveSizes();
-  const { canAccess } = usePermissions();
+  const { customers, loading, create, update, toggleActive } = useCustomers();
+  const sizes      = useResponsiveSizes();
   const { isMobile } = useDeviceType();
+  const { canAccess } = usePermissions();
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setFilters({
-        search: searchValue || undefined,
-      });
-    }, 400);
-
-    return () => clearTimeout(timeout);
-  }, [searchValue]);
+  const [open, setOpen]       = useState(false);
+  const [editing, setEditing] = useState<Customer | null>(null);
 
   function buildExportRows(data: Customer[]) {
-    return data
-      .filter(c => c.active)
-      .map((c) => ({
-        Nombre: c.name,
-        Email: c.email ?? "-",
-        Telefono: c.phone ?? "-",
-        DNI: c.dni ?? "-",
-        Puntos: c.points?.balance ?? 0,
-      }));
+    return data.filter(c => c.active).map((c) => ({
+      DNI: c.dni, Nombre: c.name, Email: c.email ?? "-",
+      Telefono: c.phone ?? "-", Direccion: c.direction ?? "-", 
+      Puntos: c.points?.balance ?? 0,
+    }));
   }
 
-  function handleExportExcel() {
-    exportToExcel(
-      buildExportRows(customers),
-      "Clientes"
-    );
-  }
-
+  function handleExportExcel() { exportToExcel(buildExportRows(customers), "Clientes"); }
   function handleExportPdf() {
-    exportToPdf(
-      "Clientes",
-      [
-        { header: "Nombre", dataKey: "Nombre" },
-        { header: "Email", dataKey: "Email" },
-        { header: "Telefono", dataKey: "Telefono" },
-        { header: "DNI", dataKey: "DNI" },
-        { header: "Puntos", dataKey: "Puntos" },
-      ],
-      buildExportRows(customers),
-      "Clientes"
-    );
+    exportToPdf("Clientes", [
+      { header: "DNI", dataKey: "DNI" }, { header: "Nombre", dataKey: "Nombre" },
+      { header: "Email", dataKey: "Email" }, { header: "Telefono", dataKey: "Telefono" },
+      { header: "Direccion", dataKey: "Direccion" }, { header: "Puntos", dataKey: "Puntos" },
+    ], buildExportRows(customers), "Clientes");
   }
 
-  function openCreate() {
-    setEditing(null);
-    setOpen(true);
-  }
-
-  function openEdit(customer: Customer) {
-    setEditing(customer);
-    setOpen(true);
-  }
+  function openCreate() { setEditing(null); setOpen(true); }
+  function openEdit(c: Customer) { setEditing(c); setOpen(true); }
 
   async function submit(values: any) {
     try {
-      const payload = {
-        ...values,
-        email: values.email?.trim() || undefined,
+      const payload = { 
+        ...values, 
+        email: values.email?.trim() || undefined, 
         phone: values.phone?.trim() || undefined,
-      }
-
-      if (editing) {
-        await update(editing.id, payload);
-        message.success("Cliente actualizado");
-      } else {
-        await create(payload);
-        message.success("Cliente creado");
-      }
+        direction: values.direction?.trim() || undefined,
+      };
+      if (editing) { await update(editing.id, payload); message.success("Cliente actualizado"); }
+      else { await create(payload); message.success("Cliente creado"); }
       setOpen(false);
-    } catch {
-      message.error("Error guardando cliente");
-    }
+    } catch { message.error("Error guardando cliente"); }
   }
 
-  function confirmToggle(customer: Customer) {
+  function confirmToggle(c: Customer) {
     ConfirmModal({
-      title: customer.active
-        ? "Desactivar cliente"
-        : "Activar cliente",
-      content: `¿Seguro que deseas ${
-        customer.active ? "desactivar" : "activar"
-      } a ${customer.name}?`,
-      danger: customer.active,
-      onConfirm: async () => {
-        await toggleActive(customer.id, !customer.active);
-        message.success("Estado actualizado");
-      },
+      title: c.active ? "Desactivar cliente" : "Activar cliente",
+      content: `¿Seguro que deseas ${c.active ? "desactivar" : "activar"} a ${c.name}?`,
+      danger: c.active,
+      onConfirm: async () => { await toggleActive(c.id, !c.active); message.success("Estado actualizado"); },
     });
   }
 
@@ -187,9 +128,9 @@ export default function Customers() {
         <div>
           <Text strong style={{ display: "block" }}>{r.name}</Text>
           <Text type="secondary" style={{ fontSize: 11 }}>{r.dni ?? "Sin DNI"}</Text>
-          {(r.email || r.phone) && (
+          {(r.email || r.phone || r.direction) && (
             <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
-              {[r.email, r.phone].filter(Boolean).join(" · ")}
+              {[r.email, r.phone, r.direction].filter(Boolean).join(" · ")}
             </Text>
           )}
           <div style={{ marginTop: 4 }}>
@@ -250,39 +191,11 @@ export default function Customers() {
           )
         }
       />
-      <div style={{ marginBottom: 12 }}>
-        <Input
-          placeholder="Buscar por nombre"
-          allowClear
-          onChange={(e) => setSearchValue(e.target.value)}
-        />
-        <Space style={{ marginTop: 12 }}>
-          <Switch
-            checked={filters.onlyInactive}
-            onChange={(val) => { setFilters((prev) => ({...prev, onlyInactive: val})) }}
-          />
-          <Text>Mostrar inactivos</Text>
-        </Space>
-      </div>
 
-      <SimpleTable<Customer>
-        data={customers}
-        columns={desktopColumns}
-        mobileColumns={mobileColumns}
-        loading={loading}
-      />
+      <SimpleTable<Customer> data={customers} columns={desktopColumns} mobileColumns={mobileColumns} loading={loading} />
 
-      <FormModal
-        open={open}
-        title={editing ? "Editar cliente" : "Nuevo cliente"}
-        onClose={() => setOpen(false)}
-      >
-        <CustomerForm 
-          isEdit={!!editing}
-          initialValues={editing ?? undefined}
-          onSubmit={submit}
-          onCancel={() => setOpen(false)}
-        />
+      <FormModal open={open} title={editing ? "Editar cliente" : "Nuevo cliente"} onClose={() => setOpen(false)}>
+        <CustomerForm isEdit={!!editing} initialValues={editing ?? undefined} onSubmit={submit} onCancel={() => setOpen(false)} />
       </FormModal>
     </>
   );

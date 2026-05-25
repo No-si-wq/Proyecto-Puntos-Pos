@@ -15,6 +15,17 @@ import { exportToExcel } from "../../../core/utils/exportExcel";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
 import { useNavigate } from "react-router-dom";
 
+type ExportRow = {
+  Numero: string;
+  Fecha: string;
+  Subtotal: string;
+  Descuento_total: string;
+  Impuesto_Total: string;
+  Total: string;
+  Puntos_obtenidos: number | string;
+  Puntos_usados: number | string;
+};
+
 export default function SaleHistory() {
   const { sales, loadingList, reload } = useSales();
   const { isMobile }  = useDeviceType();
@@ -30,14 +41,58 @@ export default function SaleHistory() {
     navigate(`/sales/${sale.id}`);
   }
 
-  function buildExportRows(data: Sale[]) {
-    return data.filter(isExportable).map((s) => ({
-      Numero:           s.saleNumber,
-      Fecha:            formatDate(s.createdAt),
-      Total:            formatCurrency(s.total),
-      Puntos_usados:    s.pointsUsed,
-      Puntos_obtenidos: s.pointsEarned,
-    }));
+  function calculateTotals(data: Sale[]) {
+    const filtered = data.filter(isExportable);
+
+    const totals = filtered.reduce(
+      (acc, s) => {
+        const itemDiscount = s.items.reduce(
+          (sum, item) => sum + Number(item.discountAmount || 0),
+          0
+        );
+
+        acc.subtotal += Number(s.grossSubtotal ?? s.subtotal);
+        acc.total += Number(s.total);
+        acc.pointsEarned += Number(s.pointsEarned);
+        acc.pointsUsed += Number(s.pointsUsed);
+        acc.discount += Number(s.discount) + itemDiscount;
+        acc.taxTotal += Number(s.taxTotal);
+
+        return acc;
+      },
+      {
+        subtotal: 0,
+        total: 0,
+        pointsEarned: 0,
+        pointsUsed: 0,
+        discount: 0,
+        taxTotal: 0
+      }
+    );
+
+    return totals;
+  }
+
+  function buildExportRows(data: Sale[]): ExportRow[] {
+    return data.filter(isExportable).map((s) => {
+      const itemDiscount = s.items.reduce(
+        (acc, item) => acc + item.discountAmount,
+        0
+      );
+
+      const totalDiscount = s.discount + itemDiscount;
+
+      return {
+        Numero:           s.saleNumber,
+        Fecha:            formatDate(s.createdAt),
+        Subtotal:         formatCurrency(s.grossSubtotal ?? s.subtotal + itemDiscount),
+        Descuento_total:  formatCurrency(totalDiscount),
+        Impuesto_Total:   formatCurrency(s.taxTotal),
+        Total:            formatCurrency(s.total),
+        Puntos_obtenidos: s.pointsEarned,
+        Puntos_usados:    s.pointsUsed,
+      };
+    });
   }
 
   function handleExportExcel() {
@@ -45,16 +100,33 @@ export default function SaleHistory() {
   }
 
   function handleExportPdf() {
+    const rows = buildExportRows(sales);
+    const totals = calculateTotals(sales);
+
+    rows.push({
+      Numero: "",
+      Fecha: "TOTALES",
+      Subtotal: formatCurrency(totals.subtotal),
+      Descuento_total: formatCurrency(totals.discount),
+      Impuesto_Total: formatCurrency(totals.taxTotal),
+      Total: formatCurrency(totals.total),
+      Puntos_usados: formatCurrency(totals.pointsUsed),
+      Puntos_obtenidos: formatCurrency(totals.pointsEarned),
+    });
+
     exportToPdf(
       "Historial de Ventas",
       [
         { header: "Numero",           dataKey: "Numero"           },
         { header: "Fecha",            dataKey: "Fecha"            },
+        { header: "Subtotal",         dataKey: "Subtotal"         },
+        { header: "Total Descuento",  dataKey: "Descuento_total"  },
+        { header: "Total Impuestos",  dataKey: "Impuesto_Total"   },
         { header: "Total",            dataKey: "Total"            },
-        { header: "Puntos_usados",    dataKey: "Puntos_usados"    },
-        { header: "Puntos_obtenidos", dataKey: "Puntos_obtenidos" },
+        { header: "Puntos usados",    dataKey: "Puntos_usados"    },
+        { header: "Puntos obtenidos", dataKey: "Puntos_obtenidos" },
       ],
-      buildExportRows(sales),
+      rows,
       "historial_ventas"
     );
   }
@@ -146,7 +218,7 @@ export default function SaleHistory() {
             Aplicar
           </Button>
           <Button block size={sizes.button} onClick={clearFilter}>
-            Limpiar
+            Limpiar filtro
           </Button>
         </Space>
       </Drawer>

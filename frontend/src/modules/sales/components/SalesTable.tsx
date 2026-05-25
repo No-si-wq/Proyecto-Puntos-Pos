@@ -29,13 +29,18 @@ export default function SalesTable({ data, loading, onView }: Props) {
       title: "Puntos",
       render: (_, r) => {
         const isCancelled = r.status === "CANCELLED";
+        const noMovement = r.pointsEarned === 0 && r.pointsUsed === 0;
+
         return (
           <>
+            {noMovement && <span style={{ color: "gray" }}>0</span>}
+
             {r.pointsEarned > 0 && (
               <span style={{ color: isCancelled ? "red" : "green" }}>
                 {isCancelled ? "−" : "+"}{r.pointsEarned}
               </span>
             )}
+
             {r.pointsUsed > 0 && (
               <span style={{ color: isCancelled ? "green" : "red", marginLeft: 6 }}>
                 {isCancelled ? "+" : "−"}{r.pointsUsed}

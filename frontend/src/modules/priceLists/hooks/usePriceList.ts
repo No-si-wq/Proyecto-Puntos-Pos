@@ -33,7 +33,6 @@ export function usePriceLists() {
       const { data } = await http.post<PriceList>(BASE, dto);
       setPriceLists((prev) => [...prev, { ...data, _count: { prices: 0 } }]);
       message.success("Lista de precios creada");
-      await fetchAll();
       return data;
     } catch {
       message.error("Error al crear lista de precios");
@@ -46,7 +45,6 @@ export function usePriceLists() {
       const { data } = await http.put<PriceList>(`${BASE}/${id}`, dto);
       setPriceLists((prev) => prev.map((pl) => (pl.id === id ? { ...pl, ...data } : pl)));
       message.success("Lista de precios actualizada");
-      await fetchAll();
       return data;
     } catch {
       message.error("Error al actualizar lista de precios");
@@ -59,7 +57,6 @@ export function usePriceLists() {
       await http.patch(`${BASE}/${id}/activate`, { active });
       setPriceLists((prev) => prev.filter((pl) => pl.id !== id));
       message.success("Lista de precios eliminada");
-      await fetchAll();
     } catch {
       message.error("No se puede eliminar: tiene productos asignados");
     }

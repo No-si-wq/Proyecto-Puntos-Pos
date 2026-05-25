@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { message, Tag, Dropdown, Typography, Space, Button, Input, type MenuProps } from "antd";
+import { useState } from "react";
+import { message, Tag, Dropdown, Typography, Space, Button } from "antd";
 import { PlusOutlined, MoreOutlined, EditOutlined, StopOutlined, CheckCircleOutlined, FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import type { MenuProps } from "antd";
 
 import type { Supplier } from "./supplier";
 import { useSuppliers } from "./useSuppliers";
-
 import PageHeader from "../../core/components/common/PageHeader";
 import ProtectedButton from "../../core/components/common/ProtectedButton";
 import SimpleTable from "../../core/components/table/SimpleTable";
@@ -14,110 +14,54 @@ import FormModal from "../../core/components/forms/FormModal";
 import { exportToPdf } from "../../core/utils/exportPDF";
 import { exportToExcel } from "../../core/utils/exportExcel";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
-import { ConfirmModal } from "../../core/components/common/ConfirmModal";
 import { useDeviceType } from "../../core/hooks/useDeviceType";
-import { usePermissions } from "../../core/hooks/usePermissions";
-
+import { ConfirmModal } from "../../core/components/common/ConfirmModal";
 import { getAllowedRoles } from "../../core/utils/permissions";
+import { usePermissions } from "../../core/hooks/usePermissions";
 
 const { Text } = Typography;
 
 export default function Suppliers() {
-  const { suppliers, loading, setFilters, create, update, toggleActive } = useSuppliers();
-  const { canAccess } = usePermissions();
-  const sizes = useResponsiveSizes();
-
-  const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-  const [editing, setEditing] = useState<Supplier | null>(null);
+  const { suppliers, loading, create, update, toggleActive } = useSuppliers();
+  const sizes      = useResponsiveSizes();
   const { isMobile } = useDeviceType();
+  const { canAccess } = usePermissions();
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setFilters({
-        search: searchValue || undefined,
-      });
-    }, 400);
-
-    return () => clearTimeout(timeout);
-  }, [searchValue]);
+  const [open, setOpen]       = useState(false);
+  const [editing, setEditing] = useState<Supplier | null>(null);
 
   function buildExportRows(data: Supplier[]) {
-    return data
-      .filter(s => s.active)
-      .map((s) => ({
-        Nombre: s.name,
-        Email: s.email ?? "-",
-        Telefono: s.phone ?? "-",
-        RTN: s.rtn ?? "-",
-      }));
+    return data.filter(s => s.active).map((s) => ({
+      Nombre: s.name, Email: s.email ?? "-", Telefono: s.phone ?? "-",
+    }));
   }
 
-  function handleExportExcel() {
-    exportToExcel(
-      buildExportRows(suppliers),
-      "Proveedores"
-    );
-  }
-
+  function handleExportExcel() { exportToExcel(buildExportRows(suppliers), "Proveedores"); }
   function handleExportPdf() {
-    exportToPdf(
-      "Proveedores",
-      [
-        { header: "RTN", dataKey: "RTN" },
-        { header: "Nombre", dataKey: "Nombre" },
-        { header: "Email", dataKey: "Email" },
-        { header: "Telefono", dataKey: "Telefono" },
-      ],
-      buildExportRows(suppliers),
-      "Proveedores"
-    );
+    exportToPdf("Proveedores", [
+      { header: "Nombre", dataKey: "Nombre" }, { header: "Email", dataKey: "Email" },
+      { header: "Telefono", dataKey: "Telefono" },
+    ], buildExportRows(suppliers), "Proveedores");
   }
 
-  function openCreate() {
-    setEditing(null);
-    setOpen(true);
-  }
-
-  function openEdit(supplier: Supplier) {
-    setEditing(supplier);
-    setOpen(true);
-  }
+  function openCreate() { setEditing(null); setOpen(true); }
+  function openEdit(s: Supplier) { setEditing(s); setOpen(true); }
 
   async function submit(values: any) {
     try {
-      const payload = {
-        ...values,
-        email: values.email?.trim() || undefined,
-        phone: values.phone?.trim() || undefined,
-      }
-
-      if (editing) {
-        await update(editing.id, payload);
-        message.success("Proveedor actualizado");
-      } else {
-        await create(payload);
-        message.success("Proveedor creado");
-      }
+      const payload = { ...values, email: values.email?.trim() || undefined, phone: values.phone?.trim() || undefined };
+      if (editing) { await update(editing.id, payload); message.success("Proveedor actualizado"); }
+      else { await create(payload); message.success("Proveedor creado"); }
       setOpen(false);
-    } catch {
-      message.error("Error guardando proveedor");
-    }
+    } catch { message.error("Error guardando proveedor"); }
   }
 
-  function confirmToggle(supplier: Supplier) {
+  function confirmToggle(s: Supplier) {
     ConfirmModal({
-      title: supplier.active
-        ? "Desactivar proveedor"
-        : "Activar Proveedor",
-      content: `¿Seguro que deseas ${
-        supplier.active ? "desactivar" : "activar"
-      } a ${supplier.name}?`,
-      danger: supplier.active,
-      onConfirm: async () => {
-        await toggleActive(supplier.id, !supplier.active);
-        message.success("Estado actualizado");
-      },
+      title: s.active ? "Desactivar proveedor" : "Activar proveedor",
+      content: `¿Seguro que deseas ${s.active ? "desactivar" : "activar"} a ${s.name}?`,
+      danger: s.active,
+      onConfirm: async () => { await toggleActive(s.id, !s.active); message.success("Estado actualizado"); },
     });
   }
 
@@ -148,7 +92,6 @@ export default function Suppliers() {
   }
 
   const desktopColumns: ColumnsType<Supplier> = [
-    { title: "RTN", dataIndex: "rtn" },
     { title: "Nombre",   dataIndex: "name"  },
     { title: "Email",    dataIndex: "email", render: (v) => v ?? "—" },
     { title: "Teléfono", dataIndex: "phone", render: (v) => v ?? "—" },
@@ -231,32 +174,10 @@ export default function Suppliers() {
         }
       />
 
-      <div style={{ marginBottom: 12 }}>
-        <Input
-          placeholder="Buscar por nombre"
-          allowClear
-          onChange={(e) => setSearchValue(e.target.value)}
-        />
-      </div>
+      <SimpleTable<Supplier> data={suppliers} columns={desktopColumns} mobileColumns={mobileColumns} loading={loading} />
 
-      <SimpleTable<Supplier>
-        data={suppliers}
-        columns={desktopColumns}
-        mobileColumns={mobileColumns}
-        loading={loading}
-      />
-
-      <FormModal
-        open={open}
-        title={editing ? "Editar proveedor" : "Nuevo proveedor"}
-        onClose={() => setOpen(false)}
-      >
-        <SupplierForm
-          isEdit={!!editing}
-          initialValues={editing ?? undefined}
-          onSubmit={submit}
-          onCancel={() => setOpen(false)}
-        />
+      <FormModal open={open} title={editing ? "Editar proveedor" : "Nuevo proveedor"} onClose={() => setOpen(false)}>
+        <SupplierForm isEdit={!!editing} initialValues={editing ?? undefined} onSubmit={submit} onCancel={() => setOpen(false)} />
       </FormModal>
     </>
   );

@@ -1,17 +1,22 @@
+import { startOfDay, endOfDay } from 'date-fns';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import prisma from "../../core/prisma";
 
 function getTodayRange(): { gte: Date; lte: Date } {
+  const timeZone = 'America/Tegucigalpa';
   const now = new Date();
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(now);
-  end.setHours(23, 59, 59, 999);
-  return { gte: start, lte: end };
+
+  const zonedNow = toZonedTime(now, timeZone);
+
+  return {
+    gte: fromZonedTime(startOfDay(zonedNow), timeZone),
+    lte: fromZonedTime(endOfDay(zonedNow), timeZone),
+  };
 }
 
 export class AdminDashboardService {
 
-  static async getDashboard() {
+  static async getDashboard(tenantId: number) {
 
     const todayFilter = { createdAt: getTodayRange() };
 
@@ -23,12 +28,12 @@ export class AdminDashboardService {
       metrics,
       reorderAlerts,
     ] = await Promise.all([
-      this.getFinancialSummary(todayFilter),
-      this.getSalesByWarehouse(todayFilter),
-      this.getInventoryValue(todayFilter),
-      this.getTopProducts(todayFilter),
-      this.getExecutiveMetrics(todayFilter),
-      this.getReorderAlerts(),
+      this.getFinancialSummary(todayFilter, tenantId),
+      this.getSalesByWarehouse(todayFilter, tenantId),
+      this.getInventoryValue(tenantId),
+      this.getTopProducts(todayFilter, tenantId),
+      this.getExecutiveMetrics(todayFilter, tenantId),
+      this.getReorderAlerts(tenantId),
     ]);
 
     return {
@@ -41,11 +46,12 @@ export class AdminDashboardService {
     };
   }
 
-  private static async getFinancialSummary(dateFilter: any) {
+  private static async getFinancialSummary(dateFilter: any, tenantId: number) {
 
     const [salesAgg, purchaseAgg] = await Promise.all([
       prisma.sale.aggregate({
         where: {
+          tenantId,
           status: "COMPLETED",
           ...dateFilter,
         },
@@ -56,7 +62,7 @@ export class AdminDashboardService {
         _count: true,
       }),
       prisma.purchase.aggregate({
-        where: dateFilter,
+        where: { tenantId, ...dateFilter },
         _sum: {
           total: true,
         },
@@ -83,12 +89,13 @@ export class AdminDashboardService {
     };
   }
 
-  private static async getSalesByWarehouse(dateFilter: any) {
+  private static async getSalesByWarehouse(dateFilter: any, tenantId: number) {
 
     const grouped = await prisma.sale.groupBy({
       by: ["warehouseId"],
       where: {
         status: "COMPLETED",
+        tenantId,
         ...dateFilter,
       },
       _sum: {
@@ -124,12 +131,16 @@ export class AdminDashboardService {
     });
   }
 
-  private static async getInventoryValue(dateFilter: any) {
+  private static async getInventoryValue(tenantId: number) {
 
     const lots = await prisma.purchaseItem.findMany({
       where: {
+        tenantId,
         quantity: { gt: 0 },
-        purchase: dateFilter,
+        purchase: {
+          tenantId,
+          status: "ACTIVE",
+        },
       },
       select: {
         quantity: true,
@@ -146,55 +157,59 @@ export class AdminDashboardService {
     return totalValue;
   }
 
-  private static async getTopProducts(dateFilter: any) {
-
+  private static async getTopProducts(dateFilter: any, tenantId: number) {
     const grouped = await prisma.saleItem.groupBy({
-      where: {
-        sale: {
-          status: "COMPLETED",
-          ...dateFilter,
-        },
-      },
       by: ["productId"],
-      _sum: {
-        quantity: true,
-      },
-      orderBy: {
-        _sum: {
-          quantity: "desc",
-        },
-      },
+      where: { sale: { tenantId, status: "COMPLETED", ...dateFilter } },
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: "desc" } },
       take: 10,
     });
 
-    const productIds = grouped.map(g => g.productId);
-
-    const products = await prisma.product.findMany({
+    // --- AÑADIR: obtener cantidades devueltas por producto ---
+    const returnedItems = await prisma.saleReturnItem.findMany({
       where: {
-        id: { in: productIds },
+        saleItem: {
+          sale: { tenantId, status: "COMPLETED", ...dateFilter },
+        },
       },
       select: {
-        id: true,
-        name: true,
+        quantity: true,
+        saleItem: { select: { productId: true } },
       },
     });
 
-    const productMap = new Map(
-      products.map(p => [p.id, p.name])
-    );
+    const returnedMap = new Map<number, number>();
+    for (const r of returnedItems) {
+      const pid = r.saleItem.productId;
+      returnedMap.set(pid, (returnedMap.get(pid) ?? 0) + r.quantity);
+    }
+    // --------------------------------------------------------
 
-    return grouped.map(g => ({
-      productId: g.productId,
-      name: productMap.get(g.productId) ?? "N/A",
-      totalSold: g._sum.quantity ?? 0,
-    }));
+    const productIds = grouped.map((g) => g.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds }, tenantId },
+      select: { id: true, name: true },
+    });
+    const productMap = new Map(products.map((p) => [p.id, p.name]));
+
+    return grouped
+      .map((g) => ({
+        productId: g.productId,
+        name: productMap.get(g.productId) ?? "N/A",
+        // Cantidad neta = vendida - devuelta
+        totalSold: (g._sum.quantity ?? 0) - (returnedMap.get(g.productId) ?? 0),
+      }))
+      .filter((p) => p.totalSold > 0)
+      .sort((a, b) => b.totalSold - a.totalSold);
   }
 
-  private static async getExecutiveMetrics(dateFilter: any) {
+  private static async getExecutiveMetrics(dateFilter: any, tenantId: number) {
 
     const sales = await prisma.sale.findMany({
       where: {
         status: "COMPLETED",
+        tenantId,
         ...dateFilter,
       },
       select: {
@@ -218,7 +233,7 @@ export class AdminDashboardService {
         ? totalRevenue / sales.length
         : 0;
 
-    const inventoryValue = await this.getInventoryValue(dateFilter);
+    const inventoryValue = await this.getInventoryValue(tenantId);
 
     const inventoryTurnover =
       totalCogs > 0 && inventoryValue > 0
@@ -230,10 +245,10 @@ export class AdminDashboardService {
       inventoryTurnover,
     };
   }
-
-  private static async getReorderAlerts() {
+  private static async getReorderAlerts(tenantId: number) {
     const products = await prisma.product.findMany({
       where: {
+        tenantId,
         active: true,
         reorderPoint: { gt: 0 },
       },
@@ -241,6 +256,7 @@ export class AdminDashboardService {
         id: true,
         name: true,
         sku: true,
+        laboratory: true,
         reorderPoint: true,
         purchaseItems: {
           where: { quantity: { gt: 0 } },
@@ -260,6 +276,7 @@ export class AdminDashboardService {
           productName: p.name,
           sku: p.sku,
           currentStock,
+          laboratory: p.laboratory,
           reorderPoint: p.reorderPoint,
         };
       })

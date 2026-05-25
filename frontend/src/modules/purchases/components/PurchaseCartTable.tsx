@@ -1,4 +1,4 @@
-import { Table, InputNumber, DatePicker, Button, Card } from "antd";
+import { Table, InputNumber, DatePicker, Button, Card, Input } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -11,6 +11,7 @@ interface Props {
   items: PurchaseCartItem[];
   onQuantityChange: (id: number, q: number) => void;
   onCostChange: (id: number, cost: number) => void;
+  onLotChange: (id: number, lot: string) => void;
   onExpirationChange: (id: number, date: Date | null) => void;
   onRemove: (id: number) => void;
 }
@@ -21,6 +22,7 @@ export function PurchaseCartTable({
   onCostChange,
   onExpirationChange,
   onRemove,
+  onLotChange,
 }: Props) {
   const sizes = useResponsiveSizes();
   const { isMobile } = useDeviceType();
@@ -93,6 +95,17 @@ export function PurchaseCartTable({
               />
             </div>
 
+            <div style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 2 }}>
+                Nº Lote
+              </label>
+              <Input
+                placeholder="Ej: L-001"
+                value={i.lotNumber ?? ""}
+                onChange={(e) => onLotChange(i.productId, e.target.value)}
+              />
+            </div>
+
             <div
               style={{
                 display: "flex",
@@ -147,6 +160,17 @@ export function PurchaseCartTable({
           style={{ width: "100%" }}
           value={i.quantity}
           onChange={(v) => onQuantityChange(i.productId, Number(v ?? 1))}
+        />
+      ),
+    },
+    {
+      title: "Nº Lote",
+      width: 130,
+      render: (_, i) => (
+        <Input
+          placeholder="Ej: L-001"
+          value={i.lotNumber ?? ""}
+          onChange={(e) => onLotChange(i.productId, e.target.value)}
         />
       ),
     },

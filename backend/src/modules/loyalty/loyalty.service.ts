@@ -7,6 +7,7 @@ type Tx = Prisma.TransactionClient;
 export class LoyaltyService {
   static async usePoints(
     tx: Tx,
+    tenantId: number,
     customerId: number,
     saleId: number,
     pointsRequested: number,
@@ -36,6 +37,7 @@ export class LoyaltyService {
 
     await tx.loyaltyPointHistory.create({
       data: {
+        tenantId,
         customerId,
         saleId,
         change: -usablePoints,
@@ -48,6 +50,7 @@ export class LoyaltyService {
 
   static async earnPoints(
     tx: Tx,
+    tenantId: number,
     customerId: number,
     total: number,
     saleId: number
@@ -67,6 +70,7 @@ export class LoyaltyService {
 
     await tx.loyaltyPointHistory.create({
       data: {
+        tenantId,
         customerId,
         saleId,
         change: points,
@@ -79,6 +83,7 @@ export class LoyaltyService {
 
   static async rollbackPoints(
     tx: Tx,
+    tenantId: number,
     customerId: number,
     saleId: number
   ) {
@@ -97,6 +102,7 @@ export class LoyaltyService {
 
       await tx.loyaltyPointHistory.create({
         data: {
+          tenantId,
           customerId,
           saleId,
           change: reverse,

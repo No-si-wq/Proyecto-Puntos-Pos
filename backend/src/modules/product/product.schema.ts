@@ -8,6 +8,8 @@ export const createProductSchema = z.object({
     price: z.number().positive(),
     cost: z.number().positive(),
     tax: z.number().nonnegative(),
+    laboratory: z.string().optional(),
+    observations: z.string().optional(),
     categoryId: z.number().int().positive(),
 
     barcodes: z
@@ -26,6 +28,8 @@ export const updateProductSchema = z.object({
     price: z.number().positive().optional(),
     cost: z.number().positive().optional(),
     tax: z.number().nonnegative().optional(),
+    laboratory: z.string().optional(),
+    observations: z.string().optional(),
     categoryId: z.number().int().positive().optional(),
     active: z.boolean().optional(),
 

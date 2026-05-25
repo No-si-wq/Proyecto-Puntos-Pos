@@ -8,22 +8,27 @@ export const createReceivable = async (req: Request, res: Response) => {
 };
 
 export const listReceivables = async (req: Request, res: Response) => {
-  const data = await accountReceivableService.list(req.query);
+  const { tenantId } = req.user!;
+  const data = await accountReceivableService.list(req.query, tenantId);
   res.json(data);
 };
 
 export const getReceivable = async (req: Request, res: Response ) => {
+  const { tenantId } = req.user;
   const data = await accountReceivableService.findById(
-    Number(req.params.id)
+    Number(req.params.id),
+    tenantId,
   );
   res.json(data);
 };
 
 export const registerReceivablePayment = async (req: Request, res: Response) => {
   const { amount, note } = req.body;
+  const { tenantId } = req.user!;
 
   const data =
     await accountReceivableService.registerPayment(
+      tenantId,
       Number(req.params.id),
       new Prisma.Decimal(amount),
       note
@@ -33,9 +38,11 @@ export const registerReceivablePayment = async (req: Request, res: Response) => 
 };
 
 export const customerSummary = async ( req: Request, res: Response) => {
+  const { tenantId } = req.user!;
   const data =
     await accountReceivableService.summaryByCustomer(
-      Number(req.params.customerId)
+      Number(req.params.customerId),
+      tenantId,
     );
   res.json(data);
 };

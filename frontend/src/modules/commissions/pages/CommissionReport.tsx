@@ -57,10 +57,11 @@ export default function CommissionReport() {
 
   function handleExportPdf() {
     const rows = data.map((r) => ({
-      Vendedor: r.userName,
+      "Vendedor": r.sellers?.join(", ") ?? "—",
       Ventas: r.totalSales,
       Devengado: formatCurrency(r.earned),
       Revertido: formatCurrency(r.reversed),
+      "Monto vendido": formatCurrency(r.sellerSalesAmount),
       Neto: formatCurrency(r.net),
     }));
     exportToPdf(
@@ -70,6 +71,7 @@ export default function CommissionReport() {
         { header: "Ventas", dataKey: "Ventas" },
         { header: "Devengado", dataKey: "Devengado" },
         { header: "Revertido", dataKey: "Revertido" },
+        { header: "Monto vendido", dataKey: "Monto vendido" },
         { header: "Neto", dataKey: "Neto" },
       ],
       rows,
@@ -79,10 +81,11 @@ export default function CommissionReport() {
 
   function handleExportExcel() {
     const rows = data.map((r) => ({
-      Vendedor: r.userName,
+      "Vendedor": r.sellers?.join(", ") ?? "—",
       "Ventas realizadas": r.totalSales,
       "Comisión devengada": Number(r.earned),
       "Comisión revertida": Number(r.reversed),
+      "Monto vendido": Number(r.sellerSalesAmount),
       "Comisión neta": Number(r.net),
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -94,9 +97,11 @@ export default function CommissionReport() {
   const desktopColumns = [
     {
       title: "Vendedor",
-      dataIndex: "userName",
-      sorter: (a: CommissionRow, b: CommissionRow) =>
-        a.userName.localeCompare(b.userName),
+      dataIndex: "sellers",
+      render: (sellers: string[]) =>
+        sellers?.length
+          ? sellers.map((s) => <Tag key={s}>{s}</Tag>)
+          : <Text type="secondary">—</Text>,
     },
     {
       title: "Ventas",
@@ -127,6 +132,15 @@ export default function CommissionReport() {
         ),
     },
     {
+      title: "Monto vendido",
+      dataIndex: "sellerSalesAmount",
+      align: "right" as const,
+      sorter: (a: CommissionRow, b: CommissionRow) =>
+        Number(a.sellerSalesAmount) - Number(b.sellerSalesAmount),
+      render: (v: number) =>
+        Number(v) > 0 ? formatCurrency(v) : <Text type="secondary">—</Text>,
+    },
+    {
       title: "Neto",
       dataIndex: "net",
       align: "right" as const,
@@ -143,9 +157,9 @@ export default function CommissionReport() {
   const mobileColumns = [
     {
       title: "Vendedor",
-      dataIndex: "userName",
+      dataIndex: "sellers",
       sorter: (a: CommissionRow, b: CommissionRow) =>
-        a.userName.localeCompare(b.userName),
+        a.sellerNames.localeCompare(b.sellerNames),
       render: (name: string, record: CommissionRow) => (
         <div>
           <div style={{ fontWeight: 600 }}>{name}</div>
@@ -179,6 +193,14 @@ export default function CommissionReport() {
   const expandedRowRender = (record: CommissionRow) => (
     <div style={{ padding: "8px 0" }}>
       <Row gutter={8}>
+      <Col span={6}>
+        <Text type="secondary" style={{ fontSize: 12 }}>Monto vendido</Text>
+        <div style={{ fontWeight: 500 }}>
+          {Number(record.sellerSalesAmount) > 0
+            ? formatCurrency(record.sellerSalesAmount)
+            : <Text type="secondary">—</Text>}
+        </div>
+      </Col>
         <Col span={8}>
           <Text type="secondary" style={{ fontSize: 12 }}>
             Devengado
@@ -317,7 +339,7 @@ export default function CommissionReport() {
               title="Total devengado"
               value={totalEarned}
               precision={2}
-              prefix="$"
+              prefix="L. "
               valueStyle={{ color: "#52c41a", fontSize: isMobile ? 18 : undefined }}
             />
           </Card>
@@ -328,7 +350,7 @@ export default function CommissionReport() {
               title="Total revertido"
               value={totalReversed}
               precision={2}
-              prefix="$"
+              prefix="L. "
               valueStyle={{ color: "#ff4d4f", fontSize: isMobile ? 18 : undefined }}
             />
           </Card>
@@ -339,7 +361,7 @@ export default function CommissionReport() {
               title="Comisión neta total"
               value={totalNet}
               precision={2}
-              prefix="$"
+              prefix="L. "
               valueStyle={{ color: "#1677ff", fontSize: isMobile ? 18 : undefined }}
             />
           </Card>
@@ -385,6 +407,11 @@ export default function CommissionReport() {
                   <Table.Summary.Cell index={3} align="right">
                     <Text strong type="danger">
                       - {formatCurrency(totalReversed)}
+                    </Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={2} align="right">
+                    <Text strong>
+                      {formatCurrency(data.reduce((acc, r) => acc + Number(r.sellerSalesAmount), 0))}
                     </Text>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={4} align="right">

@@ -8,15 +8,18 @@ export const createPayable = async (req: Request, res: Response) => {
 };
 
 export const listPayables = async (req: Request, res: Response) => {
-  const data = await accountPayableService.list(req.query);
+  const { tenantId } = req.user!;
+  const data = await accountPayableService.list(req.query, tenantId);
   res.json(data);
 };
 
 export const registerPayablePayment = async (req: Request, res: Response) => {
   const { amount, note } = req.body;
+  const { tenantId } = req.user!;
 
   const data =
     await accountPayableService.registerPayment(
+      tenantId,
       Number(req.params.id),
       new Prisma.Decimal(amount),
       note

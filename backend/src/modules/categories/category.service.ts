@@ -5,6 +5,7 @@ import { CategoryError } from "./category";
 export class CategoryService {
 
   static create(data: {
+    tenantId: number;
     name: string;
     parentId?: number | null;
     active?: boolean;
@@ -12,7 +13,7 @@ export class CategoryService {
     return CategoryRepository.create(data);
   }
 
-  static async toggleActive(id: number, active: boolean) {
+  static async toggleActive(id: number, tenantId: number, active: boolean) {
     const children =
       await CategoryRepository.countActiveChildren(id);
 
@@ -20,36 +21,37 @@ export class CategoryService {
       throw new Error(CategoryError.CATEGORY_HAS_CHILDREN);
     }
 
-    return CategoryRepository.update(id, { active });
+    return CategoryRepository.update(id, tenantId, { active });
   }
 
-  static findChildren(parentId: number | null) {
-    return CategoryRepository.findChildren(parentId);
+  static findChildren(parentId: number | null, tenantId: number) {
+    return CategoryRepository.findChildren(parentId, tenantId);
   }
 
-  static async findTree() {
-    const categories = await CategoryRepository.findAllActive();
+  static async findTree(tenantId: number) {
+    const categories = await CategoryRepository.findAllActive(tenantId);
     return this.buildTree(categories);
   }
 
-  static async findSubtree(categoryId: number) {
-    const root = await CategoryRepository.findActiveById(categoryId);
+  static async findSubtree(categoryId: number, tenantId: number) {
+    const root = await CategoryRepository.findActiveById(categoryId, tenantId);
 
     if (!root) {
       throw new Error(CategoryError.CATEGORY_NOT_FOUND);
     }
 
-    const all = await CategoryRepository.findAllActive();
+    const all = await CategoryRepository.findAllActive(tenantId);
     const tree = this.buildTree(all);
 
     return this.findNode(tree, categoryId);
   }
 
   static async createHierarchy(params: {
+    tenantId: number;
     rootCategoryId: number;
     levels: string[];
   }) {
-    const { rootCategoryId, levels } = params;
+    const { tenantId, rootCategoryId, levels } = params;
 
     if (!levels?.length) {
       throw new Error(CategoryError.EMPTY_LEVELS);
@@ -57,7 +59,7 @@ export class CategoryService {
 
     return prisma.$transaction(async (tx) => {
       const root = await tx.category.findFirst({
-        where: { id: rootCategoryId, active: true },
+        where: { id: rootCategoryId, tenantId, active: true },
       });
 
       if (!root) {
@@ -72,7 +74,7 @@ export class CategoryService {
         if (!name) continue;
 
         const existing = await tx.category.findFirst({
-          where: { name, parentId, active: true },
+          where: { name, parentId, tenantId, active: true },
         });
 
         if (existing) {
@@ -82,7 +84,7 @@ export class CategoryService {
         }
 
         const created = await tx.category.create({
-          data: { name, parentId, active: true },
+          data: { tenantId, name, parentId, active: true },
         });
 
         parentId = created.id;
@@ -93,15 +95,15 @@ export class CategoryService {
     });
   }
 
-  static findById(id: number) {
-    return CategoryRepository.findById(id);
+  static findById(id: number, tenantId: number) {
+    return CategoryRepository.findById(id, tenantId);
   }
 
-  static update(id: number, data: any) {
-    return CategoryRepository.update(id, data);
+  static update(id: number, tenantId: number, data: any) {
+    return CategoryRepository.update(id, tenantId, data);
   }
 
-  static async importFromPaths(paths: string[][]) {
+  static async importFromPaths(tenantId: number, paths: string[][]) {
 
     return prisma.$transaction(async (tx) => {
 
@@ -112,6 +114,7 @@ export class CategoryService {
 
         let root = await tx.category.findFirst({
           where: {
+            tenantId,
             name: rootName,
             parentId: null,
             active: true,
@@ -121,6 +124,7 @@ export class CategoryService {
         if (!root) {
           root = await tx.category.create({
             data: {
+              tenantId,
               name: rootName,
               parentId: null,
               active: true,
@@ -137,6 +141,7 @@ export class CategoryService {
 
           const existing = await tx.category.findFirst({
             where: {
+              tenantId,
               name,
               parentId,
               active: true,
@@ -150,6 +155,7 @@ export class CategoryService {
 
           const created = await tx.category.create({
             data: {
+              tenantId,
               name,
               parentId,
               active: true,

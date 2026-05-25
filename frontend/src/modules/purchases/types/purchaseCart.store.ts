@@ -1,12 +1,12 @@
 import { create } from "zustand";
-import type { Product } from "../../products/product";
+import type { Product } from "../../products/types/product";
 
 export interface PurchaseCartItem {
   productId: number;
   name: string;
   quantity: number;
   cost: number;
-  lot?: string;
+  lotNumber?: string | null;
   expiresAt?: Date | null;
 }
 
@@ -17,7 +17,7 @@ interface PurchaseCartState {
     product: Product,
     costOverride?: number,
     options?: {
-      lot?: string;
+      lotNumber?: string | null;
       expiresAt?: Date | null;
     }
   ) => void;
@@ -38,6 +38,7 @@ interface PurchaseCartState {
   ) => void;
 
   removeProduct: (productId: number) => void;
+  updateLot: (productId: number, lot: string) => void;
   clear: () => void;
 
   total: () => number;
@@ -82,7 +83,7 @@ export const purchaseCartStore =
               cost:
                 costOverride ??
                 product.cost,
-              lot: options?.lot,
+              lotNumber: options?.lotNumber,
               expiresAt:
                 options?.expiresAt ??
                 null,
@@ -131,6 +132,13 @@ export const purchaseCartStore =
       set((state) => ({
         items: state.items.filter(
           (i) => i.productId !== productId
+        ),
+      })),
+
+    updateLot: (productId, lot) =>
+      set((state) => ({
+        items: state.items.map((i) =>
+          i.productId === productId ? { ...i, lotNumber: lot } : i
         ),
       })),
 

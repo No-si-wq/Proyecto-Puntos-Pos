@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehouse";
 import http from "../../../core/http/http";
-import type { Sale, CreateSaleDTO } from "../types/sale";
+import type { Sale, CreateSaleDTO, ReturnSaleDTO, SaleReturn } from "../types/sale";
 
 export function useSales() {
   const [sales, setSales] = useState<Sale[]>([]);
@@ -9,6 +9,7 @@ export function useSales() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [creating, setCreating] = useState(false);
   const [canceling, setCanceling] = useState(false);
+  const [returning, setReturning] = useState(false);
   const warehouseId = useRequiredWarehouse();
 
   const load = useCallback(async (filters?: {
@@ -61,6 +62,16 @@ export function useSales() {
     }
   }
 
+  async function returnItems(id: number, payload: ReturnSaleDTO): Promise<SaleReturn> {
+    setReturning(true);
+    try {
+      const { data } = await http.post<SaleReturn>(`/sales/${id}/return`, payload);
+      return data;
+    } finally {
+      setReturning(false);
+    }
+  }
+
   return {
     sales,
     loadingList,
@@ -71,5 +82,7 @@ export function useSales() {
     getSaleById,
     create,
     cancel,
+    returning,
+    returnItems,
   };
 }

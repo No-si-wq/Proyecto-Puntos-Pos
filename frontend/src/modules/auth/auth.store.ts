@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { Role } from "../../core/auth/roles"
 import type { AuthUser } from "./auth";
 
 interface AuthState {
@@ -15,6 +16,7 @@ interface AuthState {
 
   login: (data: {
     user: AuthUser;
+    warehouseId: number,
     accessToken: string;
     refreshToken: string;
   }) => void;
@@ -23,8 +25,10 @@ interface AuthState {
   logout: () => void;
 }
 
-export function resolveDashboardRoute(role: string) {
-  if (role === "ADMIN") return "/admin-dashboard";
+export function resolveDashboardRoute(role: string): string {
+  if (role === Role.ADMIN) return "/admin-dashboard";
+  if (role === Role.USER) return "/dashboard";
+  if (role === Role.SELLER) return "/sales";
   return "/dashboard";
 }
 
@@ -41,12 +45,13 @@ export const authStore = create<AuthState>()(
       setActiveWarehouse: (id) =>
         set({ activeWarehouseId: id }),
 
-      login: ({ user, accessToken, refreshToken }) =>
+      login: ({ user, accessToken, refreshToken, warehouseId }) =>
         set({
           user,
           accessToken,
           refreshToken,
           isAuthenticated: true,
+          activeWarehouseId: warehouseId ?? undefined,
         }),
 
       setTokens: (accessToken, refreshToken) =>
@@ -67,7 +72,7 @@ export const authStore = create<AuthState>()(
     }),
     {
       name: "auth-store",
-      version: 2,
+      version: 3,
 
       partialize: (state) => ({
         user: state.user,

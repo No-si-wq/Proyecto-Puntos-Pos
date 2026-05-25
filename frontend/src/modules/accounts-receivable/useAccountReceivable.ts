@@ -4,11 +4,9 @@ import http from "../../core/http/http";
 export function useAccountReceivable() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentFilters, setCurrentFilters] = useState<any>({});
 
   async function load(filters?: any) {
     setLoading(true);
-    setCurrentFilters(filters ?? {});
     try {
       const res = await http.get("/account-receivable", {
         params: filters,
@@ -28,7 +26,7 @@ export function useAccountReceivable() {
       amount,
       note,
     });
-    await load(currentFilters);
+    await load();
   }
 
   useEffect(() => {

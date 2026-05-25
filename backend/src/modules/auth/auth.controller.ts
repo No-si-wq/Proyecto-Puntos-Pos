@@ -1,16 +1,43 @@
 import { Request, Response } from "express";
 import { AuthService } from "./auth.service";
+import { TenantService } from "../tenant/tenant.service";
+import { AuthError } from "./auth";
 
 export async function login(req: Request, res: Response) {
-  const { username, password } = req.body;
+  try {
+    const { username, password, slug } = req.body;
 
-  const result = await AuthService.login({ username, password });
+    const tenantId = await TenantService.resolveSlug(slug);
 
-  return res.json(result);
+    const result = await AuthService.login({
+      username,
+      password,
+      tenantId,
+    });
+
+    return res.status(200).json(result);
+
+  } catch (err: any) {
+
+    if (err.message === AuthError.INVALID_CREDENTIALS) {
+      return res.status(401).json({
+        message: "Usuario o contraseña incorrectos",
+      });
+    }
+
+    if (err.message === "TENANT_NOT_FOUND") {
+      return res.status(404).json({
+        message: "Empresa no encontrada",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Error interno del servidor",
+    });
+  }
 }
 
 export async function logout(req: Request, res: Response) {
-
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     return res.status(401).json({ error: "No authorization header" });

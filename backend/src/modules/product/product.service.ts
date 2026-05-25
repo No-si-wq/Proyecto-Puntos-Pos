@@ -4,6 +4,7 @@ import { CreateProductInput, UpdateProductInput, ProductError } from "./product"
 
 const pricesInclude = {
   prices: {
+    where: { active: true },
     include: {
       priceList: { select: { id: true, name: true, active: true } },
     },
@@ -22,6 +23,8 @@ const baseSelect = {
   price: true,
   cost: true,
   tax: true,
+  observations: true,
+  laboratory: true,
   active: true,
   categoryId: true,
   barcodes: { select: { code: true } },
@@ -41,32 +44,51 @@ function rethrowBarcodeError(error: unknown): never {
 }
 
 export class ProductService {
-  static async listGlobal(params: { 
+  static async listGlobal(params: {
+    tenantId: number;
     search?: string;
-   }) {
-    const { search } = params;
+    onlyInactive?: boolean
+  }) {
+    const { tenantId, search, onlyInactive } = params;
+
+    // Normalizar search
+    const normalizedSearch = search?.trim() || undefined;
+
     const products = await prisma.product.findMany({
-      where: { 
-        active: true,
-        ...(search && {
+      where: {
+        active: onlyInactive ? false : true,
+        tenantId,
+        ...(normalizedSearch && {
           OR: [
             {
               name: {
-                contains: search,
+                contains: normalizedSearch,
                 mode: "insensitive",
               },
             },
             {
               sku: {
-                contains: search,
+                contains: normalizedSearch,
                 mode: "insensitive",
               },
             },
+            {
+              barcodes: {
+                some: {
+                  code: {
+                    contains: normalizedSearch,
+                    mode: "insensitive",
+                  },
+                },
+              },
+            },
           ],
-        })
-       },
+        }),
+      },
       include: { barcodes: { select: { code: true } }, ...pricesInclude },
       orderBy: { name: "asc" },
+      // Agregar take si hay riesgo de timeout con muchos registros
+      // take: 500,
     });
 
     return products.map(p => ({
@@ -75,10 +97,10 @@ export class ProductService {
     }));
   }
 
-  static async getByWarehouse(warehouseId: number) {
+  static async getByWarehouse(warehouseId: number, tenantId: number) {
     const [products, stocks] = await Promise.all([
       prisma.product.findMany({
-        where: { active: true },
+        where: { active: true, tenantId },
         select: baseSelect,
         orderBy: { name: "asc" },
       }),
@@ -94,14 +116,14 @@ export class ProductService {
   }
 
   static async getByBarcode(code: string) {
-    return prisma.product.findFirst({
+    return prisma.product.findFirst({ 
       where: { active: true, barcodes: { some: { code } } },
       select: baseSelect,
     });
   }
 
-  static async getById(id: number) {
-    const product = await prisma.product.findUnique({ where: { id }, select: baseSelect });
+  static async getById(id: number, tenantId: number) {
+    const product = await prisma.product.findUnique({ where: { id, tenantId }, select: baseSelect });
     if (!product) return null;
 
     return {
@@ -110,15 +132,17 @@ export class ProductService {
     };
   }
 
-  static async getPrices(id: number) {
+  static async getPrices(id: number, tenantId: number) {
     return prisma.productPrice.findMany({
-      where: { productId: id },
+      where: { productId: id, tenantId, active: true },
       include: { priceList: { select: { id: true, name: true, active: true } } },
     });
   }
 
-  static async create(data: CreateProductInput) {
-    const category = await prisma.category.findUnique({ where: { id: data.categoryId } });
+  static async create(data: CreateProductInput, tenantId: number) {
+    const category = await prisma.category.findUnique({ 
+      where: { id: data.categoryId, tenantId } 
+    });
     if (!category?.active) throw new Error(ProductError.INVALID_CATEGORY);
 
     if (data.barcodes?.length) {
@@ -127,18 +151,28 @@ export class ProductService {
     }
 
     if (data.prices?.length) {
-      await ProductService._validatePriceLists(data.prices.map((p) => p.priceListId));
+      await ProductService._validatePriceLists(
+        data.prices.map((p) => p.priceListId),
+        tenantId
+      );
     }
 
     try {
       return await prisma.product.create({
         data: {
           ...data,
+          tenantId,
           barcodes: data.barcodes?.length
             ? { create: data.barcodes.map((code) => ({ code })) }
             : undefined,
           prices: data.prices?.length
-            ? { create: data.prices.map(({ priceListId, price }) => ({ priceListId, price })) }
+            ? {
+                create: data.prices.map(({ priceListId, price }) => ({
+                  tenantId,
+                  priceListId,
+                  price,
+                })),
+              }
             : undefined,
         },
         include: { barcodes: true, ...pricesInclude, ...categoryInclude },
@@ -146,21 +180,24 @@ export class ProductService {
     } catch (e) { rethrowBarcodeError(e); }
   }
 
-  static async update(id: number, data: UpdateProductInput) {
+  static async update(id: number, data: UpdateProductInput, tenantId: number) {
     if (data.categoryId) {
       const category = await prisma.category.findUnique({
-        where: { id: data.categoryId, active: true },
+        where: { id: data.categoryId, active: true, tenantId },
       });
       if (!category?.active) throw new Error(ProductError.INVALID_CATEGORY);
 
       const children = await prisma.category.count({
-        where: { parentId: data.categoryId, active: true },
+        where: { parentId: data.categoryId, active: true, tenantId },
       });
       if (children > 0) throw new Error(ProductError.CATEGORY_NOT_LEAF);
     }
 
     if (data.prices?.length) {
-      await ProductService._validatePriceLists(data.prices.map((p) => p.priceListId));
+      await ProductService._validatePriceLists(
+        data.prices.map((p) => p.priceListId),
+        tenantId
+      );
     }
 
     const { prices, barcodes, ...productFields } = data;
@@ -169,14 +206,23 @@ export class ProductService {
       return await prisma.$transaction(async (tx) => {
         if (prices !== undefined) {
           if (prices.length === 0) {
-            await tx.productPrice.deleteMany({ where: { productId: id } });
+            await tx.productPrice.updateMany({ 
+              where: { productId: id, tenantId }, 
+              data: { active: false } 
+            });
           } else {
             await Promise.all(
               prices.map(({ priceListId, price }) =>
                 tx.productPrice.upsert({
-                  where: { productId_priceListId: { productId: id, priceListId } },
+                  where: {
+                    tenantId_productId_priceListId: {
+                      tenantId,
+                      productId: id,
+                      priceListId,
+                    },
+                  },
                   update: { price },
-                  create: { productId: id, priceListId, price },
+                  create: { tenantId, productId: id, priceListId, price },
                 })
               )
             );
@@ -184,7 +230,7 @@ export class ProductService {
         }
 
         return tx.product.update({
-          where: { id },
+          where: { id, tenantId },
           data: {
             ...productFields,
             barcodes: barcodes
@@ -197,12 +243,13 @@ export class ProductService {
     } catch (e) { rethrowBarcodeError(e); }
   }
 
-  static async toggleActive(id: number, active: boolean) {
-    return prisma.product.update({ where: { id }, data: { active } });
+  static async toggleActive(id: number, tenantId: number, active: boolean) {
+    return prisma.product.update({ where: { id, tenantId }, data: { active } });
   }
 
   static async setReorderPoint(
     id: number,
+    tenantId: number,
     reorderPoint: number
   ) {
     if (reorderPoint < 0) {
@@ -210,49 +257,63 @@ export class ProductService {
     }
  
     return prisma.product.update({
-      where: { id },
+      where: { id, tenantId },
       data: { reorderPoint },
       select: { id: true, name: true, reorderPoint: true },
     });
   }
 
-  private static async _validatePriceLists(priceListIds: number[]) {
+  private static async _validatePriceLists(priceListIds: number[], tenantId: number) {
+    const uniquePriceListIds = Array.from(new Set(priceListIds));
     const found = await prisma.priceList.findMany({
-      where: { id: { in: priceListIds }, active: true },
+      where: { id: { in: uniquePriceListIds }, active: true, tenantId },
       select: { id: true },
     });
 
-    if (found.length !== priceListIds.length) {
+    if (found.length !== uniquePriceListIds.length) {
       const foundIds = new Set(found.map((p) => p.id));
-      const missing = priceListIds.find((id) => !foundIds.has(id));
+      const missing = uniquePriceListIds.find((id) => !foundIds.has(id));
       throw new Error(
         JSON.stringify({ type: ProductError.INVALID_PRICE_LIST, priceListId: missing })
       );
     }
   }
-  static async upsertPrice(productId: number, dto: { priceListId: number; price: number }) {
-    const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (!product) throw new Error("Product not found");
+  static async upsertPrice(productId: number, tenantId: number, dto: { priceListId: number; price: number }) {
+    const product = await prisma.product.findFirst({
+      where: { id: productId, tenantId },
+      select: { id: true },
+    });
+    if (!product) throw new Error("Producto no encontrado");
 
-    await ProductService._validatePriceLists([dto.priceListId]);
+    await ProductService._validatePriceLists([dto.priceListId], tenantId);
 
     return prisma.productPrice.upsert({
-      where: { productId_priceListId: { productId, priceListId: dto.priceListId } },
+      where: {
+        tenantId_productId_priceListId: {
+          tenantId,
+          productId,
+          priceListId: dto.priceListId,
+        },
+      },
       update: { price: dto.price },
-      create: { productId, priceListId: dto.priceListId, price: dto.price },
+      create: { tenantId, productId, priceListId: dto.priceListId, price: dto.price },
       include: {
         priceList: { select: { id: true, name: true, active: true } },
       },
     });
   }
 
-  static async removePrice(productId: number, priceListId: number) {
+  static async removePrice(productId: number, priceListId: number, tenantId: number) {
     const record = await prisma.productPrice.findUnique({
-      where: { productId_priceListId: { productId, priceListId } },
+      where: {
+        tenantId_productId_priceListId: { tenantId, productId, priceListId },
+      },
     });
-    if (!record || !record.active) throw new Error("Price not found");
+    if (!record || !record.active) throw new Error("Precio no encontrado");
     return prisma.productPrice.update({
-      where: { productId_priceListId: { productId, priceListId } },
+      where: {
+        tenantId_productId_priceListId: { tenantId, productId, priceListId },
+      },
       data: { active: false },
     });
   }

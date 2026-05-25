@@ -13,6 +13,7 @@ export function requireWarehouse(
   next: NextFunction
 ) {
   const header = req.header("x-warehouse-id");
+  const user = req.user!;
 
   if (!header) {
     return res.status(400).json({
@@ -20,7 +21,7 @@ export function requireWarehouse(
     });
   }
 
-  const warehouseId = Number(header);
+  const warehouseId = Number(header ? header : user);
 
   if (!Number.isInteger(warehouseId) || warehouseId <= 0) {
     return res.status(400).json({

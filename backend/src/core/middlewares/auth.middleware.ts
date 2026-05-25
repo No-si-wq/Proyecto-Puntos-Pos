@@ -3,8 +3,8 @@ import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../utils/jwt";
 
 export async function authMiddleware(
-  req: Request, 
-  res: Response, 
+  req: Request,
+  res: Response,
   next: NextFunction,
 ) {
   try {
@@ -21,8 +21,8 @@ export async function authMiddleware(
       where: { id: payload.sub },
       select: {
         id: true,
+        tenantId: true,
         username: true,
-        email: true,
         role: true,
         active: true,
         tokenVersionAt: true,
@@ -31,6 +31,10 @@ export async function authMiddleware(
 
     if (!user || !user.active) {
       return res.status(401).json({ message: "Usuario no autorizado" });
+    }
+
+    if (user.tenantId !== payload.tenantId) {
+      return res.status(401).json({ message: "Token inválido o expirado" });
     }
 
     const tokenIssuedAt = new Date(payload.iat * 1000);
@@ -43,6 +47,7 @@ export async function authMiddleware(
 
     req.user = {
       id: user.id,
+      tenantId: user.tenantId,
       username: user.username,
       role: user.role,
     };

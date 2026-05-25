@@ -2,10 +2,10 @@ import prisma from "../../core/prisma";
 import { Prisma } from "@prisma/client";
 
 class AccountReceivableService {
-  async create(data: { saleId: number; dueDate?: Date }) {
+  async create(data: { saleId: number; dueDate?: Date, tenantId: number }) {
     return prisma.$transaction(async (tx) => {
       const sale = await tx.sale.findUnique({
-        where: { id: data.saleId },
+        where: { id: data.saleId, tenantId: data.tenantId },
       });
 
       if (!sale) throw new Error("Venta no encontrada");
@@ -25,12 +25,13 @@ class AccountReceivableService {
           total: sale.total,
           balance: sale.total,
           dueDate: data.dueDate,
+          tenantId: data.tenantId,
         },
       });
     });
   }
 
-  async list(filters: any) {
+  async list(filters: any, tenantId: number) {
     const where: Prisma.AccountReceivableWhereInput = {};
 
     if (filters.status) where.status = filters.status;
@@ -43,7 +44,7 @@ class AccountReceivableService {
     }
 
     return prisma.accountReceivable.findMany({
-      where,
+      where: { tenantId },
       include: {
         customer: true,
         sale: true,
@@ -52,9 +53,9 @@ class AccountReceivableService {
     });
   }
 
-  async findById(id: number) {
+  async findById(id: number, tenantId: number) {
     return prisma.accountReceivable.findUnique({
-      where: { id },
+      where: { id, tenantId },
       include: {
         customer: true,
         sale: true,
@@ -64,13 +65,14 @@ class AccountReceivableService {
   }
 
   async registerPayment(
+    tenantId: number,
     accountId: number,
     amount: Prisma.Decimal,
     note?: string
   ) {
     return prisma.$transaction(async (tx) => {
       const account = await tx.accountReceivable.findUnique({
-        where: { id: accountId },
+        where: { id: accountId, tenantId },
       });
 
       if (!account) throw new Error("Cuenta no encontrada");
@@ -102,9 +104,9 @@ class AccountReceivableService {
     });
   }
 
-  async summaryByCustomer(customerId: number) {
+  async summaryByCustomer(customerId: number, tenantId: number) {
     const accounts = await prisma.accountReceivable.findMany({
-      where: { customerId },
+      where: { customerId, tenantId },
     });
 
     const totalDebt = accounts.reduce(

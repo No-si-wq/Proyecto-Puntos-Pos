@@ -6,11 +6,7 @@ import { requireWarehouse } from "../../core/middlewares/warehouse.middleware";
 import { validate } from "../../core/middlewares/validate.middleware";
 import { asyncHandler } from "../../core/utils/asyncHandler";
 import multer from "multer";
-import {
-  createProductSchema,
-  updateProductSchema,
-  productIdParamSchema,
-} from "./product.schema";
+import * as schema from "./product.schema";
 import { Role } from "../user/roles";
 
 const upload = multer({ dest: "uploads/" });
@@ -37,7 +33,7 @@ router.post(
 router.post(
   "/",
   roleMiddleware(Role.ADMIN, Role.USER),
-  validate(createProductSchema),
+  validate(schema.createProductSchema),
   asyncHandler(controller.createProduct)
 );
 
@@ -48,21 +44,20 @@ router.patch(
 
 router.get(
   "/:id",
-  validate(productIdParamSchema),
   asyncHandler(controller.getProduct)
 );
 
 router.put(
   "/:id",
   roleMiddleware(Role.ADMIN),
-  validate(productIdParamSchema.merge(updateProductSchema)),
+  validate(schema.productIdParamSchema.merge(schema.updateProductSchema)),
   asyncHandler(controller.updateProduct)
 );
 
 router.patch(
   "/:id/activate",
   roleMiddleware(Role.ADMIN),
-  validate(productIdParamSchema),
+  validate(schema.productIdParamSchema),
   asyncHandler(controller.toggleProductActive)
 );
 

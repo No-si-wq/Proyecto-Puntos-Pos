@@ -7,9 +7,17 @@ const purchaseItemSchema = z.object({
   quantity: z.number().int().positive({
     message: "Cantidad debe ser mayor a 0",
   }),
-  cost: z.number().positive({
-    message: "Costo debe ser mayor a 0",
+  cost: z.number().nonnegative({
+    message: "Costo debe ser igual o mayor a 0",
   }),
+  lotNumber: z.preprocess(
+    (v) => (v === "" || v === null ? undefined : v),
+    z.string().min(3).optional()
+  ),
+  expiresAt: z
+    .string()
+    .datetime({ message: "Fecha de vencimiento inválida" })
+    .optional(),
 });
 
 export const createPurchaseSchema = z.object({
@@ -17,6 +25,8 @@ export const createPurchaseSchema = z.object({
     supplierId: z.number().int().positive({
       message: "Proveedor inválido",
     }),
+
+    purchaseNumber: z.string().min(3).optional(),
 
     paymentMethod: z.enum([
       "CASH",
