@@ -13,6 +13,11 @@ export interface CreateSupplierDTO {
   phone?: string;
 }
 
+export interface SupplierSearch {
+  search?: string,
+  onlyInactive?: boolean,
+};
+
 export interface UpdateSupplierDTO {
   name?: string;
   email?: string;

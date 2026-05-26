@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { LoyaltyError } from "./points";
-import { LOYALTY_CONFIG } from "./loyalty.rules";
+import { getLoyaltyConfig } from "./loyalty.rules";
 
 type Tx = Prisma.TransactionClient;
 
@@ -12,7 +12,9 @@ export class LoyaltyService {
     saleId: number,
     pointsRequested: number,
   ): Promise<number> {
-    if (!LOYALTY_CONFIG.redeem.enabled || pointsRequested <= 0) {
+    const config = await getLoyaltyConfig(tenantId);
+
+    if (!config.redeem.enabled || pointsRequested <= 0) {
       return 0;
     }
 
@@ -28,7 +30,7 @@ export class LoyaltyService {
     if (usablePoints === 0) {
       return 0;
     }
-    const discount = usablePoints * LOYALTY_CONFIG.redeem.pointValue;
+    const discount = usablePoints * config.redeem.pointValue;
 
     await tx.loyaltyPoint.update({
       where: { customerId },
@@ -55,11 +57,11 @@ export class LoyaltyService {
     total: number,
     saleId: number
   ): Promise<number> {
-    if (!LOYALTY_CONFIG.earn.enabled) return 0;
+     const config = await getLoyaltyConfig(tenantId);
 
-    const points = Math.floor(
-      total / LOYALTY_CONFIG.earn.amountPerPoint
-    );
+    if (!config.earn.enabled) return 0;
+
+    const points = Math.floor(total / config.earn.amountPerPoint);
 
     if (points <= 0) return 0;
 

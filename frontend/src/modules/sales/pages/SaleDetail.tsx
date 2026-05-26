@@ -139,6 +139,7 @@ export default function SaleDetail() {
       onConfirm: async () => {
         await cancel(sale.id);
         message.success("Venta cancelada");
+        setSale((prev) => prev ? { ...prev, status: "CANCELLED" } : prev);
       },
     });
   }

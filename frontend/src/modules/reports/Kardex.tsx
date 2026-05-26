@@ -254,7 +254,7 @@ export default function Kardex() {
         optionFilterProp="label"
       />
       <ResponsiveRangePicker
-        style={{ width: "100%" }}
+        value={range}
         onChange={(dates) => setRange(dates)}
         size={sizes.input}
       />
@@ -378,7 +378,7 @@ export default function Kardex() {
               />
             </div>
             <ResponsiveRangePicker
-              style={{ width: "auto" }}
+              value={range}
               onChange={(dates) => setRange(dates)}
               size={sizes.input}
             />

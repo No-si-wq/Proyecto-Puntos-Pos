@@ -6,16 +6,38 @@ import {
 } from "./supplier";
 
 export class SupplierService {
-  static async list(tenantId: number) {
+  static async list(params: {
+    tenantId: number, 
+    search?: string, 
+    onlyInactive?: boolean,
+  }) {
+     const { tenantId, search, onlyInactive } = params;
+
+     const normalizedSearch = search?.trim() || undefined;
+
     return prisma.supplier.findMany({
-      where: { active: true, tenantId },
+      where: { 
+        active: onlyInactive ? false : true, 
+        tenantId,
+        ...(normalizedSearch && {
+          OR: [
+            {
+              name: {
+                contains: normalizedSearch,
+                mode: "insensitive"
+              },
+            },
+          ],
+        }),
+      },
+
       orderBy: { name: "asc" },
     });
   }
 
   static async getById(id: number, tenantId: number) {
     return prisma.supplier.findUnique({
-      where: { id },
+      where: { id, tenantId },
       include: {
         purchases: {
           select: {

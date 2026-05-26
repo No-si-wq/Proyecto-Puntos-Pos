@@ -100,6 +100,22 @@ export default function Quotations() {
     setCart([]);
   };
 
+  const handlePriceListChange = (priceListId: number | undefined) => {
+    setCart((prev) =>
+      prev.map((item) => {
+        const product = products.find((p) => p.id === item.productId);
+        if (!product) return item;
+        const customPrice = priceListId
+          ? product.prices?.find((pp) => pp.priceListId === priceListId && pp.active)?.price
+          : undefined;
+        return {
+          ...item,
+          price: customPrice !== undefined ? Number(customPrice) : Number(product.price),
+        };
+      })
+    );
+  };
+
   const toolsMenu: MenuProps = {
     items: [
       { key: "excel", label: "Exportar Excel", icon: <FileExcelOutlined />, onClick: handleExportExcel },
@@ -203,7 +219,11 @@ export default function Quotations() {
             </Col>
             <Col xs={24} sm={12}>   {/* ← era span={12} */}
               <Form.Item name="priceListId" label="Lista de precios">
-                <Select placeholder="Precio base" allowClear>
+                <Select 
+                  placeholder="Precio base" 
+                  allowClear 
+                  onChange={handlePriceListChange}
+                >
                   {priceLists.map((pl) => (
                     <Select.Option key={pl.id} value={pl.id}>{pl.name}</Select.Option>
                   ))}

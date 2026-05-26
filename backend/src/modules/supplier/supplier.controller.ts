@@ -2,8 +2,20 @@ import { Request, Response } from "express";
 import { SupplierService } from "./supplier.service";
 
 export async function listSuppliers(req: Request, res: Response) {
+  const search =
+    typeof req.query.search === "string"
+      ? req.query.search
+      : undefined;
+
+  const onlyInactive = req.query.onlyInactive === "true";
+
   const { tenantId } = req.user!;
-  const suppliers = await SupplierService.list(tenantId);
+
+  const suppliers = await SupplierService.list({
+    tenantId,
+    search,
+    onlyInactive,
+  });
   res.json(suppliers);
 }
 

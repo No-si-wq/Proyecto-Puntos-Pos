@@ -12,6 +12,11 @@ export interface Customer {
   } | null;
 }
 
+export interface CustomerSearch {
+  search?: string,
+  onlyInactive?: boolean,
+};
+
 export interface CreateCustomerDTO {
   name: string;
   email?: string;

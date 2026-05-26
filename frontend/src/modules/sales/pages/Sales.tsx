@@ -43,7 +43,7 @@ import PageHeader from "../../../core/components/common/PageHeader";
 
 export default function Sales() {
   const { customers, reload: reloadCustomers } = useCustomers();
-  const { priceMode } = useSettings();
+  const { priceMode, loyaltyConfig } = useSettings();
   const { users = [] } = useUsers();
   const sellers = users.filter((u) => u.role === Role.SELLER);
   const [sellerId, setSellerId] = useState<number | undefined>();
@@ -54,6 +54,7 @@ export default function Sales() {
   const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>("CASH");
   const [dueDate, setDueDate] = useState<string>();
   const [amountPaid, setAmountPaid] = useState<number | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   const { isMobile, isTablet, device } = useDeviceType();
   const tableSpan   = device === "desktop" ? 16 : device === "tablet" ? 14 : 24;
@@ -155,13 +156,11 @@ export default function Sales() {
 
   const estimatedCommission = cart.totalCommission();
 
-  const pointsDiscount = sale.pointsUsed * 0.01;
+  const pointValue = loyaltyConfig.redeem.pointValue;
+  const pointsDiscount = sale.pointsUsed * pointValue;
   const totalFinal = cart.total() - pointsDiscount;
 
-  const isSubmitDisabled =
-    cart.items.length === 0 ||
-    (paymentMethod === "CREDIT" && (!sale.customerId || !dueDate)) ||
-    (paymentMethod === "CASH" && (amountPaid === null || amountPaid < totalFinal));
+  const isSubmitDisabled = cart.items.length === 0
 
   async function submitSale() {
     if (cart.items.length === 0) {
@@ -191,6 +190,8 @@ export default function Sales() {
       return;
     }
 
+    const pointsToUse = loyaltyConfig.redeem.enabled ? sale.pointsUsed : 0;
+
     if (paymentMethod === "CASH") {
       if (amountPaid === null || amountPaid === undefined || amountPaid < totalFinal) {
         message.error("El monto recibido es insuficiente");
@@ -201,7 +202,7 @@ export default function Sales() {
     try {
       const result = await create({
         customerId: sale.customerId,
-        pointsUsed: sale.pointsUsed,
+        pointsUsed: pointsToUse,
         sellerId,
         observations,
         items: cart.items.map((i) => ({
@@ -225,6 +226,7 @@ export default function Sales() {
       setSellerId(undefined);
       setDueDate(undefined);
       setAmountPaid(null);
+      setPaymentModalOpen(false);
       setObservations("");
 
       message.success(
@@ -296,7 +298,7 @@ export default function Sales() {
       />
     </div>
 
-      {selectedCustomer && (
+      {selectedCustomer && loyaltyConfig.redeem.enabled && (
         <div style={{ padding: "8px 10px", background: "#f6ffed", borderRadius: 6, border: "1px solid #b7eb8f" }}>
           <Row align="middle" gutter={8}>
             <Col flex={1}>
@@ -316,73 +318,6 @@ export default function Sales() {
               />
             </Col>
           </Row>
-        </div>
-      )}
-
-      <Divider style={{ margin: "0" }} />
-
-      <div>
-        <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>MÉTODO DE PAGO</div>
-        <Row gutter={8}>
-          <Col span={paymentMethod === "CREDIT" ? 12 : 24}>
-            <Select
-              value={paymentMethod}
-              onChange={(value) => {
-                setPaymentMethod(value);
-                if (value !== "CREDIT") setDueDate(undefined);
-                if (value !== "CASH") setAmountPaid(null);
-              }}
-              size={sizes.select}
-              style={{ width: "100%" }}
-              options={[
-                { label: "Efectivo",      value: "CASH"     },
-                { label: "Tarjeta",       value: "CARD"     },
-                { label: "Transferencia", value: "TRANSFER" },
-                { label: "Crédito",       value: "CREDIT"   },
-              ]}
-            />
-          </Col>
-          {paymentMethod === "CREDIT" && (
-            <Col span={12}>
-              <DatePicker
-                style={{ width: "100%" }}
-                size={sizes.input}
-                placeholder="Vencimiento"
-                onChange={(date) => setDueDate(date?.toISOString())}
-              />
-            </Col>
-          )}
-        </Row>
-        {paymentMethod === "CREDIT" && (
-          <Tag color="orange" style={{ marginTop: 8 }}>Venta a crédito</Tag>
-        )}
-      </div>
-
-      {paymentMethod === "CASH" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ fontSize: 11, color: "#888" }}>MONTO RECIBIDO</div>
-          <InputNumber
-            style={{ width: "100%" }}
-            size={sizes.input}
-            min={0}
-            precision={2}
-            value={amountPaid}
-            onChange={(v) => setAmountPaid(v ?? null)}
-            placeholder="0.00"
-          />
-          {amountPaid !== null && amountPaid >= totalFinal && (
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
-              <span style={{ color: "#666" }}>Cambio</span>
-              <strong style={{ color: "#52c41a" }}>
-                {formatCurrency(amountPaid - totalFinal)}
-              </strong>
-            </div>
-          )}
-          {amountPaid !== null && amountPaid < totalFinal && (
-            <span style={{ color: "#ff4d4f", fontSize: 12 }}>
-              Monto insuficiente
-            </span>
-          )}
         </div>
       )}
 
@@ -419,7 +354,7 @@ export default function Sales() {
         {sale.pointsUsed > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span style={{ color: "#666" }}>Descuento puntos</span>
-            <strong style={{ color: "#ff4d4f" }}>−{formatCurrency(sale.pointsUsed * 0.01)}</strong>
+            <strong style={{ color: "#ff4d4f" }}>−{formatCurrency(sale.pointsUsed * pointValue)}</strong>
           </div>
         )}
 
@@ -445,8 +380,7 @@ export default function Sales() {
         size={sizes.button}
         block
         disabled={isSubmitDisabled}
-        loading={creating}
-        onClick={submitSale}
+        onClick={() => setPaymentModalOpen(true)}
       >
         Confirmar venta
       </Button>
@@ -538,7 +472,7 @@ export default function Sales() {
                 type="primary"
                 loading={creating}
                 disabled={isSubmitDisabled}
-                onClick={submitSale}
+                onClick={() => setPaymentModalOpen(true)}
               >
                 Confirmar
               </Button>
@@ -631,6 +565,91 @@ export default function Sales() {
             </Col>
           )}
       </Row>
+
+      <Modal
+        title="Método de pago"
+        open={paymentModalOpen}
+        onCancel={() => setPaymentModalOpen(false)}
+        onOk={submitSale}
+        okText="Confirmar venta"
+        cancelText="Cancelar"
+        confirmLoading={creating}
+        okButtonProps={{
+          disabled:
+            (paymentMethod === "CREDIT" &&  !dueDate) ||
+            (paymentMethod === "CASH" && (amountPaid === null || amountPaid < totalFinal)),
+        }}
+        width={380}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 8 }}>
+          <div>
+            <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>MÉTODO DE PAGO</div>
+            <Row gutter={8}>
+              <Col span={paymentMethod === "CREDIT" ? 12 : 24}>
+                <Select
+                  value={paymentMethod}
+                  onChange={(value) => {
+                    setPaymentMethod(value);
+                    if (value !== "CREDIT") setDueDate(undefined);
+                    if (value !== "CASH") setAmountPaid(null);
+                  }}
+                  style={{ width: "100%" }}
+                  options={[
+                    { label: "Efectivo",      value: "CASH"     },
+                    { label: "Tarjeta",       value: "CARD"     },
+                    { label: "Transferencia", value: "TRANSFER" },
+                    { label: "Crédito",       value: "CREDIT"   },
+                  ]}
+                />
+              </Col>
+              {paymentMethod === "CREDIT" && (
+                <Col span={12}>
+                  <DatePicker
+                    style={{ width: "100%" }}
+                    placeholder="Vencimiento"
+                    onChange={(date) => setDueDate(date?.toISOString())}
+                  />
+                </Col>
+              )}
+            </Row>
+            {paymentMethod === "CREDIT" && (
+              <Tag color="orange" style={{ marginTop: 8 }}>Venta a crédito</Tag>
+            )}
+          </div>
+
+          {paymentMethod === "CASH" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ fontSize: 11, color: "#888" }}>MONTO RECIBIDO</div>
+              <InputNumber
+                style={{ width: "100%" }}
+                min={0}
+                precision={2}
+                value={amountPaid}
+                onChange={(v) => setAmountPaid(v ?? null)}
+                placeholder="0.00"
+              />
+              {amountPaid !== null && amountPaid >= totalFinal && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+                  <span style={{ color: "#666" }}>Cambio</span>
+                  <strong style={{ color: "#52c41a" }}>
+                    {formatCurrency(amountPaid - totalFinal)}
+                  </strong>
+                </div>
+              )}
+              {amountPaid !== null && amountPaid < totalFinal && (
+                <span style={{ color: "#ff4d4f", fontSize: 12 }}>Monto insuficiente</span>
+              )}
+            </div>
+          )}
+
+          <Divider style={{ margin: "4px 0" }} />
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span style={{ color: "#888" }}>Total a cobrar</span>
+            <strong style={{ fontSize: 20 }}>{formatCurrency(totalFinal)}</strong>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={printModalOpen}

@@ -44,7 +44,7 @@ class AccountReceivableService {
     }
 
     return prisma.accountReceivable.findMany({
-      where: { tenantId },
+      where: { ...where, tenantId },
       include: {
         customer: true,
         sale: true,

@@ -3,7 +3,19 @@ import { CustomerService } from "./customer.service";
 
 export async function listCustomers(req: Request, res: Response) {
   const { tenantId } = req.user!;
-  const customers = await CustomerService.list(tenantId);
+  const search =
+    typeof req.query.search === "string"
+      ? req.query.search
+      : undefined;
+
+  const onlyInactive = req.query.onlyInactive === "true";
+
+  const customers = await CustomerService.list({
+    tenantId,
+    search,
+    onlyInactive,
+  });
+  
   res.json(customers);
 }
 

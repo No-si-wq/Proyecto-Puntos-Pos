@@ -42,7 +42,7 @@ class AccountPayableService {
     }
 
     return prisma.accountPayable.findMany({
-      where: { tenantId },
+      where: { ...where, tenantId },
       include: {
         supplier: true,
         purchase: true,

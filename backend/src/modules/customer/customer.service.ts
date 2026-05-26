@@ -4,18 +4,37 @@ import { Prisma } from "@prisma/client";
 import { DomainError } from "../../core/errors/domain-error";
 
 export class CustomerService {
-  static async list(tenantId: number) {
+  static async list(params: {
+    tenantId: number, 
+    search?: string, 
+    onlyInactive?: boolean,
+  }) {
+     const { tenantId, search, onlyInactive } = params;
+
+     const normalizedSearch = search?.trim() || undefined;
+
     return prisma.customer.findMany({
-      where: { active: true, tenantId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        dni: true,
-        phone: true,
-        direction: true,
-        active: true,
-        createdAt: true,
+      where: { 
+        active: onlyInactive ? false : true, 
+        tenantId,
+        ...(normalizedSearch && {
+          OR: [
+            {
+              dni: {
+                contains: normalizedSearch,
+                mode: "insensitive",
+              },
+            },
+            {
+              name: {
+                contains: normalizedSearch,
+                mode: "insensitive",
+              }
+            },
+          ],
+        }),
+      },
+      include: {
         points: {
           select: {
             balance: true,

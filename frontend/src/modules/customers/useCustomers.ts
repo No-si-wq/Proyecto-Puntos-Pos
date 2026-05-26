@@ -2,23 +2,30 @@ import { useEffect, useState, useCallback } from "react";
 import http from "../../core/http/http"
 import type {
   Customer,
+  CustomerSearch,
   CreateCustomerDTO,
   UpdateCustomerDTO,
 } from "./customer";
 
 export function useCustomers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filters, setFilters] = useState<CustomerSearch>({});
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await http.get<Customer[]>("/customers");
+      const { data } = await http.get<Customer[]>("/customers", {
+        params: { 
+          search: filters.search,
+          onlyInactive: filters.onlyInactive ? "true" : undefined,
+        },
+      });
       setCustomers(data);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters.search, filters.onlyInactive]);
 
   useEffect(() => {
     load();
@@ -42,6 +49,8 @@ export function useCustomers() {
   return {
     customers,
     loading,
+    filters,
+    setFilters,
     reload: load,
     create,
     update,
