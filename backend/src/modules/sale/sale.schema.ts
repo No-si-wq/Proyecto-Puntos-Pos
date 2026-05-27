@@ -26,8 +26,8 @@ export const createSaleSchema = z.object({
     }
   )
   .refine(
-    (data) => data.paymentMethod !== "CASH" || (data.amountPaid !== undefined && data.amountPaid >= 0),
-    { message: "El monto pagado es requerido para pagos en efectivo", path: ["amountPaid"] }
+    (data) => data.paymentMethod !== "CASH" || data.amountPaid === undefined || data.amountPaid >= 0,
+    { message: "El monto pagado no puede ser negativo", path: ["amountPaid"] }
   )
   .superRefine((data, ctx) => {
     if (data.paymentMethod === "CREDIT") {

@@ -90,10 +90,10 @@ export class SaleService {
           ...item,
           quantity: item.quantity - returned,
           returnedQuantity: returned,
-          refundedAmount: refunded,         // ← monto devuelto por ítem
+          refundedAmount: refunded,         
         };
       }),
-      totalRefunded: sale.returns.reduce(   // ← total devuelto global
+      totalRefunded: sale.returns.reduce(   
         (s, r) => s.add(
           r.items.reduce(
             (s2, i) => s2.add(new Prisma.Decimal(i.refundAmount)),
@@ -317,8 +317,22 @@ export class SaleService {
         );
         globalDiscount = new Prisma.Decimal(discountFromPoints);
       }
- 
+      
+      if (globalDiscount.gt(0) && subtotalDecimal.gt(0)) {
+        const keepRatio = new Prisma.Decimal(1).sub(
+          globalDiscount.div(subtotalDecimal)
+        );
+        for (const item of calculatedItems) {
+          if (item.commissionAmount !== null) {
+            item.commissionAmount = item.commissionAmount
+              .mul(keepRatio)
+              .toDecimalPlaces(2);
+          }
+        }
+      }
+
       const total = subtotalDecimal.sub(globalDiscount).add(taxTotalDecimal);
+
       if (total.lt(0)) throw new Error(SaleError.INVALID_TOTAL);
 
       // Calcular amountPaid y changeAmount
@@ -326,14 +340,19 @@ export class SaleService {
       let changeAmount: Prisma.Decimal | null = null;
 
       if (data.paymentMethod === "CASH") {
-        if (data.amountPaid === undefined || data.amountPaid === null) {
-          throw new Error("El monto pagado es requerido para pagos en efectivo");
+        if (total.gt(0)) {
+          if (data.amountPaid === undefined || data.amountPaid === null) {
+            throw new Error("El monto pagado es requerido para pagos en efectivo");
+          }
+          amountPaid = new Prisma.Decimal(data.amountPaid);
+          if (amountPaid.lt(total)) {
+            throw new Error("El monto pagado es insuficiente");
+          }
+          changeAmount = amountPaid.sub(total);
+        } else {
+          amountPaid = new Prisma.Decimal(0);
+          changeAmount = new Prisma.Decimal(0);
         }
-        amountPaid = new Prisma.Decimal(data.amountPaid);
-        if (amountPaid.lt(total)) {
-          throw new Error("El monto pagado es insuficiente");
-        }
-        changeAmount = amountPaid.sub(total);
       }
  
       await tx.sale.update({

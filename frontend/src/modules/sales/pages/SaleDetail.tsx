@@ -27,7 +27,6 @@ import type { ReturnItemInput } from "../types/sale";
 const { Text } = Typography;
 
 function SaleItemMobileCard({ item }: { item: SaleItems }) {
-  const commissionAmount = item.commissionAmount ?? 0;
 
   return (
     <Card
@@ -69,13 +68,6 @@ function SaleItemMobileCard({ item }: { item: SaleItems }) {
           value={formatCurrency(item.lineTotal)}
           highlight
         />
-        {commissionAmount > 0 && (
-          <MiniStat
-            label="Comisión"
-            value={formatCurrency(commissionAmount)}
-            color="#52c41a"
-          />
-        )}
       </div>
     </Card>
   );
@@ -265,6 +257,10 @@ export default function SaleDetail() {
 
   const isCompleted = sale?.status === "COMPLETED";
   const isCancelled = sale?.status === "CANCELLED";
+  const totalCommission = sale?.items.reduce(
+    (sum, item) => sum + Number(item.commissionAmount ?? 0),
+    0
+  ) ?? 0;
 
   const mobileMenuItems: MenuProps["items"] = [
     {
@@ -400,16 +396,6 @@ export default function SaleDetail() {
       dataIndex: "lineTotal",
       render: (v: number) => formatCurrency(v),
     },
-    {
-      title: "Comisión",
-      dataIndex: "commissionAmount",
-      render: (v?: number) =>
-        (v ?? 0) > 0 ? (
-          <span style={{ color: "#52c41a" }}>{formatCurrency(v ?? 0)}</span>
-        ) : (
-          <span>—</span>
-        ),
-    },
   ];
 
   return (
@@ -534,10 +520,10 @@ export default function SaleDetail() {
                 </Text>
               </Descriptions.Item>
             )}
-            {(sale?.totalCommission ?? 0) > 0 && (
+            {totalCommission > 0 && (
               <Descriptions.Item label="Comisión total">
                 <Text style={{ color: "#52c41a" }}>
-                  {formatCurrency(sale?.totalCommission ?? 0)}
+                  {formatCurrency(totalCommission)}
                 </Text>
               </Descriptions.Item>
             )}

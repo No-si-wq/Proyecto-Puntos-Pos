@@ -192,7 +192,7 @@ export default function Sales() {
 
     const pointsToUse = loyaltyConfig.redeem.enabled ? sale.pointsUsed : 0;
 
-    if (paymentMethod === "CASH") {
+    if (paymentMethod === "CASH" && totalFinal > 0) {
       if (amountPaid === null || amountPaid === undefined || amountPaid < totalFinal) {
         message.error("El monto recibido es insuficiente");
         return;
@@ -380,192 +380,15 @@ export default function Sales() {
         size={sizes.button}
         block
         disabled={isSubmitDisabled}
-        onClick={() => setPaymentModalOpen(true)}
+        onClick={() => totalFinal === 0 ? submitSale() : setPaymentModalOpen(true)}
       >
         Confirmar venta
       </Button>
     </div>
   );
-
-  if (isMobile) {
-    return (
-      <>
-        <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "#fff" }}>
-          <PageHeader title="Ventas" subtitle="Punto de venta" />
-
-          <div style={{ padding: 16, borderBottom: "1px solid #f0f0f0", background: "#fff" }}>
-            <Select
-              ref={selectRef}
-              showSearch
-              allowClear
-              disabled={!warehouseId}
-              placeholder="Buscar producto"
-              size={sizes.select}
-              style={{ width: "100%" }}
-              value={selectedProductId}
-              onChange={setSelectedProductId}
-              onSelect={(id: number) => {
-                const product = products.find((p) => p.id === id);
-                if (product) cart.addProduct(product, undefined);
-                setSelectedProductId(null);
-                selectRef.current?.blur();
-              }}
-              filterOption={(input, option) => {
-                const label = option?.label as string;
-                return label?.toLowerCase().includes(input.toLowerCase());
-              }}
-              options={products
-                .filter((p) => p.active)
-                .map((p) => ({
-                  value: p.id,
-                  label: `${p.barcodes[0]?.code ?? ""} - ${p.name} - ${p.stock}`,
-                  disabled: p.stock <= 0,
-                }))}
-            />
-          </div>
-
-          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 16, background: "#fafafa" }}>
-            <SaleCartTable
-              items={cart.items}
-              onQuantityChange={cart.updateQuantity}
-              onRemove={cart.removeProduct}
-              onDiscountChange={cart.updateDiscount}
-              onPriceListChange={(productId, priceListId, resolvedPrice) => {
-                cart.updatePriceList(productId, priceListId);
-                cart.updatePrice(productId, resolvedPrice);
-              }}
-              priceLists={priceLists}
-              products={products}
-            />
-          </div>
-
-          <div
-            style={{
-              position: "sticky",
-              bottom: 0,
-              zIndex: 10,
-              background: "#fff",
-              borderTop: "1px solid #f0f0f0",
-              padding: "10px 16px calc(10px + env(safe-area-inset-bottom))",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              boxShadow: "0 -4px 12px rgba(0,0,0,0.05)",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 11, color: "#888" }}>Total</div>
-              <strong style={{ fontSize: 18 }}>
-                {formatCurrency(totalFinal)}
-              </strong>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button
-                icon={<ShoppingCartOutlined />}
-                onClick={() => setSummaryOpen(true)}
-                disabled={cart.items.length === 0}
-              >
-                Resumen
-              </Button>
-              <Button
-                type="primary"
-                loading={creating}
-                disabled={isSubmitDisabled}
-                onClick={() => setPaymentModalOpen(true)}
-              >
-                Confirmar
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <Drawer
-          title="Resumen de la venta"
-          placement="bottom"
-          height="auto"
-          open={summaryOpen}
-          onClose={() => setSummaryOpen(false)}
-          styles={{ body: { paddingBottom: 32 } }}
-        >
-          {summaryPanel}
-        </Drawer>
-      </>
-    );
-  }
-
-  return (
+  
+  const modals = (
     <>
-      <PageHeader title="Ventas" subtitle="Punto de venta" />
-
-      <Row gutter={sizes.gutter} align="top">
-        <Col span={tableSpan}>
-          <Card title="Productos" bodyStyle={{ padding: sizes.cardPadding }}>
-            <div style={{ marginBottom: 20 }}>
-              <Select
-                ref={selectRef}
-                showSearch
-                allowClear
-                autoClearSearchValue
-                disabled={!warehouseId}
-                placeholder="Buscar producto"
-                size={sizes.select}
-                listHeight={sizes.selectListHeight}
-                style={{ width: "100%", marginBottom: isTablet ? 20 : 16 }}
-                optionFilterProp="label"
-                defaultActiveFirstOption
-                value={selectedProductId}
-                onChange={setSelectedProductId}
-                onSelect={(id: number) => {
-                  const product = products.find((p) => p.id === id);
-                  if (product) cart.addProduct(product, undefined);
-                  setSelectedProductId(null);
-                  selectRef.current?.blur();
-                  setTimeout(() => selectRef.current?.focus(), 0);
-                }}
-                filterOption={(input, option) => {
-                  const label = option?.label as string;
-                  return label?.toLowerCase().includes(input.toLowerCase());
-                }}
-                options={products
-                  .filter((p) => p.active)
-                  .map((p) => ({
-                    value: p.id,
-                    label: `${p.sku} ${p.barcodes[0]?.code ?? ""} - ${p.name} - ${p.stock}`,
-                    disabled: p.stock <= 0,
-                  }))}
-              />
-            </div>
-
-            <SaleCartTable
-              items={cart.items}
-              onQuantityChange={cart.updateQuantity}
-              onRemove={cart.removeProduct}
-              onDiscountChange={cart.updateDiscount}
-              onPriceListChange={(productId, priceListId, resolvedPrice) => {
-                cart.updatePriceList(productId, priceListId);
-                cart.updatePrice(productId, resolvedPrice);
-              }}
-              priceLists={priceLists}
-              products={products}
-            />
-          </Card>
-        </Col>
-          {!isMobile && (
-            <Col span={summarySpan}>
-              <div style={{ position: "sticky", top: 0, display: "flex", flexDirection: "column", gap: sizes.gap }}>
-                <Card
-                  size="small"
-                  bodyStyle={{ padding: sizes.cardPadding }}
-                  style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
-                >
-                  {summaryPanel}
-                </Card>
-              </div>
-            </Col>
-          )}
-      </Row>
-
       <Modal
         title="Método de pago"
         open={paymentModalOpen}
@@ -658,7 +481,7 @@ export default function Sales() {
         onCancel={() => {
           setPrintModalOpen(false);
           setPendingPrintSale(null);
-          setSelectedTemplate(null);   // ← limpia al cancelar también
+          setSelectedTemplate(null);
         }}
         okText="Imprimir"
         cancelText="Omitir"
@@ -685,6 +508,189 @@ export default function Sales() {
             : "Se usará la plantilla por defecto."}
         </p>
       </Modal>
+    </>
+  )
+
+  if (isMobile) {
+    return (
+      <>
+        <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "#fff" }}>
+          <PageHeader title="Ventas" subtitle="Punto de venta" />
+
+          <div style={{ padding: 16, borderBottom: "1px solid #f0f0f0", background: "#fff" }}>
+            <Select
+              ref={selectRef}
+              showSearch
+              allowClear
+              disabled={!warehouseId}
+              placeholder="Buscar producto"
+              size={sizes.select}
+              style={{ width: "100%" }}
+              value={selectedProductId}
+              onChange={setSelectedProductId}
+              onSelect={(id: number) => {
+                const product = products.find((p) => p.id === id);
+                if (product) cart.addProduct(product, undefined);
+                setSelectedProductId(null);
+                selectRef.current?.blur();
+              }}
+              filterOption={(input, option) => {
+                const label = option?.label as string;
+                return label?.toLowerCase().includes(input.toLowerCase());
+              }}
+              options={products
+                .filter((p) => p.active)
+                .map((p) => ({
+                  value: p.id,
+                  label: `${p.barcodes[0]?.code ?? ""} - ${p.name} - ${p.stock}`,
+                  disabled: p.stock <= 0,
+                }))}
+            />
+          </div>
+
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 16, background: "#fafafa" }}>
+            <SaleCartTable
+              items={cart.items}
+              onQuantityChange={cart.updateQuantity}
+              onRemove={cart.removeProduct}
+              onDiscountChange={cart.updateDiscount}
+              onPriceListChange={(productId, priceListId, resolvedPrice) => {
+                cart.updatePriceList(productId, priceListId);
+                cart.updatePrice(productId, resolvedPrice);
+              }}
+              priceLists={priceLists}
+              products={products}
+            />
+          </div>
+
+          <div
+            style={{
+              position: "sticky",
+              bottom: 0,
+              zIndex: 10,
+              background: "#fff",
+              borderTop: "1px solid #f0f0f0",
+              padding: "10px 16px calc(10px + env(safe-area-inset-bottom))",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              boxShadow: "0 -4px 12px rgba(0,0,0,0.05)",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 11, color: "#888" }}>Total</div>
+              <strong style={{ fontSize: 18 }}>
+                {formatCurrency(totalFinal)}
+              </strong>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button
+                icon={<ShoppingCartOutlined />}
+                onClick={() => setSummaryOpen(true)}
+                disabled={cart.items.length === 0}
+              >
+                Resumen
+              </Button>
+              <Button
+                type="primary"
+                loading={creating}
+                disabled={isSubmitDisabled}
+                onClick={() => totalFinal === 0 ? submitSale() : setPaymentModalOpen(true)}
+              >
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <Drawer
+          title="Resumen de la venta"
+          placement="bottom"
+          height="auto"
+          open={summaryOpen}
+          onClose={() => setSummaryOpen(false)}
+          styles={{ body: { paddingBottom: 32 } }}
+        >
+          {summaryPanel}
+        </Drawer>
+        {modals}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <PageHeader title="Ventas" subtitle="Punto de venta" />
+
+      <Row gutter={sizes.gutter} align="top">
+        <Col span={tableSpan}>
+          <Card title="Productos" bodyStyle={{ padding: sizes.cardPadding }}>
+            <div style={{ marginBottom: 20 }}>
+              <Select
+                ref={selectRef}
+                showSearch
+                allowClear
+                autoClearSearchValue
+                disabled={!warehouseId}
+                placeholder="Buscar producto"
+                size={sizes.select}
+                listHeight={sizes.selectListHeight}
+                style={{ width: "100%", marginBottom: isTablet ? 20 : 16 }}
+                optionFilterProp="label"
+                defaultActiveFirstOption
+                value={selectedProductId}
+                onChange={setSelectedProductId}
+                onSelect={(id: number) => {
+                  const product = products.find((p) => p.id === id);
+                  if (product) cart.addProduct(product, undefined);
+                  setSelectedProductId(null);
+                  selectRef.current?.blur();
+                  setTimeout(() => selectRef.current?.focus(), 0);
+                }}
+                filterOption={(input, option) => {
+                  const label = option?.label as string;
+                  return label?.toLowerCase().includes(input.toLowerCase());
+                }}
+                options={products
+                  .filter((p) => p.active)
+                  .map((p) => ({
+                    value: p.id,
+                    label: `${p.sku} ${p.barcodes[0]?.code ?? ""} - ${p.name} - ${p.stock}`,
+                    disabled: p.stock <= 0,
+                  }))}
+              />
+            </div>
+
+            <SaleCartTable
+              items={cart.items}
+              onQuantityChange={cart.updateQuantity}
+              onRemove={cart.removeProduct}
+              onDiscountChange={cart.updateDiscount}
+              onPriceListChange={(productId, priceListId, resolvedPrice) => {
+                cart.updatePriceList(productId, priceListId);
+                cart.updatePrice(productId, resolvedPrice);
+              }}
+              priceLists={priceLists}
+              products={products}
+            />
+          </Card>
+        </Col>
+          {!isMobile && (
+            <Col span={summarySpan}>
+              <div style={{ position: "sticky", top: 0, display: "flex", flexDirection: "column", gap: sizes.gap }}>
+                <Card
+                  size="small"
+                  bodyStyle={{ padding: sizes.cardPadding }}
+                  style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+                >
+                  {summaryPanel}
+                </Card>
+              </div>
+            </Col>
+          )}
+      </Row>
+      {modals}
     </>
   );
 }
