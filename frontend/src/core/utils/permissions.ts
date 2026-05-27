@@ -17,10 +17,7 @@ export type PermissionModule =
   | "purchases"
   | "sales"
   | "suppliers"
-  | "purchasesreport"
   | "category"
-  | "purchasehistory"
-  | "salehistory"
   | "warehouse"
   | "dashboard_admin"
   | "accountsReceivable"
@@ -28,7 +25,6 @@ export type PermissionModule =
   | "reports"
   | "priceList"
   | "commission"
-  | "commissionReport"
   | "settings"
   | "remissions"
   | "quotations"
@@ -92,23 +88,11 @@ export const PERMISSIONS: Record<
     delete: [Role.ADMIN],
   },
 
-  purchasesreport: {
-    view: [Role.ADMIN, Role.USER]
-  },
-
   category: {
     view: [Role.ADMIN, Role.USER],
     create: [Role.ADMIN, Role.USER],
     edit: [Role.ADMIN],
     delete: [Role.ADMIN],
-  },
-
-  purchasehistory: {
-    view: [Role.ADMIN, Role.USER]
-  },
-
-  salehistory: {
-    view: [Role.ADMIN, Role.USER]
   },
 
   warehouse: {
@@ -138,14 +122,10 @@ export const PERMISSIONS: Record<
   },
 
   commission: {
-    view: [Role.ADMIN, Role.USER],
-    create: [Role.ADMIN, Role.USER],
+    view: [Role.ADMIN],
+    create: [Role.ADMIN],
     edit: [Role.ADMIN],
     delete: [Role.ADMIN],
-  },
-
-  commissionReport: {
-    view: [Role.ADMIN]
   },
 
   settings: {

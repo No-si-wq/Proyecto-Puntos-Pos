@@ -7,12 +7,15 @@ import { requireWarehouse } from "../../core/middlewares/warehouse.middleware";
 const router = Router();
 
 router.use(authMiddleware);
+
+router.get("/general-inventory", asyncHandler(controller.getGeneralInventoryReport));
+
 router.use(requireWarehouse);
 
 router.get("/purchase", asyncHandler(controller.getPurchaseLotsReport));
 router.get("/kardex", asyncHandler(controller.getKardex));
 router.get("/profit", asyncHandler(controller.getProfitReport));
 router.get('/sold-products', asyncHandler(controller.getSoldProductsReport));
-router.get("/product-outputs", controller.getProductOutputsReport);
+router.get("/product-outputs", asyncHandler(controller.getProductOutputsReport));
 
 export default router;

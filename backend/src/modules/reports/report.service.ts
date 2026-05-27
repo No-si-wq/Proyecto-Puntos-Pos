@@ -441,4 +441,56 @@ export class ReportService {
       movementCount: Number(r.movementCount),
     }));
   }
+
+  static async getGeneralInventoryReport(tenantId: number) {
+    const rows = await prisma.$queryRaw<{
+      productId: bigint;
+      sku: string;
+      name: string;
+      category: string;
+      cost: string;
+      reorderPoint: bigint;
+      stock: string;
+    }[]>`
+      SELECT
+        p.id                AS "productId",
+        p.sku,
+        p.name,
+        cat.name            AS category,
+        p.cost::numeric     AS cost,
+        p."reorderPoint",
+        COALESCE(SUM(
+          CASE
+            WHEN l.type = 'IN'  THEN  l.quantity
+            WHEN l.type = 'OUT' THEN -l.quantity
+            ELSE l.quantity
+          END
+        ), 0)               AS stock
+      FROM "Product"  p
+      INNER JOIN "Category" cat ON cat.id = p."categoryId"
+      LEFT JOIN "InventoryLedger" l
+        ON l."productId" = p.id AND l."tenantId" = ${tenantId}
+      WHERE p."tenantId" = ${tenantId}
+        AND p.active = true
+      GROUP BY p.id, p.sku, p.name, cat.name, p.cost, p."reorderPoint"
+      ORDER BY cat.name, p.name
+    `;
+
+    return rows.map((r) => {
+      const stock      = Number(r.stock);
+      const cost       = Number(r.cost);
+      const reorder    = Number(r.reorderPoint);
+      return {
+        productId:    Number(r.productId),
+        sku:          r.sku,
+        name:         r.name,
+        category:     r.category,
+        stock,
+        cost,
+        totalValue:   stock * cost,
+        reorderPoint: reorder,
+        belowReorder: stock <= reorder,
+      };
+    });
+  }  
 }

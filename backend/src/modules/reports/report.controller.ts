@@ -103,3 +103,9 @@ export const getProductOutputsReport = asyncHandler(async (req: Request, res: Re
 
   res.json(data);
 });
+
+export const getGeneralInventoryReport = asyncHandler(async (req: Request, res: Response) => {
+  const { tenantId } = req.user!;
+  const data = await ReportService.getGeneralInventoryReport(tenantId);
+  res.json(data);
+});

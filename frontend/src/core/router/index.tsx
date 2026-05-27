@@ -40,6 +40,7 @@ import RemissionDetail from "../../modules/remissions/pages/RemissionDetail";
 import Quotations from "../../modules/quotations/pages/Quotations";
 import QuotationDetail from "../../modules/quotations/pages/QuotationDetail";
 import ProductOutputsReport from "../../modules/reports/ProductOutputsReport";
+import GeneralInventoryReport from "../../modules/reports/GeneralInventoryReport";
 
 import Unauthorized from "../../modules/Unauthorized";
 
@@ -87,7 +88,7 @@ export default function AppRouter() {
           <Route 
             path="/commissionReports"
             element={
-              <ProtectedRoute module="commissionReport">
+              <ProtectedRoute module="reports">
                 <CommissionReport />
               </ProtectedRoute>
             }
@@ -161,7 +162,7 @@ export default function AppRouter() {
           <Route
             path="/inventory/transfers/report"
             element={
-              <ProtectedRoute module="inventory">
+              <ProtectedRoute module="reports">
                 <TransferReport />
               </ProtectedRoute>
             }
@@ -179,7 +180,7 @@ export default function AppRouter() {
           <Route
             path= "/purchases/history"
             element={
-              <ProtectedRoute module="purchasehistory">
+              <ProtectedRoute module="purchases">
                 <PurchaseHistory />
               </ProtectedRoute>
             }
@@ -190,7 +191,7 @@ export default function AppRouter() {
           <Route
             path="/purchases-report"
             element={
-              <ProtectedRoute module="purchasesreport">
+              <ProtectedRoute module="reports">
                 <PurchaseLotsReportPage />
               </ProtectedRoute>
             }
@@ -208,7 +209,7 @@ export default function AppRouter() {
           <Route 
             path="/sales/history"
             element={
-              <ProtectedRoute  module="salehistory">
+              <ProtectedRoute  module="sales">
                 <SaleHistory />
               </ProtectedRoute>
             }
@@ -275,6 +276,15 @@ export default function AppRouter() {
             element={
               <ProtectedRoute module="reports">
                 <ReportDesigner />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/reports/general-inventory"
+            element={
+              <ProtectedRoute module="reports">
+                <GeneralInventoryReport />
               </ProtectedRoute>
             }
           />

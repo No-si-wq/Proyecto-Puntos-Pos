@@ -81,3 +81,15 @@ export interface ProductOutputRow {
   totalValue:    number;
   movementCount: number;
 }
+
+export interface GeneralInventoryRow {
+  productId:    number;
+  sku:          string;
+  name:         string;
+  category:     string;
+  stock:        number;
+  cost:         number;
+  totalValue:   number;
+  reorderPoint: number;
+  belowReorder: boolean;
+}

@@ -9,6 +9,7 @@ import type {
   PurchaseLotReportItem,
   SoldProductRow,
   ProductOutputRow,
+  GeneralInventoryRow,
 } from "./report";
 
 export function useReports() {
@@ -18,6 +19,7 @@ export function useReports() {
   const [loading, setLoading] = useState(false);
   const [soldProducts, setSoldProducts] = useState<SoldProductRow[]>([]);
   const [productOutputs, setProductOutputs] = useState<ProductOutputRow[]>([]);
+  const [generalInventory, setGeneralInventory] = useState<GeneralInventoryRow[]>([]);
 
   const fetchPurchaseLots = useCallback(
     async (filters?: { product?: string }) => {
@@ -177,20 +179,32 @@ export function useReports() {
     [warehouseId]
   );
 
+  const fetchGeneralInventory = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await http.get<GeneralInventoryRow[]>("/reports/general-inventory");
+      setGeneralInventory(data);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     purchaseLots,
     loading,
     soldProducts,
+    generalInventory,
+    productOutputs,
 
     fetchPurchaseLots,
     fetchKardex,
     fetchProfit,
     fetchSoldProducts,
+    fetchGeneralInventory,
+    fetchProductOutputs,
 
     clearSoldProducts: () => setSoldProducts([]),
     clearProductOutputs: () => setProductOutputs([]),
-
-    productOutputs,
-    fetchProductOutputs,
+    clearGeneralInventory: () => setGeneralInventory([]),
   };
 }
