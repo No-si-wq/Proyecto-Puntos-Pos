@@ -6,7 +6,9 @@ export type PermissionAction =
   | "edit"
   | "delete"
   | "export"
-  | "manage";
+  | "manage"
+  | "cancel"
+  | "devolution";
 
 export type PermissionModule =
   | "dashboard"
@@ -77,7 +79,8 @@ export const PERMISSIONS: Record<
   sales: {
     view: [Role.ADMIN, Role.USER, Role.SELLER],
     create: [Role.ADMIN, Role.USER, Role.SELLER],
-    delete: [Role.ADMIN],
+    cancel: [Role.ADMIN],
+    devolution: [Role.ADMIN],
     export: [Role.ADMIN],
   },
 

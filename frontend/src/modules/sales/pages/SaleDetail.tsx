@@ -23,6 +23,9 @@ import SimpleTable from "../../../core/components/table/SimpleTable";
 import { RollbackOutlined } from "@ant-design/icons";
 import ReturnItemsModal from "../components/ReturnItemsModal";
 import type { ReturnItemInput } from "../types/sale";
+import { getAllowedRoles } from "../../../core/utils/permissions";
+import { usePermissions } from "../../../core/hooks/usePermissions";
+import ProtectedButton from "../../../core/components/common/ProtectedButton";
 
 const { Text } = Typography;
 
@@ -105,6 +108,7 @@ export default function SaleDetail() {
   const navigate   = useNavigate();
   const { getSaleById, cancel, canceling, loadingDetail,returnItems, returning } = useSales();
   const { isMobile } = useDeviceType();
+  const { canAccess } = usePermissions();
 
   const [sale, setSale]       = useState<Sale | null>(null);
   const [returnModalOpen, setReturnModalOpen] = useState(false);
@@ -141,7 +145,7 @@ export default function SaleDetail() {
     await returnItems(sale.id, { items, reason });
     message.success("Devolución registrada correctamente");
     setReturnModalOpen(false);
-    await load(); // refrescar la venta
+    await load();
   }
 
   async function handlePrint(templateId?: number) {
@@ -275,7 +279,7 @@ export default function SaleDetail() {
       icon: <FilePdfOutlined />,
       children: buildTemplateMenuItems("pdf") ?? [],
     },
-    ...(isCompleted
+    ...(isCompleted && canAccess(...getAllowedRoles("sales", "devolution"))
       ? [
           {
             key: "return",
@@ -283,6 +287,10 @@ export default function SaleDetail() {
             icon: <RollbackOutlined />,
             onClick: () => setReturnModalOpen(true),
           },
+        ]
+      : []),
+    ...(isCompleted && canAccess(...getAllowedRoles("sales", "cancel"))
+      ? [
           { type: "divider" as const },
           {
             key: "cancel",
@@ -334,21 +342,23 @@ export default function SaleDetail() {
       </Dropdown>
         {!isCancelled && (
           <>
-            <Button
+            <ProtectedButton
+              roles={getAllowedRoles("sales", "devolution")}
               icon={<RollbackOutlined />}
               onClick={() => setReturnModalOpen(true)}
               loading={returning}
             >
               Devolución
-            </Button>
-            <Button
+            </ProtectedButton>
+            <ProtectedButton
+              roles={getAllowedRoles("sales", "cancel")}
               danger
               icon={<CloseCircleOutlined />}
               onClick={handleCancel}
               loading={canceling}
             >
               Cancelar venta
-            </Button>
+            </ProtectedButton>
           </>
         )}
     </Space>
