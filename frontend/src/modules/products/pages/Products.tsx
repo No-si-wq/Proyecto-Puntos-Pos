@@ -330,10 +330,10 @@ export default function Products() {
         <>
           <ProtectedButton roles={getAllowedRoles("products", "edit")} onClick={() => openEdit(record)}>Editar</ProtectedButton>
           <Tooltip title="Listas de precios">
-            <ProtectedButton roles={getAllowedRoles("products", "edit")} icon={<TagsOutlined />} onClick={() => openPrices(record)}>Precios</ProtectedButton>
+            <ProtectedButton roles={getAllowedRoles("products", "manage")} icon={<TagsOutlined />} onClick={() => openPrices(record)}>Precios</ProtectedButton>
           </Tooltip>
           <Tooltip title="Punto de reorden">
-            <ProtectedButton roles={getAllowedRoles("products", "edit")} icon={<ReloadOutlined />} onClick={() => openReorder(record)}>Reorden</ProtectedButton>
+            <ProtectedButton roles={getAllowedRoles("products", "manage")} icon={<ReloadOutlined />} onClick={() => openReorder(record)}>Reorden</ProtectedButton>
           </Tooltip>
           <ProtectedButton roles={getAllowedRoles("products", "delete")} danger onClick={() => confirmToggle(record)}>
             {record.active ? "Desactivar" : "Activar"}

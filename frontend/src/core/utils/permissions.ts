@@ -62,6 +62,7 @@ export const PERMISSIONS: Record<
     view: [Role.ADMIN, Role.USER],
     create: [Role.ADMIN, Role.USER],
     edit: [Role.ADMIN],
+    manage: [Role.ADMIN],
     delete: [Role.ADMIN],
   },
 
