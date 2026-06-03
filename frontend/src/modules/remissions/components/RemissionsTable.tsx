@@ -47,10 +47,10 @@ export function RemissionsTable({ data, loading, onCancel, onDeliver }: Props) {
 
             {/* Detalles */}
             <div style={{ fontSize: 12, color: '#555', display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 10 }}>
-              <span>🏭 {record.warehouse?.name ?? '—'}</span>
-              <span>👤 {record.customerName ?? 'Sin cliente'}</span>
-              <span>📦 {record._count?.items ?? '—'} producto(s)</span>
-              <span>📅 {new Date(record.createdAt).toLocaleDateString('es-HN')}</span>
+              <span>{record.warehouse?.name ?? '—'}</span>
+              <span>{record.customerName ?? 'Sin cliente'}</span>
+              <span>{record._count?.items ?? '—'} producto(s)</span>
+              <span>{new Date(record.createdAt).toLocaleDateString('es-HN')}</span>
             </div>
 
             {/* Acciones */}

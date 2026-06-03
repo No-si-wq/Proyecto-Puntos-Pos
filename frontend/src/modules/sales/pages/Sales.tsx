@@ -211,6 +211,7 @@ export default function Sales() {
           discountType: i.discountType,
           discountValue: i.discountValue,
           priceListId: i.priceListId,
+          observations: i.observations || undefined,
         })),
         paymentMethod,
         dueDate,
@@ -554,6 +555,8 @@ export default function Sales() {
               onQuantityChange={cart.updateQuantity}
               onRemove={cart.removeProduct}
               onDiscountChange={cart.updateDiscount}
+              onObservationsChange={cart.updateObservations}
+              onPriceChange={(productId, price) => cart.updatePrice(productId, price)}
               onPriceListChange={(productId, priceListId, resolvedPrice) => {
                 cart.updatePriceList(productId, priceListId);
                 cart.updatePrice(productId, resolvedPrice);
@@ -667,10 +670,12 @@ export default function Sales() {
               onQuantityChange={cart.updateQuantity}
               onRemove={cart.removeProduct}
               onDiscountChange={cart.updateDiscount}
+              onObservationsChange={cart.updateObservations}
               onPriceListChange={(productId, priceListId, resolvedPrice) => {
                 cart.updatePriceList(productId, priceListId);
                 cart.updatePrice(productId, resolvedPrice);
               }}
+              onPriceChange={(productId, price) => cart.updatePrice(productId, price)}
               priceLists={priceLists}
               products={products}
             />

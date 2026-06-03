@@ -35,6 +35,7 @@ export interface SaleItems {
   commissionAmount?: number;
   returnedQuantity?: number;
   refundedAmount?: number;
+  observations?: string | null;
 }
 
 export interface CreateSaleDTO {

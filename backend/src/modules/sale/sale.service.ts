@@ -49,6 +49,7 @@ export class SaleService {
             lineTotal: true,
             commissionPercent: true,
             commissionAmount: true,
+            observations: true,
             product: { select: { id: true, name: true, sku: true } },
             lots: { select: { purchaseItemId: true, quantity: true } },
             returnItems: { select: { quantity: true, refundAmount: true } },
@@ -191,6 +192,7 @@ export class SaleService {
         commissionAmount: Prisma.Decimal | null;
         taxAmount: Prisma.Decimal;
         lineTotal: Prisma.Decimal;
+        observations: string | null;
       }[] = [];
  
       for (const item of data.items) {
@@ -268,6 +270,7 @@ export class SaleService {
           commissionAmount,
           taxAmount,
           lineTotal,
+          observations: item.observations ?? null,
         });
       }
  
@@ -380,6 +383,7 @@ export class SaleService {
               lineSubtotal: item.lineSubtotal,
               commissionPercent: item.commissionPercent,
               commissionAmount: item.commissionAmount,
+              observations: item.observations,
             },
           })
         )

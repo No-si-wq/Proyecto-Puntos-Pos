@@ -4,6 +4,7 @@ export interface SaleItemInput {
   priceListId?: number;
   discountType?: "NONE" | "PERCENTAGE" | "FIXED"
   discountValue?: number
+  observations?: string | null;
 }
 
 interface BaseSaleInput {

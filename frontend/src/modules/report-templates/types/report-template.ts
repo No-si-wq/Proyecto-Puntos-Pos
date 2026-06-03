@@ -58,7 +58,13 @@ export interface ReportTemplateConfig {
   header: ReportHeader;
   pageSize?: PageSize;
   customPageWidth?: number;   
-  customPageHeight?: number;  
+  customPageHeight?: number;
+  headerHeight?: number;
+  logoBase64?: string;
+  logoX?: number;
+  logoY?: number;
+  logoWidth?: number;
+  logoHeight?: number;  
   documentType?: 'sale' | 'quotation';
   groupBy?: "seller" | "customer" | "paymentMethod" | "date" | "product" | "";
   totals: {

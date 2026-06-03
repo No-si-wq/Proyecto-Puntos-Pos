@@ -71,6 +71,13 @@ function SaleItemMobileCard({ item }: { item: SaleItems }) {
           value={formatCurrency(item.lineTotal)}
           highlight
         />
+        {item.observations && (
+          <div style={{ gridColumn: "1 / -1", marginTop: 4 }}>
+            <Text type="secondary" style={{ fontSize: 11 }}>OBS.</Text>
+            <br />
+            <Text style={{ fontSize: 13 }}>{item.observations}</Text>
+          </div>
+        )}
       </div>
     </Card>
   );
@@ -366,6 +373,12 @@ export default function SaleDetail() {
 
   const columns: ColumnsType<SaleItems> = [
     { title: "Producto", dataIndex: ["product", "name"] },
+    {
+      title: "Obs.",
+      dataIndex: "observations",
+      render: (v: string | null) =>
+        v ? <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text> : null,
+    },
     {
       title: "Cant.",
       dataIndex: "quantity",

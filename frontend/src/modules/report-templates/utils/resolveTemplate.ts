@@ -40,7 +40,7 @@ export function resolveSaleTokens(sale: Sale): Record<string, string> {
     "[Descuento]":  "",
     "[Importe]":    "",
     "[Impuesto]":   "",
-    "[Totales]":      "",   
+    "[Totales]":      "",
     "[Comision]":   "",
   };
 }
@@ -146,9 +146,9 @@ export function buildSaleHtml(
   const detailPadPx  = Math.max(1, Math.round(3 * scale));
 
   const colStyle = (col: DetailColumn): string => {
-    const colFontPx = col.fontSize            // 👈 si la columna tiene fontSize propio
+    const colFontPx = col.fontSize           
       ? Math.max(6, Math.round(col.fontSize * scale))
-      : detailFontPx;                          // si no, usa el tamaño global del detalle
+      : detailFontPx;                         
 
     const pad = `padding:${detailPadPx}px;overflow:hidden;font-size:${colFontPx}px;white-space:nowrap;`;
     
@@ -196,6 +196,10 @@ export function buildSaleHtml(
   const headerEls = bySection("header").map(el => renderEl(el, globalTokens)).join("");
   const totalsEls = bySection("totals").map(el => renderEl(el, globalTokens)).join("");
   const footerEls = bySection("footer").map(el => renderEl(el, globalTokens)).join("");
+  const headerH = config.headerHeight ?? 130;
+  const logoHtml = config.logoBase64
+  ? `<img src="${config.logoBase64}" style="position:absolute;left:${Math.round((config.logoX ?? 8) * scale)}px;top:${Math.round((config.logoY ?? 8) * scale)}px;width:${Math.round((config.logoWidth ?? 80) * scale)}px;height:${Math.round((config.logoHeight ?? 60) * scale)}px;object-fit:contain;z-index:10;" />`
+  : "";
 
   return `
     <!DOCTYPE html>
@@ -208,7 +212,7 @@ export function buildSaleHtml(
         body { font-family: Arial, sans-serif; font-size: 11px; color: #222; }
         .doc { ${docWidth} margin: 0 auto; padding: 0; }
         .section { position: relative; width: 100%; }
-        .section-header { min-height: ${Math.round(130 * scale)}px; border-bottom: 1px solid #ccc; overflow:hidden; }
+        .section-header { min-height: ${Math.round(headerH * scale)}px; border-bottom: 1px solid #ccc; overflow:hidden; }
         .section-detail-header {
           display: flex; width:100%; background: #f5f5f5;
           border-bottom: 1px solid #ccc; border-top: 1px solid #ccc;
@@ -233,7 +237,8 @@ export function buildSaleHtml(
     <body>
       <div class="doc">
         <!-- Encabezado -->
-        <div class="section section-header" style="min-height:${Math.round(130 * scale)}px;">
+        <div class="section section-header" style="min-height:${Math.round(headerH * scale)}px;">
+          ${logoHtml}
           ${headerEls}
           ${sale.status === "CANCELLED" ? '<div class="cancelled-stamp">CANCELADA</div>' : ""}
         </div>

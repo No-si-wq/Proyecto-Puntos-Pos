@@ -5,7 +5,7 @@ import {
 } from "antd";
 import {
   SaveOutlined, FolderOpenOutlined, CopyOutlined, DeleteOutlined,
-  StarFilled, BoldOutlined, ItalicOutlined, UnderlineOutlined,
+  StarFilled, StarOutlined, BoldOutlined, ItalicOutlined, UnderlineOutlined,
   AlignLeftOutlined, AlignCenterOutlined, AlignRightOutlined,
   ZoomInOutlined, ZoomOutOutlined, EyeOutlined, FontSizeOutlined,
 } from "@ant-design/icons";
@@ -221,6 +221,14 @@ export default function ReportDesigner() {
   const dragColRef = useRef<string | null>(null);
   const [editingColId, setEditingColId] = useState<string | null>(null);
   const [pageSize,       setPageSize]       = useState<PageSize>("ticket");
+  const [headerHeight, setHeaderHeight] = useState<number>(130);
+  const [logo,       setLogo]       = useState<string | null>(null);
+  const [logoX,      setLogoX]      = useState(8);
+  const [logoY,      setLogoY]      = useState(8);
+  const [logoWidth,  setLogoWidth]  = useState(80);
+  const [logoHeight, setLogoHeight] = useState(60);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const draggingLogoRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [documentType,   setDocumentType]   = useState<'sale' | 'quotation'>('sale');
 
   const [saveModalOpen,  setSaveModalOpen]  = useState(false);
@@ -250,10 +258,16 @@ export default function ReportDesigner() {
     setElements((t.config.elements?.length ? t.config.elements : DEFAULT_ELEMENTS) as CanvasElement[]);
     setDetailColumns(t.config.detailColumns?.length ? t.config.detailColumns : DEFAULT_DETAIL_COLUMNS);
     setPageSize(t.config.pageSize ?? "ticket");
+    setHeaderHeight(t.config.headerHeight ?? 130);
     setDocumentType((t.config as any).documentType ?? "sale");
     setIsDirty(false);
     setSelectedId(null);
     setSelectedColId(null);
+    setLogo(t.config.logoBase64 ?? null);
+    setLogoX(t.config.logoX ?? 8);
+    setLogoY(t.config.logoY ?? 8);
+    setLogoWidth(t.config.logoWidth ?? 80);
+    setLogoHeight(t.config.logoHeight ?? 60);
     if (showMessage) message.success(`Plantilla "${t.name}" cargada`);
   }
 
@@ -261,7 +275,11 @@ export default function ReportDesigner() {
 
   function buildConfig(): ReportTemplateConfig {
     const base = currentTemplate?.config ?? DEFAULT_CONFIG;
-    return { ...base, elements, detailColumns, pageSize, documentType };
+    return { 
+      ...base, elements, detailColumns, pageSize, documentType, headerHeight, 
+      logoBase64: logo ?? undefined,
+      logoX, logoY, logoWidth, logoHeight,
+    };
   }
 
   const onFieldDragStart = useCallback((token: string, label: string) => {
@@ -285,6 +303,27 @@ export default function ReportDesigner() {
     setElements(prev => [...prev, newEl]);
     setSelectedId(newEl.id);
     markDirty();
+  }
+
+  function onLogoMouseDown(e: React.MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedId(null);
+    draggingLogoRef.current = { startX: e.clientX, startY: e.clientY, origX: logoX, origY: logoY };
+    const onMove = (ev: MouseEvent) => {
+      const d = draggingLogoRef.current;
+      if (!d) return;
+      setLogoX(Math.max(0, d.origX + Math.round((ev.clientX - d.startX) / zoom)));
+      setLogoY(Math.max(0, d.origY + Math.round((ev.clientY - d.startY) / zoom)));
+      markDirty();
+    };
+    const onUp = () => {
+      draggingLogoRef.current = null;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   }
 
   function onElMouseDown(e: React.MouseEvent, id: string) {
@@ -420,6 +459,14 @@ export default function ReportDesigner() {
         message.success(`Plantilla "${name}" eliminada`);
       },
     });
+  }
+
+  async function handleSetDefault(id: number) {
+    await update(id, { isDefault: true });
+    message.success("Plantilla marcada como predeterminada");
+    if (currentTemplate?.id === id) {
+      setCurrentTemplate(prev => prev ? { ...prev, isDefault: true } : prev);
+    }
   }
 
   async function handleDuplicate(values: { name: string }) {
@@ -589,6 +636,61 @@ export default function ReportDesigner() {
           ]}
         />
 
+        <div style={{ width: 1, height: 20, background: "#c0bbb0", margin: "0 2px" }} />
+        <span style={{ fontSize: 11, color: "#666" }}>Alto encabezado:</span>
+        <Input
+          size="small"
+          type="number"
+          style={{ width: 75 }}
+          value={headerHeight}
+          min={80}
+          max={600}
+          onChange={e => { setHeaderHeight(Number(e.target.value) || 130); markDirty(); }}
+          suffix="px"
+        />
+
+        <div style={{ width: 1, height: 20, background: "#c0bbb0", margin: "0 2px" }} />
+
+        <input
+          ref={logoInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={e => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+              setLogo(ev.target?.result as string);
+              markDirty();
+            };
+            reader.readAsDataURL(file);
+            e.target.value = "";
+          }}
+        />
+
+        <Button size="small" onClick={() => logoInputRef.current?.click()}>
+          {logo ? "Cambiar logo" : "+ Logo"}
+        </Button>
+
+        {logo && (
+          <>
+            <Input
+              size="small" type="number" style={{ width: 75 }}
+              value={logoWidth} min={20} max={400}
+              onChange={e => { setLogoWidth(Number(e.target.value) || 80); markDirty(); }}
+              suffix="w"
+            />
+            <Input
+              size="small" type="number" style={{ width: 58 }}
+              value={logoHeight} min={10} max={300}
+              onChange={e => { setLogoHeight(Number(e.target.value) || 60); markDirty(); }}
+              suffix="h"
+            />
+            <Button size="small" danger onClick={() => { setLogo(null); markDirty(); }}>✕</Button>
+          </>
+        )}
+
         <div style={{ flex: 1 }} />
 
         {isDirty && <Tag color="warning" style={{ margin: 0 }}>● Sin guardar</Tag>}
@@ -660,7 +762,7 @@ export default function ReportDesigner() {
                   const isActive = activeSection === sec.id;
                   return (
                     <div key={sec.id} style={{
-                      position: "relative", minHeight: sec.minHeight,
+                      position: "relative", minHeight: sec.id === "header" ? headerHeight : sec.minHeight,
                       background: isActive ? sec.bgColor : "#f7f7f5",
                       borderBottom: "2px dashed #d0c8b8",
                       opacity: isActive ? 1 : 0.45, transition: "opacity .2s",
@@ -674,6 +776,24 @@ export default function ReportDesigner() {
                       </div>
 
                       {sec.id !== "detail" && secEls.map(renderEl)}
+
+                      {sec.id === "header" && logo && (
+                        <img
+                          src={logo}
+                          alt="Logo"
+                          onMouseDown={onLogoMouseDown}
+                          style={{
+                            position: "absolute",
+                            left: logoX, top: logoY,
+                            width: logoWidth, height: logoHeight,
+                            objectFit: "contain",
+                            cursor: "move",
+                            userSelect: "none",
+                            border: activeSection === "header" ? "1px dashed #1677ff" : "none",
+                            zIndex: 10,
+                          }}
+                        />
+                      )}
 
                       {sec.id === "detail" && (
                         <div style={{ userSelect: "none" }}>
@@ -991,6 +1111,15 @@ export default function ReportDesigner() {
                     </Tooltip>
                     <Tooltip title="Eliminar">
                       <Button size="small" type="text" danger icon={<DeleteOutlined />} loading={deleting} onClick={() => handleDelete(t.id, t.name)} />
+                    </Tooltip>
+                    <Tooltip title={t.isDefault ? "Ya es predeterminada" : "Marcar como predeterminada"}>
+                      <Button
+                        size="small" type="text"
+                        icon={t.isDefault ? <StarFilled style={{ color: "#faad14" }} /> : <StarOutlined />}
+                        disabled={t.isDefault}
+                        loading={saving}
+                        onClick={() => handleSetDefault(t.id)}
+                      />
                     </Tooltip>
                   </div>
                 </div>

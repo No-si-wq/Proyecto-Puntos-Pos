@@ -21,6 +21,8 @@ export interface SaleCartItem {
   taxAmount: number;      
   lineTotal: number;      
   priceMode: PriceMode;
+
+  observations: string;
 }
 
 interface SaleCartState {
@@ -38,6 +40,7 @@ interface SaleCartState {
   clear: () => void;
   setCommissionPercent: (percent: number | undefined) => void;
   setPriceMode: (mode: PriceMode) => void;
+  updateObservations: (productId: number, observations: string) => void;
   setAmountPaid: (amount: number | null) => void;
 
   grossSubtotal: () => number;  
@@ -119,6 +122,7 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
             priceListId: undefined,
             discountType: "NONE",
             discountValue: 0,
+            observations: "",
           }, get().priceMode),
         ],
       };
@@ -168,6 +172,13 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
       priceMode: mode,
       items: state.items.map((i) => calculateItem(i, mode)),
     })),
+
+    updateObservations: (productId, observations) =>
+      set((s) => ({
+        items: s.items.map((i) =>
+          i.productId === productId ? { ...i, observations } : i
+        ),
+      })),
 
   amountPaid: null,
   setAmountPaid: (amount) => set({ amountPaid: amount }),

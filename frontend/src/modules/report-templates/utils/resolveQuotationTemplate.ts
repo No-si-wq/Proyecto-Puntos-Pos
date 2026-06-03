@@ -114,7 +114,11 @@ export function resolveQuotationTemplate(
     ? (config.customPageWidth ?? 560)
     : PAGE_WIDTHS[pgSize] ?? 560;
 
-  function renderSection(sectionId: string, minH: number, bg: string) {
+  const logoHtml = config.logoBase64
+    ? `<img src="${config.logoBase64}" style="position:absolute;left:${config.logoX ?? 8}px;top:${config.logoY ?? 8}px;width:${config.logoWidth ?? 80}px;height:${config.logoHeight ?? 60}px;object-fit:contain;z-index:10;" />`
+    : "";
+
+  function renderSection(sectionId: string, minH: number, bg: string, extraHtml = "") {
     const els = config.elements.filter(e => e.section === sectionId);
     const h   = Math.max(minH, ...els.map(e => e.y + (e.fontSize ?? 11) + 8), minH);
     const inner = els.map(el => {
@@ -126,7 +130,7 @@ export function resolveQuotationTemplate(
       if (!raw) return "";
       return `<span style="position:absolute;left:${el.x}px;top:${el.y}px;font-size:${el.fontSize ?? 11}px;font-weight:${el.fontWeight ?? "normal"};text-align:${el.align ?? "left"};">${raw}</span>`;
     }).join("");
-    return `<div style="position:relative;width:${DOC_W}px;min-height:${h}px;background:${bg};border-bottom:1px solid #e5e7eb;overflow:hidden;">${inner}</div>`;
+    return `<div style="position:relative;width:${DOC_W}px;min-height:${h}px;background:${bg};border-bottom:1px solid #e5e7eb;overflow:hidden;">${extraHtml}${inner}</div>`;
   }
 
   // ── Tabla de partidas ──────────────────────────────────────────────────
@@ -134,6 +138,7 @@ export function resolveQuotationTemplate(
   const fixedW  = cols.filter(c => c.width > 0).reduce((a, c) => a + c.width, 0);
   const flexW   = Math.max(60, DOC_W - fixedW - 16);
   const colW    = (c: DetailColumn) => c.width === 0 ? flexW : c.width;
+  const headerH = config.headerHeight ?? 130;
 
   const thead = cols.map(c =>
     `<th style="width:${colW(c)}px;text-align:${c.align};padding:2px 4px;font-size:${c.fontSize ?? 9}px;border-bottom:1px solid #666;">${c.header}</th>`
@@ -155,7 +160,7 @@ export function resolveQuotationTemplate(
     : "";
 
   const body = [
-    renderSection("header", 130, "#fffef9"),
+    renderSection("header", headerH, "#fffef9", logoHtml),
     detailHtml,
     renderSection("totals", 100, "#fffef9"),
     renderSection("footer",  50, "#ffffff"),

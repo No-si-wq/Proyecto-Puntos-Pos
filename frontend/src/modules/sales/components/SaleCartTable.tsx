@@ -1,10 +1,11 @@
-import { InputNumber, Select } from "antd";
+import { InputNumber, Select, Input } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 import { formatCurrency } from "../../../core/utils/formatters";
 import type { SaleCartItem } from "../types/saleCart.store";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
 import type { PriceList } from "../../priceLists/types/pricelist";
 import type { Product } from "../../products/types/product";
+import { usePermissions } from "../../../core/hooks/usePermissions";
 
 interface Props {
   items: SaleCartItem[];
@@ -20,6 +21,8 @@ interface Props {
     priceListId: number | undefined,
     resolvedPrice: number
   ) => void;
+  onObservationsChange: (productId: number, value: string) => void;
+  onPriceChange: (productId: number, price: number) => void;
   priceLists: PriceList[];
   products: Product[];
 }
@@ -30,10 +33,13 @@ export function SaleCartTable({
   onRemove,
   onDiscountChange,
   onPriceListChange,
+  onObservationsChange,
+  onPriceChange,
   priceLists,
   products,
 }: Props) {
   const { isMobile } = useDeviceType();
+  const { isAdmin } = usePermissions();
 
   function getAvailableOptions(productId: number) {
     const product = products.find((p) => p.id === productId);
@@ -98,7 +104,19 @@ export function SaleCartTable({
                   </div>
                   <div style={{ flex: 1 }}>
                     <span style={mobileLabelStyle}>Precio unit.</span>
-                    <div style={{ paddingTop: 5, fontWeight: 500, fontSize: 14 }}>{formatCurrency(i.price)}</div>
+                    {isAdmin ? (
+                      <InputNumber
+                        min={0}
+                        size="small"
+                        style={{ width: "100%" }}
+                        value={i.price}
+                        formatter={(v) => `L ${v}`}
+                        parser={(v) => Number(v?.replace(/L\s?/, "") ?? "0")}
+                        onChange={(v) => onPriceChange(i.productId, Number(v ?? 0))}
+                      />
+                    ) : (
+                      <div style={{ paddingTop: 5, fontWeight: 500, fontSize: 14 }}>{formatCurrency(i.price)}</div>
+                    )}
                   </div>
                 </div>
                 <div style={{ marginBottom: 8 }}>
@@ -112,6 +130,16 @@ export function SaleCartTable({
                       disabled={i.discountType === "NONE"}
                       onChange={(v) => onDiscountChange(i.productId, i.discountType, Number(v ?? 0))} />
                   </div>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <span style={mobileLabelStyle}>Observaciones</span>
+                  <Input
+                    size="small"
+                    maxLength={500}
+                    placeholder="Nota del ítem (opcional)"
+                    value={i.observations}
+                    onChange={(e) => onObservationsChange(i.productId, e.target.value)}
+                  />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderTop: "1px solid #f0f0f0", paddingTop: 10, marginTop: 8 }}>
                   <div style={{ fontSize: 12, color: "#888" }}>
@@ -155,6 +183,7 @@ export function SaleCartTable({
           <col style={{ width: 112 }} />
           <col style={{ width: 185 }} />
           <col style={{ width: 106 }} />
+          <col style={{ width: 160 }} />
           <col style={{ width: 38 }} />
         </colgroup>
 
@@ -233,9 +262,21 @@ export function SaleCartTable({
                 </td>
 
                 <td style={td({ textAlign: "right" })}>
-                  <div style={{ fontWeight: 500, fontSize: 13, color: "#1a1a1a", fontVariantNumeric: "tabular-nums" }}>
-                    {formatCurrency(i.price)}
-                  </div>
+                  {isAdmin ? (
+                    <InputNumber
+                      min={0}
+                      size="small"
+                      style={{ width: "100%" }}
+                      value={i.price}
+                      formatter={(v) => `L ${v}`}
+                      parser={(v) => Number(v?.replace(/L\s?/, "") ?? "0")}
+                      onChange={(v) => onPriceChange(i.productId, Number(v ?? 0))}
+                    />
+                  ) : (
+                    <div style={{ fontWeight: 500, fontSize: 13, color: "#1a1a1a", fontVariantNumeric: "tabular-nums" }}>
+                      {formatCurrency(i.price)}
+                    </div>
+                  )}
                   {i.tax > 0 && (
                     <div style={{ marginTop: 3, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 3 }}>
                       <span style={taxBadgeStyle}>{taxPercent}%</span>
@@ -280,6 +321,16 @@ export function SaleCartTable({
                   <strong style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a", fontVariantNumeric: "tabular-nums" }}>
                     {formatCurrency(i.lineTotal)}
                   </strong>
+                </td>
+
+                <td style={td()}>
+                  <Input
+                    size="small"
+                    maxLength={500}
+                    placeholder="Nota…"
+                    value={i.observations}
+                    onChange={(e) => onObservationsChange(i.productId, e.target.value)}
+                  />
                 </td>
 
                 <td style={td({ textAlign: "center" })}>

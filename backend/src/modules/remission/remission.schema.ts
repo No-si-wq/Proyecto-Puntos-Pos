@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const createRemissionSchema = z.object({
   body: z.object({
     warehouseId: z.number().int().positive(),
-    customerId: z.number().int().positive().optional(),
+    customerName: z.string().optional(),
     note: z.string().optional(),
     items: z
       .array(

@@ -20,6 +20,7 @@ export const createSaleSchema = z.object({
           priceListId:   z.number().int().positive().optional(),
           discountType:  z.enum(["NONE", "PERCENTAGE", "FIXED"]).optional(),
           discountValue: z.number().nonnegative().optional(),
+          observations: z.string().max(500).optional(),
         })
       )
       .min(1),
