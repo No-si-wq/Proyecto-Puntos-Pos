@@ -97,11 +97,12 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
 
   addProduct: (product, overridePrice) =>
     set((state) => {
-      const price = overridePrice ?? Number(product.price);
       const tax = Number(product.tax);
       const existing = state.items.find((i) => i.productId === product.id);
 
       if (existing) {
+        const price = overridePrice ?? existing.price; // <-- conserva precio de lista u override previo
+
         return {
           items: state.items.map((i) =>
             i.productId === product.id
@@ -110,6 +111,8 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
           ),
         };
       }
+
+      const price = overridePrice ?? Number(product.price);
 
       return {
         items: [

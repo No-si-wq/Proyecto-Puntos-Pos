@@ -447,15 +447,17 @@ export default function Sales() {
                     value={p.method}
                     style={{ width: "100%" }}
                     onChange={(value: SalePaymentMethod) => {
-                      const updated = [...payments];
-                      updated[idx] = {
-                        ...updated[idx],
-                        method: value,
-                        amount: value === "CREDIT"
-                          ? Math.max(totalFinal - totalNonCredit, 0)
-                          : updated[idx].amount,
-                      };
-                      setPayments(updated);
+                      setPayments((prev) => {
+                        const updated = [...prev];
+                        updated[idx] = {
+                          ...updated[idx],
+                          method: value,
+                          amount: value === "CREDIT"
+                            ? Math.max(totalFinal - totalNonCredit, 0)
+                            : updated[idx].amount,
+                        };
+                        return updated;
+                      });
                       if (value !== "CREDIT") setDueDate(undefined);
                     }}
                     options={[
@@ -475,12 +477,14 @@ export default function Sales() {
                     min={0}
                     precision={2}
                     value={p.amount}
-                    onChange={(v) => {
-                      const updated = [...payments];
-                      updated[idx] = { ...updated[idx], amount: v ?? null };
-                      setPayments(updated);
-                    }}
                     placeholder="Monto"
+                    onChange={(v) => {
+                      setPayments((prev) => {
+                        const updated = [...prev];
+                        updated[idx] = { ...updated[idx], amount: v ?? null };
+                        return updated;
+                      });
+                    }}
                   />
                 </Col>
                 <Col span={4}>
@@ -489,7 +493,7 @@ export default function Sales() {
                       danger
                       size="small"
                       onClick={() => {
-                        setPayments(payments.filter((_, i) => i !== idx));
+                        setPayments((prev) => prev.filter((_, i) => i !== idx));
                         if (p.method === "CREDIT") setDueDate(undefined);
                       }}
                     >
@@ -515,7 +519,7 @@ export default function Sales() {
           <Button
             size="small"
             type="dashed"
-            onClick={() => setPayments([...payments, { method: "CASH", amount: null }])}
+            onClick={() => setPayments((prev) => [...prev, { method: "CASH", amount: null }])}
           >
             + Agregar método de pago
           </Button>
