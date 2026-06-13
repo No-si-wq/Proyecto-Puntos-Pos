@@ -310,7 +310,7 @@ export default function AppRouter() {
           <Route 
             path="/quotations"
             element={
-              <ProtectedRoute module="commission">
+              <ProtectedRoute module="quotations">
                 <Quotations />
               </ProtectedRoute>
             }
@@ -319,7 +319,7 @@ export default function AppRouter() {
           <Route 
             path="/quotations/:id"
             element={
-              <ProtectedRoute module="commission">
+              <ProtectedRoute module="quotations">
                 <QuotationDetail />
               </ProtectedRoute>
             }
