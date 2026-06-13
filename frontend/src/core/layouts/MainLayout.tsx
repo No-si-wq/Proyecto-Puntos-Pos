@@ -144,14 +144,14 @@ export default function MainLayout() {
             label: 'Cotizaciones',
             icon: <FileTextFilled />,
             onClick: () => navigate('/quotations'),
-            visible: can('sales'),
+            visible: can("quotations"),
           },
           {
             key: "/remissions",
             label: "Remisiones",
             icon: <SolutionOutlined />,
             onClick: () => navigate("/remissions"),
-            visible: can("sales"),
+            visible: can("remissions"),
           },
           {
             key: "/customers",
