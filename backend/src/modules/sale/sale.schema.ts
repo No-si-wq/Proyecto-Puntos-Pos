@@ -5,12 +5,18 @@ export const createSaleSchema = z.object({
     customerId:  z.number().int().positive().optional(),
     pointsUsed:  z.number().int().nonnegative().optional(),
     sellerId:    z.number().int().positive().optional(),
-    amountPaid: z.number().nonnegative().optional(),
     observations: z.string().max(500).optional(),
     priceMode:     z.enum(["TAX_INCLUDED", "TAX_EXCLUDED"]).optional(),
-    paymentMethod: z.enum(["CASH", "CARD", "TRANSFER", "CREDIT"]),
 
     dueDate: z.string().datetime({ message: "Fecha inválida" }).optional(),
+
+    payments: z.array(
+      z.object({
+        method: z.enum(["CASH", "CARD", "TRANSFER", "CREDIT"]),
+        amount: z.number().positive(),
+        reference: z.string().max(100).optional(),
+      })
+    ).min(1),
 
     items: z
       .array(
@@ -21,48 +27,34 @@ export const createSaleSchema = z.object({
           discountType:  z.enum(["NONE", "PERCENTAGE", "FIXED"]).optional(),
           discountValue: z.number().nonnegative().optional(),
           observations: z.string().max(500).optional(),
+          unitPrice:     z.number().positive().optional(),
         })
       )
       .min(1),
     }
   )
-  .refine(
-    (data) => data.paymentMethod !== "CASH" || data.amountPaid === undefined || data.amountPaid >= 0,
-    { message: "El monto pagado no puede ser negativo", path: ["amountPaid"] }
-  )
   .superRefine((data, ctx) => {
-    if (data.paymentMethod === "CREDIT") {
+    const hasCredit = data.payments.some(p => p.method === "CREDIT");
+
+    if (hasCredit) {
       if (!data.customerId) {
-        ctx.addIssue({
-          path: ["customerId"],
-          code: z.ZodIssueCode.custom,
-          message: "Cliente requerido para venta a crédito",
-        });
+        ctx.addIssue({ path: ["customerId"], code: z.ZodIssueCode.custom, message: "Cliente requerido para venta a crédito" });
       }
-
       if (!data.dueDate) {
-        ctx.addIssue({
-          path: ["dueDate"],
-          code: z.ZodIssueCode.custom,
-          message: "Fecha de vencimiento requerida para crédito",
-        });
+        ctx.addIssue({ path: ["dueDate"], code: z.ZodIssueCode.custom, message: "Fecha de vencimiento requerida para crédito" });
+      }
+      if (data.dueDate && new Date(data.dueDate) <= new Date()) {
+        ctx.addIssue({ path: ["dueDate"], code: z.ZodIssueCode.custom, message: "La fecha de vencimiento debe ser futura" });
       }
 
-      if (data.dueDate && new Date(data.dueDate) <= new Date()) {
-        ctx.addIssue({
-          path: ["dueDate"],
-          code: z.ZodIssueCode.custom,
-          message: "La fecha de vencimiento debe ser futura",
-        });
+      const creditCount = data.payments.filter(p => p.method === "CREDIT").length;
+      if (creditCount > 1) {
+        ctx.addIssue({ path: ["payments"], code: z.ZodIssueCode.custom, message: "Solo puede existir un pago a crédito por venta" });
       }
     }
 
-    if (data.paymentMethod !== "CREDIT" && data.dueDate) {
-      ctx.addIssue({
-        path: ["dueDate"],
-        code: z.ZodIssueCode.custom,
-        message: "Fecha de vencimiento solo aplica para crédito",
-      });
+    if (!hasCredit && data.dueDate) {
+      ctx.addIssue({ path: ["dueDate"], code: z.ZodIssueCode.custom, message: "Fecha de vencimiento solo aplica para crédito" });
     }
   }),
 });

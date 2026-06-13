@@ -51,9 +51,10 @@ export default function Sales() {
   const { products, reload: reloadProducts } = useWarehouseProducts();
   const { priceLists = [] } = usePriceLists();
 
-  const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>("CASH");
+  const [payments, setPayments] = useState<
+    { method: SalePaymentMethod; amount: number | null; reference?: string }[]
+  >([{ method: "CASH", amount: null }]);
   const [dueDate, setDueDate] = useState<string>();
-  const [amountPaid, setAmountPaid] = useState<number | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   const { isMobile, isTablet, device } = useDeviceType();
@@ -117,7 +118,7 @@ export default function Sales() {
       };
 
     } catch (err) {
-      console.error("[handleConfirmPrint] error:", err);
+      console.error("error al seleccionar plantilla:", err);
       message.error("Error al cargar la plantilla de impresión");
     } finally {
       setPrinting(false);
@@ -160,6 +161,18 @@ export default function Sales() {
   const pointsDiscount = sale.pointsUsed * pointValue;
   const totalFinal = cart.total() - pointsDiscount;
 
+  const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const EPS = 0.005;
+
+  const hasCredit = payments.some((p) => p.method === "CREDIT");
+  const creditPayment = payments.find((p) => p.method === "CREDIT");
+  const creditAmount = creditPayment?.amount ?? 0;
+  const nonCreditPayments = payments.filter((p) => p.method !== "CREDIT");
+  const totalNonCredit = nonCreditPayments.reduce((s, p) => s + (p.amount ?? 0), 0);
+  const totalAssigned = round2(totalNonCredit + creditAmount);
+  const totalFinalRounded = round2(totalFinal);
+  const remaining = round2(totalFinalRounded - totalAssigned);
+
   const isSubmitDisabled = cart.items.length === 0
 
   async function submitSale() {
@@ -173,13 +186,17 @@ export default function Sales() {
       return;
     }
 
-    if (paymentMethod === "CREDIT") {
+    if (hasCredit) {
       if (!sale.customerId) {
         message.error("Debe seleccionar cliente para crédito");
         return;
       }
       if (!dueDate) {
         message.error("Debe seleccionar fecha de vencimiento");
+        return;
+      }
+      if (creditAmount <= 0) {
+        message.error("Ingrese el monto a crédito");
         return;
       }
     }
@@ -192,11 +209,19 @@ export default function Sales() {
 
     const pointsToUse = loyaltyConfig.redeem.enabled ? sale.pointsUsed : 0;
 
-    if (paymentMethod === "CASH" && totalFinal > 0) {
-      if (amountPaid === null || amountPaid === undefined || amountPaid < totalFinal) {
-        message.error("El monto recibido es insuficiente");
-        return;
-      }
+    if (nonCreditPayments.some((p) => p.amount === null || p.amount <= 0)) {
+      message.error("Ingrese un monto válido para cada método de pago");
+      return;
+    }
+
+    if (hasCredit && Math.abs(totalAssigned - totalFinalRounded) > EPS) {
+      message.error("La suma de los métodos de pago debe ser igual al total de la venta");
+      return;
+    }
+
+    if (!hasCredit && totalAssigned < totalFinalRounded - EPS) {
+      message.error("El monto pagado es insuficiente");
+      return;
     }
 
     try {
@@ -212,21 +237,29 @@ export default function Sales() {
           discountValue: i.discountValue,
           priceListId: i.priceListId,
           observations: i.observations || undefined,
+          unitPrice: i.priceOverridden ? i.price : undefined,
         })),
-        paymentMethod,
+        payments: [
+          ...nonCreditPayments
+            .filter((p) => p.amount !== null && p.amount > 0)
+            .map((p) => ({
+              method: p.method,
+              amount: p.amount!,
+              reference: p.reference || undefined,
+            })),
+          ...(hasCredit ? [{ method: "CREDIT" as const, amount: creditAmount }] : []),
+        ],
         dueDate,
         priceMode,
-        amountPaid: paymentMethod === "CASH" && amountPaid !== null ? amountPaid : undefined,
       });
 
       await Promise.all([reloadProducts(), reloadCustomers()]);
 
       cart.clear();
       sale.reset();
-      setPaymentMethod("CASH");
+      setPayments([{ method: "CASH", amount: null }]);
       setSellerId(undefined);
       setDueDate(undefined);
-      setAmountPaid(null);
       setPaymentModalOpen(false);
       setObservations("");
 
@@ -400,71 +433,92 @@ export default function Sales() {
         confirmLoading={creating}
         okButtonProps={{
           disabled:
-            (paymentMethod === "CREDIT" &&  !dueDate) ||
-            (paymentMethod === "CASH" && (amountPaid === null || amountPaid < totalFinal)),
+            (hasCredit && (!dueDate || creditAmount <= 0 || Math.abs(totalAssigned - totalFinalRounded) > EPS)) ||
+            (!hasCredit && totalAssigned < totalFinalRounded - EPS),
         }}
-        width={380}
+        width={420}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 8 }}>
-          <div>
-            <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>MÉTODO DE PAGO</div>
-            <Row gutter={8}>
-              <Col span={paymentMethod === "CREDIT" ? 12 : 24}>
-                <Select
-                  value={paymentMethod}
-                  onChange={(value) => {
-                    setPaymentMethod(value);
-                    if (value !== "CREDIT") setDueDate(undefined);
-                    if (value !== "CASH") setAmountPaid(null);
-                  }}
-                  style={{ width: "100%" }}
-                  options={[
-                    { label: "Efectivo",      value: "CASH"     },
-                    { label: "Tarjeta",       value: "CARD"     },
-                    { label: "Transferencia", value: "TRANSFER" },
-                    { label: "Crédito",       value: "CREDIT"   },
-                  ]}
-                />
-              </Col>
-              {paymentMethod === "CREDIT" && (
-                <Col span={12}>
-                  <DatePicker
+          {payments.map((p, idx) => (
+            <div key={idx}>
+              <Row gutter={8} align="middle">
+                <Col span={14}>
+                  <Select
+                    value={p.method}
                     style={{ width: "100%" }}
+                    onChange={(value: SalePaymentMethod) => {
+                      const updated = [...payments];
+                      updated[idx] = {
+                        ...updated[idx],
+                        method: value,
+                        amount: value === "CREDIT"
+                          ? Math.max(totalFinal - totalNonCredit, 0)
+                          : updated[idx].amount,
+                      };
+                      setPayments(updated);
+                      if (value !== "CREDIT") setDueDate(undefined);
+                    }}
+                    options={[
+                      { label: "Efectivo",      value: "CASH"     },
+                      { label: "Tarjeta",       value: "CARD"     },
+                      { label: "Transferencia", value: "TRANSFER" },
+                      ...(!hasCredit || p.method === "CREDIT"
+                        ? [{ label: "Crédito", value: "CREDIT" }]
+                        : []),
+                    ]}
+                  />
+                </Col>
+
+                <Col span={6}>
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    min={0}
+                    precision={2}
+                    value={p.amount}
+                    onChange={(v) => {
+                      const updated = [...payments];
+                      updated[idx] = { ...updated[idx], amount: v ?? null };
+                      setPayments(updated);
+                    }}
+                    placeholder="Monto"
+                  />
+                </Col>
+                <Col span={4}>
+                  {payments.length > 1 && (
+                    <Button
+                      danger
+                      size="small"
+                      onClick={() => {
+                        setPayments(payments.filter((_, i) => i !== idx));
+                        if (p.method === "CREDIT") setDueDate(undefined);
+                      }}
+                    >
+                      Quitar
+                    </Button>
+                  )}
+                </Col>
+              </Row>
+
+              {p.method === "CREDIT" && (
+                <>
+                  <DatePicker
+                    style={{ width: "100%", marginTop: 8 }}
                     placeholder="Vencimiento"
                     onChange={(date) => setDueDate(date?.toISOString())}
                   />
-                </Col>
-              )}
-            </Row>
-            {paymentMethod === "CREDIT" && (
-              <Tag color="orange" style={{ marginTop: 8 }}>Venta a crédito</Tag>
-            )}
-          </div>
-
-          {paymentMethod === "CASH" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ fontSize: 11, color: "#888" }}>MONTO RECIBIDO</div>
-              <InputNumber
-                style={{ width: "100%" }}
-                min={0}
-                precision={2}
-                value={amountPaid}
-                onChange={(v) => setAmountPaid(v ?? null)}
-                placeholder="0.00"
-              />
-              {amountPaid !== null && amountPaid >= totalFinal && (
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
-                  <span style={{ color: "#666" }}>Cambio</span>
-                  <strong style={{ color: "#52c41a" }}>
-                    {formatCurrency(amountPaid - totalFinal)}
-                  </strong>
-                </div>
-              )}
-              {amountPaid !== null && amountPaid < totalFinal && (
-                <span style={{ color: "#ff4d4f", fontSize: 12 }}>Monto insuficiente</span>
+                  <Tag color="orange" style={{ marginTop: 8 }}>Venta a crédito</Tag>
+                </>
               )}
             </div>
-          )}
+          ))}
+
+          <Button
+            size="small"
+            type="dashed"
+            onClick={() => setPayments([...payments, { method: "CASH", amount: null }])}
+          >
+            + Agregar método de pago
+          </Button>
 
           <Divider style={{ margin: "4px 0" }} />
 
@@ -472,6 +526,24 @@ export default function Sales() {
             <span style={{ color: "#888" }}>Total a cobrar</span>
             <strong style={{ fontSize: 20 }}>{formatCurrency(totalFinal)}</strong>
           </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ color: "#666" }}>Asignado</span>
+            <strong>{formatCurrency(totalAssigned)}</strong>
+          </div>
+
+          {remaining > 0 && (
+            <span style={{ color: "#ff4d4f", fontSize: 12 }}>
+              Falta {formatCurrency(remaining)}
+            </span>
+          )}
+
+          {remaining < 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: "#666" }}>Cambio</span>
+              <strong style={{ color: "#52c41a" }}>{formatCurrency(-remaining)}</strong>
+            </div>
+          )}
         </div>
       </Modal>
 
@@ -558,7 +630,7 @@ export default function Sales() {
               onObservationsChange={cart.updateObservations}
               onPriceChange={(productId, price) => cart.updatePrice(productId, price)}
               onPriceListChange={(productId, priceListId, resolvedPrice) => {
-                cart.updatePriceList(productId, priceListId);
+                cart.updatePriceList(productId, priceListId, resolvedPrice);
                 cart.updatePrice(productId, resolvedPrice);
               }}
               priceLists={priceLists}
@@ -672,7 +744,7 @@ export default function Sales() {
               onDiscountChange={cart.updateDiscount}
               onObservationsChange={cart.updateObservations}
               onPriceListChange={(productId, priceListId, resolvedPrice) => {
-                cart.updatePriceList(productId, priceListId);
+                cart.updatePriceList(productId, priceListId, resolvedPrice);
                 cart.updatePrice(productId, resolvedPrice);
               }}
               onPriceChange={(productId, price) => cart.updatePrice(productId, price)}

@@ -196,6 +196,7 @@ export function SaleCartTable({
               { label: "Precio",    align: "right"  },
               { label: "Descuento", align: "left"   },
               { label: "Subtotal",  align: "right"  },
+              { label: "Obs.",         align: "left"   },
               { label: "",          align: "center" },
             ] as { label: string; align: React.CSSProperties["textAlign"] }[]).map(({ label, align }, idx) => (
               <th key={idx} style={{ ...thStyle, textAlign: align }}>{label}</th>
@@ -206,7 +207,7 @@ export function SaleCartTable({
         <tbody>
           {items.length === 0 && (
             <tr>
-              <td colSpan={7} style={{ textAlign: "center", color: "#bbb", padding: "40px 0", fontSize: 14 }}>
+              <td colSpan={8} style={{ textAlign: "center", color: "#bbb", padding: "40px 0", fontSize: 14 }}>
                 Sin productos en el carrito
               </td>
             </tr>

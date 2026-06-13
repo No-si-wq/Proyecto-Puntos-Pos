@@ -41,10 +41,10 @@ export async function createSale(req: Request, res: Response) {
 
   const warehouseId = (req as any).warehouseId;
   const { tenantId } = req.user!;
-  const { customerId, items, pointsUsed, paymentMethod, dueDate, sellerId, amountPaid, priceMode, observations } = req.body;
+  const { customerId, items, pointsUsed, payments, dueDate, sellerId, priceMode, observations } = req.body;
 
   const sale = await SaleService.create(
-    { customerId, items, pointsUsed, paymentMethod, dueDate, sellerId, amountPaid, priceMode, observations },
+    { customerId, items, pointsUsed, payments, dueDate, sellerId, priceMode, observations },
     req.user.id,
     warehouseId,
     tenantId,

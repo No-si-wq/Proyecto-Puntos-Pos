@@ -433,10 +433,23 @@ model Sale {
   user          User                  @relation("SaleCreator", fields: [userId], references: [id])
   warehouse     Warehouse             @relation(fields: [warehouseId], references: [id])
   items         SaleItem[]
+  payments      SalePayment[]
   returns       SaleReturn[]
 
   @@unique([tenantId, saleNumber])
   @@index([tenantId])
+}
+
+model SalePayment {
+  id        Int           @id @default(autoincrement())
+  saleId    Int
+  method    PaymentMethod
+  amount    Decimal       @db.Decimal(10, 2)
+  reference String?
+  tenantId  Int
+  sale      Sale          @relation(fields: [saleId], references: [id])
+
+  @@index([saleId])
 }
 
 model SaleItem {

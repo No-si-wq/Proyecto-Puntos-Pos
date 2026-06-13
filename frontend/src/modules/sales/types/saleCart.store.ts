@@ -11,6 +11,7 @@ export interface SaleCartItem {
   tax: number;
   quantity: number;
   priceListId?: number;
+  priceOverridden: boolean;
 
   discountType: DiscountType;
   discountValue: number;
@@ -35,7 +36,7 @@ interface SaleCartState {
   updateQuantity: (productId: number, quantity: number) => void;
   updateDiscount: (productId: number, discountType: DiscountType, discountValue: number) => void;
   updatePrice: (productId: number, price: number) => void;
-  updatePriceList: (productId: number, priceListId: number | undefined) => void;
+  updatePriceList: (productId: number, priceListId: number | undefined, resolvedPrice: number) => void;
   removeProduct: (productId: number) => void;
   clear: () => void;
   setCommissionPercent: (percent: number | undefined) => void;
@@ -120,6 +121,7 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
             tax,
             quantity: 1,
             priceListId: undefined,
+            priceOverridden: false,
             discountType: "NONE",
             discountValue: 0,
             observations: "",
@@ -149,14 +151,17 @@ export const saleCartStore = create<SaleCartState>((set, get) => ({
   updatePrice: (productId, price) =>
     set((state) => ({
       items: state.items.map((i) =>
-        i.productId === productId ? calculateItem({ ...i, price }, get().priceMode) : i
+        i.productId === productId 
+          ? calculateItem({ ...i, price, priceOverridden: true }, 
+            get().priceMode) 
+          : i
       ),
     })),
 
-  updatePriceList: (productId, priceListId) =>
+  updatePriceList: (productId, priceListId, resolvedPrice) =>
     set((state) => ({
       items: state.items.map((i) =>
-        i.productId === productId ? { ...i, priceListId } : i
+        i.productId === productId ? { ...i, priceListId, price: resolvedPrice, priceOverridden: false } : i
       ),
     })),
 

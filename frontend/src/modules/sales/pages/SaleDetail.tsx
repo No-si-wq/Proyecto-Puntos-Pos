@@ -13,7 +13,7 @@ import type { ColumnsType } from "antd/es/table";
 import { ConfirmModal } from "../../../core/components/common/ConfirmModal";
 import PageHeader from "../../../core/components/common/PageHeader";
 import { formatCurrency, formatDate } from "../../../core/utils/formatters";
-import type { Sale, SaleItems } from "../types/sale";
+import type { Sale, SaleItems, SalePaymentMethod } from "../types/sale";
 import { exportToPdf } from "../../../core/utils/exportPDF";
 import { useReportTemplates } from "../../report-templates/hooks/useReportTemplates";
 import { buildSaleHtml } from "../../report-templates/utils/resolveTemplate";
@@ -27,7 +27,7 @@ import { getAllowedRoles } from "../../../core/utils/permissions";
 import { usePermissions } from "../../../core/hooks/usePermissions";
 import ProtectedButton from "../../../core/components/common/ProtectedButton";
 
-const { Text } = Typography;
+const { Text, Paragraph } = Typography;
 
 function SaleItemMobileCard({ item }: { item: SaleItems }) {
 
@@ -74,8 +74,13 @@ function SaleItemMobileCard({ item }: { item: SaleItems }) {
         {item.observations && (
           <div style={{ gridColumn: "1 / -1", marginTop: 4 }}>
             <Text type="secondary" style={{ fontSize: 11 }}>OBS.</Text>
-            <br />
-            <Text style={{ fontSize: 13 }}>{item.observations}</Text>
+            <Paragraph
+              type="secondary"
+              style={{ fontSize: 13, marginBottom: 0 }}
+              ellipsis={{ rows: 2, expandable: true, symbol: "ver más" }}
+            >
+              {item.observations}
+            </Paragraph>
           </div>
         )}
       </div>
@@ -229,6 +234,16 @@ export default function SaleDetail() {
     );
   }
 
+  function paymentMethodLabel(method: SalePaymentMethod): string {
+    const labels: Record<SalePaymentMethod, string> = {
+      CASH: "Efectivo",
+      CARD: "Tarjeta",
+      TRANSFER: "Transferencia",
+      CREDIT: "Crédito",
+    };
+    return labels[method] ?? method;
+  }
+
   function buildTemplateMenuItems(action: "print" | "pdf"): MenuProps["items"] {
     if (!templates.length) {
       return [
@@ -376,8 +391,17 @@ export default function SaleDetail() {
     {
       title: "Obs.",
       dataIndex: "observations",
+      width: 160,
       render: (v: string | null) =>
-        v ? <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text> : null,
+        v ? (
+          <Paragraph
+            type="secondary"
+            style={{ fontSize: 12, marginBottom: 0, maxWidth: 150 }}
+            ellipsis={{ rows: 2, expandable: true, symbol: "ver más" }}
+          >
+            {v}
+          </Paragraph>
+        ) : null,
     },
     {
       title: "Cant.",
@@ -454,15 +478,27 @@ export default function SaleDetail() {
             <Descriptions.Item label="Vendedor">
               {sale?.seller?.name}
             </Descriptions.Item>
-            <Descriptions.Item label="Método de pago">
-              {sale?.paymentMethod}
+            <Descriptions.Item label="Método(s) de pago" span={2}>
+              {sale?.payments && sale.payments.length > 0 ? (
+                <Space direction="vertical" size={2}>
+                  {sale.payments.map((p) => (
+                    <span key={p.id}>
+                      <Tag>{paymentMethodLabel(p.method)}</Tag>
+                      {formatCurrency(p.amount)}
+                      {p.reference && (
+                        <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                          Ref: {p.reference}
+                        </Text>
+                      )}
+                    </span>
+                  ))}
+                </Space>
+              ) : (
+                sale?.paymentMethod
+              )}
             </Descriptions.Item>
-            {sale?.paymentMethod === "CASH" && sale?.amountPaid != null && (
-              <Descriptions.Item label="Monto recibido">
-                {formatCurrency(sale.amountPaid)}
-              </Descriptions.Item>
-            )}
-            {sale?.paymentMethod === "CASH" && sale?.changeAmount != null && (
+
+            {sale?.changeAmount != null && Number(sale.changeAmount) > 0 && (
               <Descriptions.Item label="Cambio">
                 <Text style={{ color: "#52c41a" }}>
                   {formatCurrency(sale.changeAmount)}
@@ -531,12 +567,19 @@ export default function SaleDetail() {
                 </Descriptions.Item>
               </>
             )}
-            {sale?.paymentMethod === "CASH" && sale?.amountPaid != null && (
-              <Descriptions.Item label="Efectivo recibido">
-                {formatCurrency(sale.amountPaid)}
+            {sale?.payments && sale.payments.length > 0 && (
+              <Descriptions.Item label="Pagos">
+                <Space direction="vertical" size={2} style={{ alignItems: "flex-end" }}>
+                  {sale.payments.map((p) => (
+                    <span key={p.id}>
+                      {paymentMethodLabel(p.method)}: {formatCurrency(p.amount)}
+                    </span>
+                  ))}
+                </Space>
               </Descriptions.Item>
             )}
-            {sale?.paymentMethod === "CASH" && sale?.changeAmount != null && (
+
+            {sale?.changeAmount != null && Number(sale.changeAmount) > 0 && (
               <Descriptions.Item label="Cambio">
                 <Text style={{ color: "#52c41a" }}>
                   {formatCurrency(sale.changeAmount)}

@@ -65,6 +65,14 @@ export class SaleService {
             createdAt: true,
           },
         },
+        payments: {
+          select: {
+            id: true,
+            method: true,
+            amount: true,
+            reference: true,
+          },
+        },
         returns: {
           select: {
             id: true,
@@ -197,18 +205,26 @@ export class SaleService {
  
       for (const item of data.items) {
         const product = productMap.get(item.productId);
- 
+
         if (!product || !product.active) {
           throw new Error(SaleError.PRODUCT_NOT_AVAILABLE);
         }
 
-        const customPrice = item.priceListId
-          ? product.prices?.find((pp) => pp.priceListId === item.priceListId)?.price
-          : undefined;
-        const price: Prisma.Decimal =
-          customPrice !== undefined
+        let price: Prisma.Decimal;
+
+        if (item.unitPrice !== undefined) {
+          if (item.unitPrice <= 0) {
+            throw new Error("Precio inválido");
+          }
+          price = new Prisma.Decimal(item.unitPrice);
+        } else {
+          const customPrice = item.priceListId
+            ? product.prices?.find((pp) => pp.priceListId === item.priceListId)?.price
+            : undefined;
+          price = customPrice !== undefined
             ? new Prisma.Decimal(customPrice)
             : product.price;
+        }
 
         const tax = product.tax;
  
@@ -285,6 +301,11 @@ export class SaleService {
       const subtotalDecimal = new Prisma.Decimal(subtotalAfterLineDiscount);
       const taxTotalDecimal = new Prisma.Decimal(totalTax);
       const pointsUsed = data.pointsUsed ?? 0;
+
+      const hasCredit = data.payments.some(p => p.method === "CREDIT");
+      const dominantMethod = hasCredit
+        ? "CREDIT"
+        : data.payments.reduce((a, b) => (b.amount > a.amount ? b : a)).method;
  
       const sale = await tx.sale.create({
         data: {
@@ -301,11 +322,21 @@ export class SaleService {
           customerId: data.customerId,
           warehouseId,
           tenantId,
-          paymentMethod: data.paymentMethod,
+          paymentMethod: dominantMethod,
           observations: data.observations,
           priceMode: data.priceMode ?? "TAX_INCLUDED",
           status: SaleStatus.COMPLETED,
         },
+      });
+
+      await tx.salePayment.createMany({
+        data: data.payments.map(p => ({
+          saleId: sale.id,
+          method: p.method,
+          amount: new Prisma.Decimal(p.amount),
+          reference: p.reference ?? null,
+          tenantId,
+        })),
       });
  
       let globalDiscount = new Prisma.Decimal(0);
@@ -334,29 +365,28 @@ export class SaleService {
         }
       }
 
-      const total = subtotalDecimal.sub(globalDiscount).add(taxTotalDecimal);
+const total = subtotalDecimal.sub(globalDiscount).add(taxTotalDecimal);
 
       if (total.lt(0)) throw new Error(SaleError.INVALID_TOTAL);
 
-      // Calcular amountPaid y changeAmount
-      let amountPaid: Prisma.Decimal | null = null;
-      let changeAmount: Prisma.Decimal | null = null;
+      const creditAmount = data.payments
+        .filter((p) => p.method === "CREDIT")
+        .reduce((acc, p) => acc.add(new Prisma.Decimal(p.amount)), new Prisma.Decimal(0));
 
-      if (data.paymentMethod === "CASH") {
-        if (total.gt(0)) {
-          if (data.amountPaid === undefined || data.amountPaid === null) {
-            throw new Error("El monto pagado es requerido para pagos en efectivo");
-          }
-          amountPaid = new Prisma.Decimal(data.amountPaid);
-          if (amountPaid.lt(total)) {
-            throw new Error("El monto pagado es insuficiente");
-          }
-          changeAmount = amountPaid.sub(total);
-        } else {
-          amountPaid = new Prisma.Decimal(0);
-          changeAmount = new Prisma.Decimal(0);
-        }
+      const nonCreditPaid = data.payments
+        .filter((p) => p.method !== "CREDIT")
+        .reduce((acc, p) => acc.add(new Prisma.Decimal(p.amount)), new Prisma.Decimal(0));
+
+      const totalPaid = nonCreditPaid.add(creditAmount);
+
+      if (totalPaid.lt(total)) {
+        throw new Error("El monto pagado es insuficiente");
       }
+
+      const amountPaid = nonCreditPaid;
+      const changeAmount = hasCredit
+        ? new Prisma.Decimal(0)
+        : totalPaid.sub(total);
  
       await tx.sale.update({
         where: { id: sale.id },
@@ -431,14 +461,14 @@ export class SaleService {
         });
       }
  
-      if (data.paymentMethod === "CREDIT") {
+      if (hasCredit) {
         if (!sale.customerId) throw new Error("Venta a crédito requiere cliente");
         await tx.accountReceivable.create({
           data: {
             saleId: sale.id,
             customerId: sale.customerId,
-            total,
-            balance: total,
+            total: creditAmount,
+            balance: creditAmount,
             dueDate: data.dueDate ?? null,
             tenantId,
           },

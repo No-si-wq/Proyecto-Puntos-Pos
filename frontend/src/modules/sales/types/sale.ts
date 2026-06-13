@@ -12,6 +12,7 @@ export interface SaleItemDTO {
   quantity: number;
   discountType?: DiscountType;
   discountValue?: number;
+  unitPrice?: number;
 }
 
 export interface SaleItems {
@@ -38,13 +39,26 @@ export interface SaleItems {
   observations?: string | null;
 }
 
+export interface SalePaymentInput {
+  method: SalePaymentMethod;
+  amount: number;
+  reference?: string;
+}
+
+export interface SalePayment {
+  id: number;
+  method: SalePaymentMethod;
+  amount: number;
+  reference?: string | null;
+}
+
 export interface CreateSaleDTO {
   customerId?: number;
   pointsUsed?: number;
   sellerId?: number;
   priceListId?: number;
   items: SaleItemDTO[];
-  paymentMethod: SalePaymentMethod;
+  payments: SalePaymentInput[];
   dueDate?: string;
   priceMode: PriceMode;
   amountPaid?: number;
@@ -64,6 +78,7 @@ export interface Sale {
   totalCommission?: number;
   createdAt: string;
   status: SaleStatus;
+  payments?: SalePayment[];
   paymentMethod: SalePaymentMethod;
   priceListId?: number | null;
   amountPaid?: number | null;

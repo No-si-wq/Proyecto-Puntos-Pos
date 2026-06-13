@@ -1,3 +1,9 @@
+export interface SalePaymentInput {
+  method: "CASH" | "CARD" | "TRANSFER" | "CREDIT";
+  amount: number;
+  reference?: string;
+}
+
 export interface SaleItemInput {
   productId: number;
   quantity: number;
@@ -5,6 +11,7 @@ export interface SaleItemInput {
   discountType?: "NONE" | "PERCENTAGE" | "FIXED"
   discountValue?: number
   observations?: string | null;
+  unitPrice?: number;
 }
 
 interface BaseSaleInput {
@@ -13,19 +20,17 @@ interface BaseSaleInput {
   sellerId?: number;
   observations?: string | null;
   priceMode?: "TAX_INCLUDED" | "TAX_EXCLUDED";
+  payments: SalePaymentInput[];
 }
 
 export interface CreateSaleCashInput
   extends BaseSaleInput {
-  paymentMethod: "CASH" | "CARD" | "TRANSFER";
   customerId?: number;
   dueDate?: never;
-  amountPaid?: number;
 }
 
 export interface CreateSaleCreditInput
   extends BaseSaleInput {
-  paymentMethod: "CREDIT";
   customerId: number;
   dueDate?: string;
 }
