@@ -328,7 +328,7 @@ export default function AppRouter() {
           <Route 
             path="/settings"
             element={
-              <ProtectedRoute module="commission">
+              <ProtectedRoute module="settings">
                 <Settings />
               </ProtectedRoute>
             }
