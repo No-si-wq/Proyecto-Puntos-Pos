@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehouse";
 import http from "../../../core/http/http";
-import type { Sale, CreateSaleDTO, ReturnSaleDTO, SaleReturn } from "../types/sale";
+import type { Sale, CreateSaleDTO, ReturnSaleDTO, SaleReturn, CreditStatus } from "../types/sale";
 
 export function useSales() {
   const [sales, setSales] = useState<Sale[]>([]);
@@ -10,6 +10,8 @@ export function useSales() {
   const [creating, setCreating] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [returning, setReturning] = useState(false);
+  const [creditStatus, setCreditStatus] = useState<CreditStatus | null>(null);
+  const [loadingCredit, setLoadingCredit] = useState(false);
   const warehouseId = useRequiredWarehouse();
 
   const load = useCallback(async (filters?: {
@@ -72,6 +74,22 @@ export function useSales() {
     }
   }
 
+  async function fetchCreditStatus(customerId: number) {
+    setLoadingCredit(true);
+    try {
+      const { data } = await http.get<CreditStatus>(`/customers/${customerId}/credit-status`);
+      setCreditStatus(data);
+    } catch {
+      setCreditStatus(null);
+    } finally {
+      setLoadingCredit(false);
+    }
+  }
+
+  function clearCreditStatus() {
+    setCreditStatus(null);
+  }
+
   return {
     sales,
     loadingList,
@@ -84,5 +102,9 @@ export function useSales() {
     cancel,
     returning,
     returnItems,
+    creditStatus,
+    loadingCredit,
+    fetchCreditStatus,
+    clearCreditStatus,
   };
 }

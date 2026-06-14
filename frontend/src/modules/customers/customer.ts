@@ -7,6 +7,7 @@ export interface Customer {
   direction?: string;
   active: boolean;
   createdAt?: string;
+  creditLimit?: number | null;
   points?: {
     balance: number;
   } | null;
@@ -22,6 +23,7 @@ export interface CreateCustomerDTO {
   email?: string;
   phone?: string;
   direction?: string;
+  creditLimit?: number | null;
 }
 
 export interface UpdateCustomerDTO {
@@ -29,5 +31,6 @@ export interface UpdateCustomerDTO {
   email?: string;
   phone?: string;
   direction?: string;
+  creditLimit?: number | null;
   active?: boolean;
 }

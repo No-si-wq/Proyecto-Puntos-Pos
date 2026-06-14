@@ -1,4 +1,4 @@
-import { Form, Input, Switch } from "antd";
+import { Form, Input, Switch, InputNumber } from "antd";
 import type { Customer } from "../customer";
 import FormBase from "../../../core/components/forms/FormBase";
 
@@ -60,6 +60,20 @@ export default function CustomerForm({
         label="Direccion"
       >
         <Input autoFocus />
+      </Form.Item>
+
+      <Form.Item
+        name="creditLimit"
+        label="Límite de crédito"
+        tooltip="Dejar vacío para no aplicar límite"
+      >
+        <InputNumber
+          min={0}
+          precision={2}
+          placeholder="Sin límite"
+          style={{ width: "100%" }}
+          prefix="L"
+        />
       </Form.Item>
 
       {isEdit && (

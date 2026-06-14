@@ -18,6 +18,7 @@ import CustomerForm from "./components/CustomerForm";
 import SimpleTable from "../../core/components/table/SimpleTable";
 import { getAllowedRoles } from "../../core/utils/permissions";
 import { usePermissions } from "../../core/hooks/usePermissions";
+import { formatCurrency } from "../../core/utils/formatters";
 
 const { Text } = Typography;
 
@@ -40,8 +41,12 @@ export default function Customers() {
 
   function buildExportRows(data: Customer[]) {
     return data.filter(c => c.active).map((c) => ({
-      DNI: c.dni, Nombre: c.name, Email: c.email ?? "-",
-      Telefono: c.phone ?? "-", Direccion: c.direction ?? "-", 
+      DNI: c.dni, 
+      Nombre: c.name, 
+      Email: c.email ?? "-",
+      Telefono: c.phone ?? "-", 
+      Direccion: c.direction ?? "-", 
+      Limite_credito: c.creditLimit != null ? c.creditLimit : "Sin límite",
       Puntos: c.points?.balance ?? 0,
     }));
   }
@@ -49,9 +54,13 @@ export default function Customers() {
   function handleExportExcel() { exportToExcel(buildExportRows(customers), "Clientes"); }
   function handleExportPdf() {
     exportToPdf("Clientes", [
-      { header: "DNI", dataKey: "DNI" }, { header: "Nombre", dataKey: "Nombre" },
-      { header: "Email", dataKey: "Email" }, { header: "Telefono", dataKey: "Telefono" },
-      { header: "Direccion", dataKey: "Direccion" }, { header: "Puntos", dataKey: "Puntos" },
+      { header: "DNI", dataKey: "DNI" }, 
+      { header: "Nombre", dataKey: "Nombre" },
+      { header: "Email", dataKey: "Email" }, 
+      { header: "Telefono", dataKey: "Telefono" },
+      { header: "Direccion", dataKey: "Direccion" },
+      { header: "Límite crédito", dataKey: "Limite_credito" },
+      { header: "Puntos", dataKey: "Puntos" },
     ], buildExportRows(customers), "Clientes");
   }
 
@@ -65,6 +74,7 @@ export default function Customers() {
         email: values.email?.trim() || undefined, 
         phone: values.phone?.trim() || undefined,
         direction: values.direction?.trim() || undefined,
+        creditLimit: values.creditLimit ?? null,
       };
       if (editing) { await update(editing.id, payload); message.success("Cliente actualizado"); }
       else { await create(payload); message.success("Cliente creado"); }
@@ -113,6 +123,12 @@ export default function Customers() {
     { title: "Email",    dataIndex: "email", render: (v) => v ?? "-" },
     { title: "Teléfono", dataIndex: "phone", render: (v) => v ?? "-" },
     { title: "Direccion", dataIndex: "direction", render: (v) => v ?? "-" },
+    {
+      title: "Límite crédito",
+      dataIndex: "creditLimit",
+      align: "right",
+      render: (v) => v != null ? formatCurrency(v) : <Text type="secondary">Sin límite</Text>,
+    },
     { title: "Activo",   dataIndex: "active", render: (v) => (v ? "Sí" : "No") },
     { title: "Puntos",   dataIndex: "points", align: "right",
       render: (_, r) => new Intl.NumberFormat("es-HN").format(r.points?.balance ?? 0) },
@@ -143,6 +159,11 @@ export default function Customers() {
           )}
           <div style={{ marginTop: 4 }}>
             <Tag color={r.active ? "green" : "default"}>{r.active ? "Activo" : "Inactivo"}</Tag>
+            {r.creditLimit != null && (
+              <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                Crédito: {formatCurrency(r.creditLimit)}
+              </Text>
+            )}
           </div>
         </div>
       ),

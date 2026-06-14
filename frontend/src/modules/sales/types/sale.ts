@@ -15,6 +15,13 @@ export interface SaleItemDTO {
   unitPrice?: number;
 }
 
+export interface CreditStatus {
+  creditLimit: number | null;
+  usedCredit: number;
+  availableCredit: number | null;
+  hasOverdue: boolean;
+}
+
 export interface SaleItems {
   id: number;
   product: {

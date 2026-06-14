@@ -1,5 +1,5 @@
 import prisma from "../../core/prisma";
-import { CreateCustomerInput, UpdateCustomerInput, CustomerError } from "./customer";
+import { CreateCustomerInput, UpdateCustomerInput, CustomerError, CustomerCreditStatus } from "./customer";
 import { Prisma } from "@prisma/client";
 import { DomainError } from "../../core/errors/domain-error";
 
@@ -48,15 +48,7 @@ export class CustomerService {
   static async getById(id: number, tenantId: number) {
     return prisma.customer.findUnique({
       where: { id, tenantId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        dni: true,
-        direction: true,
-        active: true,
-        createdAt: true,
+      include: {
         points: {
           select: {
             balance: true,
@@ -121,5 +113,37 @@ export class CustomerService {
       where: { id, tenantId },
       data: { active },
     });
+  }
+
+  static async getCreditStatus(id: number, tenantId: number): Promise<CustomerCreditStatus | null> {
+    const customer = await prisma.customer.findUnique({
+      where: { id, tenantId },
+      select: { creditLimit: true },
+    });
+
+    if (!customer) return null;
+
+    const aggregate = await prisma.accountReceivable.aggregate({
+      where: {
+        customerId: id,
+        tenantId,
+        status: { in: ["PENDING", "PARTIAL", "OVERDUE"] },
+      },
+      _sum: { balance: true },
+    });
+
+    const hasOverdue = await prisma.accountReceivable.count({
+      where: { customerId: id, tenantId, status: "OVERDUE" },
+    });
+
+    const usedCredit = Number(aggregate._sum.balance ?? 0);
+    const creditLimit = customer.creditLimit ? Number(customer.creditLimit) : null;
+
+    return {
+      creditLimit,
+      usedCredit,
+      availableCredit: creditLimit !== null ? creditLimit - usedCredit : null,
+      hasOverdue: hasOverdue > 0,
+    };
   }
 }

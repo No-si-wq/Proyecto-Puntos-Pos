@@ -7,6 +7,7 @@ export const createCustomerSchema = z.object({
     email: z.string().email("Email inválido").optional(),
     phone: z.string().min(6).optional(),
     direction: z.string().min(4).optional(),
+    creditLimit: z.number().positive("El límite de crédito debe ser positivo").nullable().optional(),
   }),
 });
 
@@ -17,6 +18,7 @@ export const updateCustomerSchema = z.object({
     email: z.string().email().optional(),
     phone: z.string().min(6).optional(),
     direction: z.string().min(4).optional(),
+    creditLimit: z.number().positive("El límite de crédito debe ser positivo").nullable().optional(),
     active: z.boolean().optional(),
   }),
 });

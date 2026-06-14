@@ -56,3 +56,16 @@ export async function toggleCustomerActive(req: Request, res: Response) {
 
   res.json({ message: "Estado actualizado" });
 }
+
+export async function getCustomerCreditStatus(req: Request, res: Response) {
+  const id = Number(req.params.id);
+  const { tenantId } = req.user!;
+
+  const status = await CustomerService.getCreditStatus(id, tenantId);
+
+  if (!status) {
+    return res.status(404).json({ message: "Cliente no encontrado" });
+  }
+
+  res.json(status);
+}

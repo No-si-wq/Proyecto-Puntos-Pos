@@ -30,14 +30,12 @@ import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
 import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehouse";
 import { useWarehouseProducts } from "../../warehouses/hooks/useWarehouseProducts";
 import { usePriceLists } from "../../priceLists/hooks/usePriceList";
-import type { SalePaymentMethod } from "../types/sale";
-import type { Sale } from "../types/sale";
+import type { SalePaymentMethod, Sale } from "../types/sale";
 import { saleCartStore } from "../types/saleCart.store";
 import { Role } from "../../../core/auth/roles";
 import { useReportTemplates } from "../../report-templates/hooks/useReportTemplates";
 import { buildSaleHtml, resolveWindowSize } from "../../report-templates/utils/resolveTemplate";
 import { useSettings } from "../../settings/hooks/useSettings";
-import http from "../../../core/http/http";
 
 import PageHeader from "../../../core/components/common/PageHeader";
 
@@ -55,6 +53,7 @@ export default function Sales() {
     { method: SalePaymentMethod; amount: number | null; reference?: string }[]
   >([{ method: "CASH", amount: null }]);
   const [dueDate, setDueDate] = useState<string>();
+
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   const { isMobile, isTablet, device } = useDeviceType();
@@ -65,7 +64,7 @@ export default function Sales() {
   const inputRef = useRef<InputRef>(null);
   const sizes = useResponsiveSizes();
 
-  const { create, creating } = useSales();
+  const { create, creating, getSaleById, creditStatus, loadingCredit, fetchCreditStatus, clearCreditStatus } = useSales();
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const selectRef = useRef<any>(null);
   const cart = saleCartStore();
@@ -85,7 +84,7 @@ export default function Sales() {
     if (!pendingPrintSale) return;
     setPrinting(true);
     try {
-      const { data: fullSale } = await http.get<Sale>(`/sales/${pendingPrintSale.id}`);
+      const fullSale = await getSaleById(pendingPrintSale.id);
       let defaultT = selectedTemplate
         ? await getById(selectedTemplate).catch(() => null)
         : await getDefault();
@@ -172,8 +171,19 @@ export default function Sales() {
   const totalAssigned = round2(totalNonCredit + creditAmount);
   const totalFinalRounded = round2(totalFinal);
   const remaining = round2(totalFinalRounded - totalAssigned);
+  const creditExceedsLimit =
+    creditStatus?.availableCredit != null &&
+    creditAmount > creditStatus.availableCredit;
 
   const isSubmitDisabled = cart.items.length === 0
+
+  useEffect(() => {
+    if (!paymentModalOpen || !hasCredit || !sale.customerId) {
+      clearCreditStatus();
+      return;
+    }
+    fetchCreditStatus(sale.customerId);
+  }, [paymentModalOpen, hasCredit, sale.customerId]);
 
   async function submitSale() {
     if (cart.items.length === 0) {
@@ -183,6 +193,13 @@ export default function Sales() {
 
     if (sale.pointsUsed > availablePoints) {
       message.error("Puntos insuficientes");
+      return;
+    }
+
+    if (hasCredit && creditExceedsLimit) {
+      message.error(
+        `Monto a crédito excede el límite disponible (${formatCurrency(creditStatus!.availableCredit!)})`
+      );
       return;
     }
 
@@ -434,13 +451,14 @@ export default function Sales() {
         okButtonProps={{
           disabled:
             (hasCredit && (!dueDate || creditAmount <= 0 || Math.abs(totalAssigned - totalFinalRounded) > EPS)) ||
-            (!hasCredit && totalAssigned < totalFinalRounded - EPS),
+            (!hasCredit && totalAssigned < totalFinalRounded - EPS) ||
+            creditExceedsLimit,
         }}
         width={420}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 8 }}>
           {payments.map((p, idx) => (
-            <div key={idx}>
+            <div key={`${idx}-${p.method}`}>
               <Row gutter={8} align="middle">
                 <Col span={14}>
                   <Select
@@ -454,7 +472,8 @@ export default function Sales() {
                           method: value,
                           amount: value === "CREDIT"
                             ? Math.max(totalFinal - totalNonCredit, 0)
-                            : updated[idx].amount,
+                            : null,
+                          reference: undefined,
                         };
                         return updated;
                       });
@@ -511,6 +530,48 @@ export default function Sales() {
                     onChange={(date) => setDueDate(date?.toISOString())}
                   />
                   <Tag color="orange" style={{ marginTop: 8 }}>Venta a crédito</Tag>
+
+                  {/* AGREGAR ESTO: */}
+                  {sale.customerId && (
+                    <div style={{ marginTop: 8, padding: "8px 10px", background: "#fafafa", borderRadius: 6, border: "1px solid #f0f0f0", fontSize: 12 }}>
+                      {loadingCredit ? (
+                        <span style={{ color: "#888" }}>Verificando límite de crédito...</span>
+                      ) : creditStatus ? (
+                        <>
+                          {creditStatus.hasOverdue && (
+                            <div style={{ color: "#ff4d4f", marginBottom: 4, fontWeight: 500 }}>
+                              ⚠ Cliente tiene cuentas vencidas
+                            </div>
+                          )}
+                          {creditStatus.creditLimit != null ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ color: "#888" }}>Límite</span>
+                                <span>{formatCurrency(creditStatus.creditLimit)}</span>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ color: "#888" }}>Usado</span>
+                                <span>{formatCurrency(creditStatus.usedCredit)}</span>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ color: "#888" }}>Disponible</span>
+                                <strong style={{ color: creditExceedsLimit ? "#ff4d4f" : "#52c41a" }}>
+                                  {formatCurrency(creditStatus.availableCredit!)}
+                                </strong>
+                              </div>
+                              {creditExceedsLimit && (
+                                <div style={{ color: "#ff4d4f", marginTop: 2 }}>
+                                  El monto excede el crédito disponible
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{ color: "#888" }}>Sin límite de crédito configurado</span>
+                          )}
+                        </>
+                      ) : null}
+                    </div>
+                  )}
                 </>
               )}
             </div>

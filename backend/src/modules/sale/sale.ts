@@ -61,4 +61,5 @@ export enum SaleError {
   RETURN_QUANTITY_EXCEEDS = "La cantidad a devolver supera la vendida",
   RETURN_ITEM_NOT_FOUND   = "Ítem de venta no encontrado",
   SALE_CANCELLED          = "No se puede devolver una venta cancelada",
+  CREDIT_LIMIT_EXCEEDED = "CREDIT_LIMIT_EXCEEDED",
 }

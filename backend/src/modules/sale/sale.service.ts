@@ -365,7 +365,7 @@ export class SaleService {
         }
       }
 
-const total = subtotalDecimal.sub(globalDiscount).add(taxTotalDecimal);
+      const total = subtotalDecimal.sub(globalDiscount).add(taxTotalDecimal);
 
       if (total.lt(0)) throw new Error(SaleError.INVALID_TOTAL);
 
@@ -463,6 +463,27 @@ const total = subtotalDecimal.sub(globalDiscount).add(taxTotalDecimal);
  
       if (hasCredit) {
         if (!sale.customerId) throw new Error("Venta a crédito requiere cliente");
+
+        const customer = await tx.customer.findUnique({
+          where: { id: sale.customerId },
+          select: { creditLimit: true },
+        });
+
+        if (customer?.creditLimit != null) {
+          const usedAgg = await tx.accountReceivable.aggregate({
+            where: {
+              customerId: sale.customerId,
+              tenantId,
+              status: { in: ["PENDING", "PARTIAL", "OVERDUE"] },
+            },
+            _sum: { balance: true },
+          });
+          const usedCredit = new Prisma.Decimal(usedAgg._sum.balance ?? 0);
+          if (usedCredit.add(creditAmount).gt(customer.creditLimit)) {
+            throw new Error(SaleError.CREDIT_LIMIT_EXCEEDED);
+          }
+        }
+
         await tx.accountReceivable.create({
           data: {
             saleId: sale.id,

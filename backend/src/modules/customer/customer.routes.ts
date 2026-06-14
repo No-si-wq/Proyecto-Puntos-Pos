@@ -31,6 +31,13 @@ router.post(
   asyncHandler(controller.createCustomer),
 );
 
+router.get(
+  "/:id/credit-status",
+  roleMiddleware(Role.ADMIN, Role.USER),
+  validate(schema.customerIdParamSchema),
+  asyncHandler(controller.getCustomerCreditStatus)
+);
+
 router.put(
   "/:id",
   roleMiddleware(Role.ADMIN, Role.USER),
