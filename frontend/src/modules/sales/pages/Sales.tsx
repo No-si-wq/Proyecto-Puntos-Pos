@@ -165,11 +165,11 @@ export default function Sales() {
 
   const hasCredit = payments.some((p) => p.method === "CREDIT");
   const creditPayment = payments.find((p) => p.method === "CREDIT");
-  const creditAmount = creditPayment?.amount ?? 0;
   const nonCreditPayments = payments.filter((p) => p.method !== "CREDIT");
   const totalNonCredit = nonCreditPayments.reduce((s, p) => s + (p.amount ?? 0), 0);
-  const totalAssigned = round2(totalNonCredit + creditAmount);
   const totalFinalRounded = round2(totalFinal);
+  const creditAmount = hasCredit ? (creditPayment?.amount ?? 0) : 0;
+  const totalAssigned = round2(totalNonCredit + creditAmount);
   const remaining = round2(totalFinalRounded - totalAssigned);
   const creditExceedsLimit =
     creditStatus?.availableCredit != null &&
@@ -450,15 +450,15 @@ export default function Sales() {
         confirmLoading={creating}
         okButtonProps={{
           disabled:
-            (hasCredit && (!dueDate || creditAmount <= 0 || Math.abs(totalAssigned - totalFinalRounded) > EPS)) ||
-            (!hasCredit && totalAssigned < totalFinalRounded - EPS) ||
-            creditExceedsLimit,
+          (hasCredit && (!dueDate || Math.abs(totalAssigned - totalFinalRounded) > EPS)) ||
+          (!hasCredit && totalAssigned < totalFinalRounded - EPS) ||
+          creditExceedsLimit,
         }}
         width={420}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 8 }}>
           {payments.map((p, idx) => (
-            <div key={`${idx}-${p.method}`}>
+            <div key={idx}>
               <Row gutter={8} align="middle">
                 <Col span={14}>
                   <Select
@@ -470,9 +470,7 @@ export default function Sales() {
                         updated[idx] = {
                           ...updated[idx],
                           method: value,
-                          amount: value === "CREDIT"
-                            ? Math.max(totalFinal - totalNonCredit, 0)
-                            : null,
+                          amount: null,
                           reference: undefined,
                         };
                         return updated;
@@ -491,7 +489,7 @@ export default function Sales() {
                 </Col>
 
                 <Col span={6}>
-                  <InputNumber
+                  <InputNumber<number>
                     style={{ width: "100%" }}
                     min={0}
                     precision={2}
@@ -506,6 +504,7 @@ export default function Sales() {
                     }}
                   />
                 </Col>
+
                 <Col span={4}>
                   {payments.length > 1 && (
                     <Button
