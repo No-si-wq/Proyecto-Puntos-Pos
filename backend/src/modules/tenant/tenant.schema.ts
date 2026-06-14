@@ -66,3 +66,19 @@ z.object({
 );
 
 export type RegisterTenantInput = z.infer<typeof registerTenantSchema>;
+
+// Regex del formato NNN-NNN-NN-NNNNNNNN
+const fiscalNumberRegex = /^\d{3}-\d{3}-\d{2}-\d{8}$/;
+const caiRegex = /^[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{2}$/i;
+
+export const setFiscalConfigSchema = z.object({
+  body: z.object({
+    cai:            z.string().trim().toUpperCase().regex(caiRegex, "Formato de CAI inválido"),
+    establishment:  z.string().regex(/^\d{3}$/, "Debe ser 3 dígitos"),
+    emissionPoint:  z.string().regex(/^\d{3}$/, "Debe ser 3 dígitos"),
+    documentType:   z.string().regex(/^\d{2}$/, "Debe ser 2 dígitos").default("01"),
+    rangeStart:     z.string().regex(fiscalNumberRegex, "Formato inválido (NNN-NNN-NN-NNNNNNNN)"),
+    rangeEnd:       z.string().regex(fiscalNumberRegex, "Formato inválido (NNN-NNN-NN-NNNNNNNN)"),
+    expiresAt:      z.string().datetime({ message: "Fecha inválida" }),
+  }),
+});

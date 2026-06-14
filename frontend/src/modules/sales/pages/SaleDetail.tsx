@@ -508,6 +508,21 @@ export default function SaleDetail() {
             <Descriptions.Item label="Observaciones">
               {sale?.observations ?? "-"}
             </Descriptions.Item>
+              {sale?.fiscalData && (
+                <>
+                  <Descriptions.Item label="CAI" span={2}>
+                    <Text code style={{ fontSize: 11 }}>
+                      {sale.fiscalData.cai}
+                    </Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Rango autorizado">
+                    Hasta {sale.fiscalData.rangeEnd}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Fecha límite emisión">
+                    {formatDate(sale.fiscalData.expiresAt)}
+                  </Descriptions.Item>
+                </>
+              )}
             {sale?.priceList && (
               <Descriptions.Item label="Lista de precios">
                 {sale.priceList.name}

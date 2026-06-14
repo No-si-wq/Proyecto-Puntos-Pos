@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import http from "../../../core/http/http";
-import { PRICE_MODE_KEY, type PriceMode, type LoyaltyConfig, DEFAULT_LOYALTY_CONFIG } from "../types/settings";
+import { PRICE_MODE_KEY, type PriceMode, type LoyaltyConfig, DEFAULT_LOYALTY_CONFIG, type FiscalConfig, type FiscalConfigInput } from "../types/settings";
 
 export function useSettings() {
   const [priceMode, setPriceModeState] = useState<PriceMode>("TAX_INCLUDED");
@@ -9,16 +9,22 @@ export function useSettings() {
   const [loyaltyConfig, setLoyaltyConfig] = useState<LoyaltyConfig>(DEFAULT_LOYALTY_CONFIG);
   const [loadingLoyalty, setLoadingLoyalty] = useState(false);
   const [savingLoyalty, setSavingLoyalty] = useState(false);
+  const [fiscalConfig, setFiscalConfig] = useState<FiscalConfig | null>(null);
+  const [loadingFiscal, setLoadingFiscal] = useState(false);
+  const [savingFiscal, setSavingFiscal] = useState(false);
 
   const LOYALTY_CONFIG_KEY = "loyalty_config";
 
   const load = useCallback(async () => {
     setLoading(true);
     setLoadingLoyalty(true);
+    setLoadingFiscal(true);
     try {
-      const [priceModeRes, loyaltyRes] = await Promise.allSettled([
+      const [priceModeRes, loyaltyRes, fiscalRes] = await Promise.allSettled([
         http.get<{ key: string; value: string }>(`/tenants/config/${PRICE_MODE_KEY}`),
         http.get<{ key: string; value: string }>(`/tenants/config/${LOYALTY_CONFIG_KEY}`),
+        http.get<FiscalConfig>("/tenants/fiscal-config"),
+
       ]);
 
       if (priceModeRes.status === "fulfilled") {
@@ -32,6 +38,11 @@ export function useSettings() {
           setLoyaltyConfig(DEFAULT_LOYALTY_CONFIG);
         }
       }
+
+      if (fiscalRes.status === "fulfilled") {
+        setFiscalConfig(fiscalRes.value.data);
+      }
+
     } finally {
       setLoading(false);
       setLoadingLoyalty(false);
@@ -62,5 +73,28 @@ export function useSettings() {
     }
   }
 
-  return { priceMode, loading, saving, savePriceMode, loyaltyConfig, loadingLoyalty, savingLoyalty, saveLoyaltyConfig };
+  async function saveFiscalConfig(input: FiscalConfigInput) {
+    setSavingFiscal(true);
+    try {
+      const res = await http.post<FiscalConfig>("/tenants/fiscal-config", input);
+      setFiscalConfig(res.data);
+    } finally {
+      setSavingFiscal(false);
+    }
+  }
+
+  return { 
+    priceMode, 
+    loading, 
+    saving, 
+    savePriceMode, 
+    loyaltyConfig, 
+    loadingLoyalty, 
+    savingLoyalty, 
+    saveLoyaltyConfig,
+    fiscalConfig,
+    loadingFiscal,
+    savingFiscal,
+    saveFiscalConfig
+  };
 }

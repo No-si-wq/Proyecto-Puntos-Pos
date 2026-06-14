@@ -83,4 +83,20 @@ export class TenantController {
     return res.status(200).json(result);
   }
 
+  static async getFiscalConfig(req: Request, res: Response) {
+    const { tenantId } = req.user!;
+    const config = await TenantService.getFiscalConfig(tenantId);
+    if (!config) return res.status(404).json({ message: "Sin configuración fiscal activa" });
+    return res.json(config);
+  }
+
+  static async setFiscalConfig(req: Request, res: Response) {
+    const { tenantId } = req.user!;
+    const { cai, establishment, emissionPoint, documentType, rangeStart, rangeEnd, expiresAt } = req.body;
+    const config = await TenantService.setFiscalConfig(tenantId, {
+      cai, establishment, emissionPoint, documentType, rangeStart, rangeEnd,
+      expiresAt: new Date(expiresAt),
+    });
+    return res.status(201).json(config);
+  }
 }

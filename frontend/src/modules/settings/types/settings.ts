@@ -1,3 +1,5 @@
+import dayjs from "dayjs"
+
 export type PriceMode = "TAX_INCLUDED" | "TAX_EXCLUDED";
 
 export interface SystemConfig {
@@ -21,6 +23,32 @@ export interface LoyaltyConfig {
     enabled: boolean;
     pointValue: number;
   };
+}
+
+export interface FiscalConfig {
+  id: number;
+  cai: string;
+  establishment: string;
+  emissionPoint: string;
+  documentType: string;
+  rangeStart: string;
+  rangeEnd: string;
+  expiresAt: string;
+  active: boolean;
+}
+
+export interface FiscalConfigInput {
+  cai: string;
+  establishment: string;
+  emissionPoint: string;
+  documentType: string;
+  rangeStart: string;
+  rangeEnd: string;
+  expiresAt: string;
+}
+
+export interface FiscalFormValues extends Omit<FiscalConfigInput, "expiresAt"> {
+  expiresAt: dayjs.Dayjs;
 }
 
 export const DEFAULT_LOYALTY_CONFIG: LoyaltyConfig = {

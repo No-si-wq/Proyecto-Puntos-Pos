@@ -1,4 +1,5 @@
 import prisma from "../../core/prisma";
+import { validateFiscalRange, buildFiscalNumber, isFiscalConfigExpired } from "../../utils/fiscal.util";
 import { Prisma } from "@prisma/client";
 import { CommissionType, InventoryMovementType, SaleStatus } from "@prisma/client";
 import { InventoryService } from "../inventory/inventory.service";
@@ -35,6 +36,7 @@ export class SaleService {
         user: { select: { id: true, name: true } },
         seller: { select: { id: true, name: true } },
         priceList: { select: { id: true, name: true } },
+        fiscalConfig: { select: { cai: true, rangeEnd: true, expiresAt: true, rangeStart: true } },
         items: {
           select: {
             id: true,
@@ -87,22 +89,32 @@ export class SaleService {
 
     if (!sale) throw new Error(SaleError.SALE_NOT_FOUND);
 
+    if (!sale) throw new Error(SaleError.SALE_NOT_FOUND);
+
+    const { fiscalConfig: fc, ...saleData } = sale;
+
     const saleWithEffectiveQty = {
-      ...sale,
+      ...saleData,
+      fiscalData: fc ? {
+        cai:       fc.cai,
+        rangeEnd:  fc.rangeEnd,
+        rangeStart: fc.rangeStart,
+        expiresAt: fc.expiresAt.toISOString(),
+      } : null,
       items: sale.items.map((item) => {
         const returned = item.returnItems.reduce((s, r) => s + r.quantity, 0);
         const refunded = item.returnItems.reduce(
-          (s, r) => s.add(new Prisma.Decimal(r.refundAmount)), 
+          (s, r) => s.add(new Prisma.Decimal(r.refundAmount)),
           new Prisma.Decimal(0)
         );
         return {
           ...item,
           quantity: item.quantity - returned,
           returnedQuantity: returned,
-          refundedAmount: refunded,         
+          refundedAmount: refunded,
         };
       }),
-      totalRefunded: sale.returns.reduce(   
+      totalRefunded: sale.returns.reduce(
         (s, r) => s.add(
           r.items.reduce(
             (s2, i) => s2.add(new Prisma.Decimal(i.refundAmount)),
@@ -290,14 +302,39 @@ export class SaleService {
         });
       }
  
-      const sequence = await tx.saleSequence.upsert({
-        where: { warehouseId, tenantId },
-        create: { warehouseId, tenantId, current: 1 },
-        update: { current: { increment: 1 } },
-        select: { current: true },
+      // 1. Obtener FiscalConfig activo del tenant
+      const fiscalConfig = await tx.fiscalConfig.findFirst({
+        where: { tenantId, active: true },
       });
- 
-      const saleNumber = `SALE-${warehouseId}-${String(sequence.current).padStart(6, "0")}`;
+
+      if (!fiscalConfig) {
+        throw new Error(SaleError.NO_FISCAL_CONFIG);
+      }
+
+      if (isFiscalConfigExpired(fiscalConfig.expiresAt)) {
+        throw new Error(SaleError.FISCAL_CONFIG_EXPIRED);
+      }
+
+      // 2. Obtener y actualizar secuencia con operación atómica
+      const sequence = await tx.saleSequence.upsert({
+        where: { warehouseId },
+        update: { current: { increment: 1 } },
+        create: { tenantId, warehouseId, current: 1 },
+      });
+
+      // 3. Construir número fiscal
+      const saleNumber = buildFiscalNumber({
+        establishment: fiscalConfig.establishment,
+        emissionPoint: fiscalConfig.emissionPoint,
+        documentType: fiscalConfig.documentType,
+        sequence: sequence.current,
+      });
+
+      // 4. Validar que está dentro del rango autorizado
+      if (!validateFiscalRange(saleNumber, fiscalConfig.rangeStart, fiscalConfig.rangeEnd)) {
+        throw new Error(SaleError.FISCAL_RANGE_EXCEEDED);
+      }
+
       const subtotalDecimal = new Prisma.Decimal(subtotalAfterLineDiscount);
       const taxTotalDecimal = new Prisma.Decimal(totalTax);
       const pointsUsed = data.pointsUsed ?? 0;
@@ -325,6 +362,7 @@ export class SaleService {
           paymentMethod: dominantMethod,
           observations: data.observations,
           priceMode: data.priceMode ?? "TAX_INCLUDED",
+          fiscalConfigId: fiscalConfig.id,
           status: SaleStatus.COMPLETED,
         },
       });

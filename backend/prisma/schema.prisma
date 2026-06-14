@@ -23,6 +23,7 @@ model Tenant {
   commissions     Commission[]
   commissionLevel CommissionLevel[]
   customers       Customer[]
+  fiscalConfigs   FiscalConfig[]
   priceLists      PriceList[]
   products        Product[]
   productPrice    ProductPrice[]
@@ -377,9 +378,28 @@ model PurchaseItem {
 model SaleSequence {
   id          Int       @id @default(autoincrement())
   tenantId    Int
-  current     Int       @default(0)
+  current     BigInt    @default(0)
   warehouseId Int       @unique
   warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  @@index([tenantId])
+}
+
+model FiscalConfig {
+  id            Int      @id @default(autoincrement())
+  tenantId      Int
+  cai           String
+  establishment String   @default("001")
+  emissionPoint String   @default("001")
+  documentType  String   @default("01")
+  rangeStart    String
+  rangeEnd      String
+  expiresAt     DateTime
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  sales         Sale[]
 
   @@index([tenantId])
 }
@@ -400,42 +420,44 @@ model ReportTemplate {
 }
 
 model Sale {
-  id            Int                   @id @default(autoincrement())
-  tenantId      Int
-  saleNumber    String
-  status        SaleStatus            @default(COMPLETED)
-  subtotal      Decimal               @db.Decimal(10, 2)
-  discount      Decimal               @default(0) @db.Decimal(10, 2)
-  total         Decimal               @db.Decimal(10, 2)
-  grossSubtotal Decimal               @db.Decimal(12, 2)
-  cogs          Decimal               @default(0) @db.Decimal(10, 2)
-  pointsUsed    Int                   @default(0)
-  pointsEarned  Int                   @default(0)
-  customerId    Int?
-  userId        Int
-  warehouseId   Int
-  paymentMethod PaymentMethod         @default(CASH)
-  createdAt     DateTime              @default(now())
-  priceListId   Int?
-  sellerId      Int?
-  taxTotal      Decimal               @default(0)
-  priceMode     PriceMode             @default(TAX_INCLUDED)
-  amountPaid    Decimal?              @db.Decimal(10, 2)
-  changeAmount  Decimal?              @db.Decimal(10, 2)
-  observations  String?
-  receivable    AccountReceivable?
-  commissions   Commission[]
-  history       LoyaltyPointHistory[]
-  quotation     Quotation?
-  customer      Customer?             @relation(fields: [customerId], references: [id])
-  priceList     PriceList?            @relation(fields: [priceListId], references: [id])
-  seller        User?                 @relation("SaleSeller", fields: [sellerId], references: [id])
-  tenant        Tenant                @relation(fields: [tenantId], references: [id])
-  user          User                  @relation("SaleCreator", fields: [userId], references: [id])
-  warehouse     Warehouse             @relation(fields: [warehouseId], references: [id])
-  items         SaleItem[]
-  payments      SalePayment[]
-  returns       SaleReturn[]
+  id             Int                   @id @default(autoincrement())
+  tenantId       Int
+  saleNumber     String
+  status         SaleStatus            @default(COMPLETED)
+  subtotal       Decimal               @db.Decimal(10, 2)
+  discount       Decimal               @default(0) @db.Decimal(10, 2)
+  total          Decimal               @db.Decimal(10, 2)
+  grossSubtotal  Decimal               @db.Decimal(12, 2)
+  cogs           Decimal               @default(0) @db.Decimal(10, 2)
+  pointsUsed     Int                   @default(0)
+  pointsEarned   Int                   @default(0)
+  customerId     Int?
+  userId         Int
+  warehouseId    Int
+  paymentMethod  PaymentMethod         @default(CASH)
+  createdAt      DateTime              @default(now())
+  priceListId    Int?
+  sellerId       Int?
+  taxTotal       Decimal               @default(0)
+  priceMode      PriceMode             @default(TAX_INCLUDED)
+  amountPaid     Decimal?              @db.Decimal(10, 2)
+  changeAmount   Decimal?              @db.Decimal(10, 2)
+  observations   String?
+  fiscalConfigId Int?
+  receivable     AccountReceivable?
+  commissions    Commission[]
+  history        LoyaltyPointHistory[]
+  quotation      Quotation?
+  customer       Customer?             @relation(fields: [customerId], references: [id])
+  fiscalConfig   FiscalConfig?         @relation(fields: [fiscalConfigId], references: [id])
+  priceList      PriceList?            @relation(fields: [priceListId], references: [id])
+  seller         User?                 @relation("SaleSeller", fields: [sellerId], references: [id])
+  tenant         Tenant                @relation(fields: [tenantId], references: [id])
+  user           User                  @relation("SaleCreator", fields: [userId], references: [id])
+  warehouse      Warehouse             @relation(fields: [warehouseId], references: [id])
+  items          SaleItem[]
+  payments       SalePayment[]
+  returns        SaleReturn[]
 
   @@unique([tenantId, saleNumber])
   @@index([tenantId])

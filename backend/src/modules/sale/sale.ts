@@ -62,4 +62,7 @@ export enum SaleError {
   RETURN_ITEM_NOT_FOUND   = "Ítem de venta no encontrado",
   SALE_CANCELLED          = "No se puede devolver una venta cancelada",
   CREDIT_LIMIT_EXCEEDED = "CREDIT_LIMIT_EXCEEDED",
+  NO_FISCAL_CONFIG    = "No hay una configuración fiscal activa (CAI). Configura el CAI antes de facturar.",
+  FISCAL_CONFIG_EXPIRED = "El CAI fiscal ha vencido. Renueva la autorización en el SAR.",
+  FISCAL_RANGE_EXCEEDED = "El correlativo ha superado el rango autorizado por el SAR. Solicita un nuevo CAI.",
 }

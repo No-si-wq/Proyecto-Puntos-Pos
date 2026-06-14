@@ -5,7 +5,7 @@ import { formatCurrency, formatDate } from "../../../core/utils/formatters";
 export function resolveSaleTokens(sale: Sale): Record<string, string> {
   const now = new Date();
   return {
-    "[SaleNumber]":       sale.saleNumber ?? "",
+    "[Factura]":          sale.saleNumber ?? "",
     "[Fecha]":            formatDate(sale.createdAt),
     "[Hora]":             now.toLocaleTimeString("es-HN", { hour: "2-digit", minute: "2-digit" }),
     "[Estatus]":          sale.status === "CANCELLED" ? "Cancelada" : "Completada",
@@ -22,6 +22,13 @@ export function resolveSaleTokens(sale: Sale): Record<string, string> {
     "[NombreVendedor]":   sale.seller?.name ?? "",
     "[Cajero]":           sale.user?.name ?? "",
     "[RTNEmisor]":        "", 
+    "[CAI]":                sale.fiscalData?.cai               ?? "",
+    "[RangoAutorizado]":    sale.fiscalData?.rangeEnd
+      ? `Rango:  ${sale.fiscalData.rangeStart ?? ""} al ${sale.fiscalData.rangeEnd}`
+      : "",
+    "[FechaLimiteEmision]": sale.fiscalData?.expiresAt
+      ? `Fecha límite: ${formatDate(sale.fiscalData.expiresAt)}`
+      : "",
     "[Monto]":            String(sale.amountPaid ?? ""),
     "[Cambio]":           String(sale.changeAmount ?? ""),
 

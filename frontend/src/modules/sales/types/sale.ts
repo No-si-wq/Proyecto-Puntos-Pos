@@ -15,6 +15,13 @@ export interface SaleItemDTO {
   unitPrice?: number;
 }
 
+export interface FiscalData {
+  cai: string;
+  rangeStart?: string;
+  rangeEnd: string;
+  expiresAt: string;
+}
+
 export interface CreditStatus {
   creditLimit: number | null;
   usedCredit: number;
@@ -92,6 +99,7 @@ export interface Sale {
   changeAmount?: number | null;
   totalRefunded?: number;
   observations?: string | null;
+  fiscalData?: FiscalData | null;
 
   customer?: {
     id: number;

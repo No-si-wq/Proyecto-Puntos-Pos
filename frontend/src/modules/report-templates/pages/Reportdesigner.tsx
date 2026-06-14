@@ -25,7 +25,7 @@ const SECTIONS: { id: SectionId; label: string; minHeight: number; bgColor: stri
 
 const FIELD_GROUPS = [
   { id: "venta", label: "Venta", fields: [
-    { token: "[SaleNumber]",   label: "# Factura" },
+    { token: "[Factura]",      label: "# Factura" },
     { token: "[Fecha]",        label: "Fecha" },
     { token: "[Estatus]",      label: "Estatus" },
     { token: "[MetodoPago]",   label: "Método de pago" },
@@ -66,9 +66,14 @@ const FIELD_GROUPS = [
     { token: "[PuntosUsados]",  label: "Puntos usados" },
     { token: "[PuntosGanados]", label: "Puntos ganados" },
   ]},
+  { id: "fiscal", label: "Fiscal (SAR)", fields: [
+    { token: "[CAI]",               label: "CAI" },
+    { token: "[RangoAutorizado]",   label: "Rango autorizado" },
+    { token: "[FechaLimiteEmision]",label: "Fecha límite emisión" },
+  ]},
   { id: "cotizacion", label: "Cotización", fields: [
     { token: "[QuotationNumber]", label: "# Cotización"      },
-    { token: "[SaleNumber]",      label: "# Factura (si aplica)" },
+    { token: "[Factura]",         label: "# Factura (si aplica)" },
     { token: "[Fecha]",           label: "Fecha"             },
     { token: "[FechaExpiracion]", label: "Fecha expiración"  },
     { token: "[Estatus]",         label: "Estatus"           },
@@ -80,7 +85,7 @@ const FIELD_GROUPS = [
 const DEFAULT_ELEMENTS: ReportFieldElement[] = [
   { id: "e1", type: "static", token: "", label: "MI EMPRESA S.A. DE C.V.", x: 160, y: 14, fontSize: 14, fontWeight: "bold",   align: "left", section: "header" },
   { id: "e2", type: "field",  token: "[RTNEmisor]",      label: "RTN Emisor",      x: 8,   y: 14,  fontSize: 11, fontWeight: "normal", align: "left", section: "header" },
-  { id: "e3", type: "field",  token: "[SaleNumber]",     label: "# Factura",       x: 8,   y: 50,  fontSize: 11, fontWeight: "normal", align: "left", section: "header" },
+  { id: "e3", type: "field",  token: "[Factura]",        label: "# Factura",       x: 8,   y: 50,  fontSize: 11, fontWeight: "normal", align: "left", section: "header" },
   { id: "e4", type: "field",  token: "[Fecha]",          label: "Fecha",           x: 290, y: 50,  fontSize: 11, fontWeight: "normal", align: "left", section: "header" },
   { id: "e5", type: "field",  token: "[NombreCliente]",  label: "Cliente",         x: 8,   y: 80,  fontSize: 11, fontWeight: "normal", align: "left", section: "header" },
   { id: "e6", type: "field",  token: "[NombreVendedor]", label: "Vendedor",        x: 290, y: 80,  fontSize: 11, fontWeight: "normal", align: "left", section: "header" },

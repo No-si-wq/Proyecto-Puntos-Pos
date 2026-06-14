@@ -55,7 +55,7 @@ function fmtDatetime(d: string | Date) {
 function resolveToken(token: string, q: QuotationForPrint, now: Date): string {
   switch (token) {
     case "[QuotationNumber]":  return `Cotización: ${q.quotationNumber}`;
-    case "[SaleNumber]":       return q.convertedSale ? `Venta: ${q.convertedSale.saleNumber}` : "";
+    case "[Factura]":          return q.convertedSale ? `Venta: ${q.convertedSale.saleNumber}` : "";
     case "[Fecha]":            return `Fecha: ${fmtDatetime(q.createdAt)}`;
     case "[FechaExpiracion]":  return q.expiresAt ? `Expira: ${fmtDate(q.expiresAt)}` : "";
     case "[Estatus]":          return `Estado: ${STATUS_LABEL[q.status] ?? q.status}`;
@@ -73,7 +73,6 @@ function resolveToken(token: string, q: QuotationForPrint, now: Date): string {
     case "[DescTotal]":        return `Descuento: ${formatCurrency(0)}`; // cotización no tiene discount global expuesto
     case "[ImpTotal]":         return `Impuestos: ${formatCurrency(q.taxTotal)}`;
     case "[Total]":            return `Total: ${formatCurrency(q.total)}`;
-    // Campos que no aplican a cotización — devuelven vacío
     case "[MetodoPago]":
     case "[Monto]":
     case "[Cambio]":
@@ -81,6 +80,9 @@ function resolveToken(token: string, q: QuotationForPrint, now: Date): string {
     case "[PuntosUsados]":
     case "[PuntosGanados]":
     case "[ComisionVendedor]": return "";
+    case "[CAI]":
+    case "[RangoAutorizado]":
+    case "[FechaLimiteEmision]": return "";
     default:
       // Tokens de fecha/hora en estáticos
       if (token === "[Fecha]")  return fmtDatetime(now);

@@ -139,4 +139,31 @@ export class TenantService {
       create: { key, value, tenantId },
     });
   }
+
+  static async getFiscalConfig(tenantId: number) {
+    return prisma.fiscalConfig.findFirst({
+      where: { tenantId, active: true },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  static async setFiscalConfig(tenantId: number, data: {
+    cai: string;
+    establishment: string;
+    emissionPoint: string;
+    documentType: string;
+    rangeStart: string;
+    rangeEnd: string;
+    expiresAt: Date;
+  }) {
+    // Desactivar el anterior si existe
+    await prisma.fiscalConfig.updateMany({
+      where: { tenantId, active: true },
+      data: { active: false },
+    });
+
+    return prisma.fiscalConfig.create({
+      data: { ...data, tenantId, active: true },
+    });
+  }
 }
