@@ -302,37 +302,39 @@ export class SaleService {
         });
       }
  
-      // 1. Obtener FiscalConfig activo del tenant
+      // 1. Buscar FiscalConfig — opcional
       const fiscalConfig = await tx.fiscalConfig.findFirst({
         where: { tenantId, active: true },
       });
 
-      if (!fiscalConfig) {
-        throw new Error(SaleError.NO_FISCAL_CONFIG);
-      }
-
-      if (isFiscalConfigExpired(fiscalConfig.expiresAt)) {
+      if (fiscalConfig && isFiscalConfigExpired(fiscalConfig.expiresAt)) {
         throw new Error(SaleError.FISCAL_CONFIG_EXPIRED);
       }
 
-      // 2. Obtener y actualizar secuencia con operación atómica
+      // 2. Secuencia siempre incrementa (con o sin CAI)
       const sequence = await tx.saleSequence.upsert({
         where: { warehouseId },
         update: { current: { increment: 1 } },
         create: { tenantId, warehouseId, current: 1 },
       });
 
-      // 3. Construir número fiscal
-      const saleNumber = buildFiscalNumber({
-        establishment: fiscalConfig.establishment,
-        emissionPoint: fiscalConfig.emissionPoint,
-        documentType: fiscalConfig.documentType,
-        sequence: sequence.current,
-      });
+      // 3. Construir número según si hay CAI o no
+      let saleNumber: string;
 
-      // 4. Validar que está dentro del rango autorizado
-      if (!validateFiscalRange(saleNumber, fiscalConfig.rangeStart, fiscalConfig.rangeEnd)) {
-        throw new Error(SaleError.FISCAL_RANGE_EXCEEDED);
+      if (fiscalConfig) {
+        saleNumber = buildFiscalNumber({
+          establishment: fiscalConfig.establishment,
+          emissionPoint: fiscalConfig.emissionPoint,
+          documentType:  fiscalConfig.documentType,
+          sequence:      sequence.current,
+        });
+
+        if (!validateFiscalRange(saleNumber, fiscalConfig.rangeStart, fiscalConfig.rangeEnd)) {
+          throw new Error(SaleError.FISCAL_RANGE_EXCEEDED);
+        }
+      } else {
+        // Formato interno: FAC-001-00000001 (warehouseId + correlativo)
+        saleNumber = `FAC-${String(warehouseId).padStart(3, "0")}-${String(sequence.current).padStart(8, "0")}`;
       }
 
       const subtotalDecimal = new Prisma.Decimal(subtotalAfterLineDiscount);
@@ -362,7 +364,7 @@ export class SaleService {
           paymentMethod: dominantMethod,
           observations: data.observations,
           priceMode: data.priceMode ?? "TAX_INCLUDED",
-          fiscalConfigId: fiscalConfig.id,
+          fiscalConfigId: fiscalConfig?.id ?? null,
           status: SaleStatus.COMPLETED,
         },
       });
