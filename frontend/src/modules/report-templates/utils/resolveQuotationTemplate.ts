@@ -130,7 +130,8 @@ export function resolveQuotationTemplate(
             .replace(/\[Hora\]/g,  now.toLocaleTimeString("es-HN"))
         : resolveToken(el.token, quotation, now);
       if (!raw) return "";
-      return `<span style="position:absolute;left:${el.x}px;top:${el.y}px;font-size:${el.fontSize ?? 11}px;font-weight:${el.fontWeight ?? "normal"};text-align:${el.align ?? "left"};">${raw}</span>`;
+      const cl = el.color ? `color:${el.color};` : "";
+      return `<span style="position:absolute;left:${el.x}px;top:${el.y}px;font-size:${el.fontSize ?? 11}px;font-weight:${el.fontWeight ?? "normal"};${cl}text-align:${el.align ?? "left"};">${raw}</span>`;
     }).join("");
     return `<div style="position:relative;width:${DOC_W}px;min-height:${h}px;background:${bg};border-bottom:1px solid #e5e7eb;overflow:hidden;">${extraHtml}${inner}</div>`;
   }
@@ -153,7 +154,7 @@ export function resolveQuotationTemplate(
   ).join("");
 
   const detailHtml = cols.length
-    ? `<div style="width:${DOC_W}px;padding:0 8px 8px;box-sizing:border-box;">
+    ? `<div style="width:${DOC_W}px;padding:0 8px 8px;box-sizing:border-box;min-height:${config.detailHeight ?? 110}px;">
         <table style="width:100%;border-collapse:collapse;">
           <thead><tr>${thead}</tr></thead>
           <tbody>${tbody}</tbody>
@@ -164,8 +165,8 @@ export function resolveQuotationTemplate(
   const body = [
     renderSection("header", headerH, "#fffef9", logoHtml),
     detailHtml,
-    renderSection("totals", 100, "#fffef9"),
-    renderSection("footer",  50, "#ffffff"),
+    renderSection("totals", config.totalsHeight ?? 100, "#fffef9"),
+    renderSection("footer",  config.footerHeight ?? 50, "#ffffff"),
   ].join("\n");
 
   return `<!DOCTYPE html>

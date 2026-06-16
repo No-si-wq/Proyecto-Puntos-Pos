@@ -192,18 +192,20 @@ export function buildSaleHtml(
       ? resolveToken(el.token, tokens)
       : el.label.replace(/\[\w+\]/g, t => tokens[t] ?? t);
     const fw  = el.fontWeight === "bold" ? "font-weight:700;" : "";
+    const cl  = el.color ? `color:${el.color};` : "";
     const scaledX    = Math.round(el.x * scale);
     const scaledY    = Math.round(el.y * scale);
     const scaledFont = Math.max(7, Math.round((el.fontSize ?? 11) * scale));
     const fs  = `font-size:${scaledFont}px;`;
     const ta  = el.align ? `text-align:${el.align};` : "";
-    return `<div style="position:absolute;left:${scaledX}px;top:${scaledY}px;${fw}${fs}${ta}white-space:nowrap;max-width:calc(100% - ${scaledX}px);overflow:hidden;">${text}</div>`;
+    return `<div style="position:absolute;left:${scaledX}px;top:${scaledY}px;${fw}${cl}${fs}${ta}white-space:nowrap;max-width:calc(100% - ${scaledX}px);overflow:hidden;">${text}</div>`;
   };
 
   const headerEls = bySection("header").map(el => renderEl(el, globalTokens)).join("");
-  const totalsEls = bySection("totals").map(el => renderEl(el, globalTokens)).join("");
-  const footerEls = bySection("footer").map(el => renderEl(el, globalTokens)).join("");
   const headerH = config.headerHeight ?? 130;
+  const detailH = config.detailHeight ?? 110;
+  const totalsH = config.totalsHeight ?? 90;
+  const footerH = config.footerHeight ?? 40;
   const logoHtml = config.logoBase64
   ? `<img src="${config.logoBase64}" style="position:absolute;left:${Math.round((config.logoX ?? 8) * scale)}px;top:${Math.round((config.logoY ?? 8) * scale)}px;width:${Math.round((config.logoWidth ?? 80) * scale)}px;height:${Math.round((config.logoHeight ?? 60) * scale)}px;object-fit:contain;z-index:10;" />`
   : "";
@@ -225,8 +227,8 @@ export function buildSaleHtml(
           border-bottom: 1px solid #ccc; border-top: 1px solid #ccc;
           font-weight: 600;
         }
-        .section-totals { min-height: ${Math.round(90 * scale)}px; border-top: 1px solid #ccc; overflow:hidden; }
-        .section-footer { min-height: ${Math.round(40 * scale)}px; border-top: 1px solid #eee; font-size: ${Math.round(10 * scale)}px; color: #888; overflow:hidden; }
+        .section-totals { min-height: ${Math.round(totalsH * scale)}px; border-top: 1px solid #ccc; overflow:hidden; }
+        .section-footer { min-height: ${Math.round(footerH * scale)}px; border-top: 1px solid #eee; font-size: ${Math.round(10 * scale)}px; color: #888; overflow:hidden; }
         .cancelled-stamp {
           position: absolute; top: 40px; left: 50%; transform: translateX(-50%) rotate(-15deg);
           font-size: 48px; font-weight: 900; color: rgba(255,0,0,0.15);
@@ -258,15 +260,10 @@ export function buildSaleHtml(
           ${detailRowsHtml}
         </div>
 
-        <!-- Totales -->
-        <div class="section section-totals" style="min-height:${Math.round(90 * scale)}px;position:relative;">
-          ${totalsEls}
-        </div>
+        <div class="section section-detail" style="width:100%;overflow:hidden;min-height:${Math.round(detailH * scale)}px;">
+        <div class="section section-totals" style="min-height:${Math.round(totalsH * scale)}px;position:relative;">
+        <div class="section section-footer" style="min-height:${Math.round(footerH * scale)}px;position:relative;">
 
-        <!-- Pie -->
-        <div class="section section-footer" style="min-height:${Math.round(40 * scale)}px;position:relative;">
-          ${footerEls}
-        </div>
       </div>
     </body>
     </html>

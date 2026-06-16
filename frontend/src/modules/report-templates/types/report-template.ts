@@ -60,6 +60,9 @@ export interface ReportTemplateConfig {
   customPageWidth?: number;   
   customPageHeight?: number;
   headerHeight?: number;
+  detailHeight?: number;
+  totalsHeight?: number;
+  footerHeight?: number;
   logoBase64?: string;
   logoX?: number;
   logoY?: number;
@@ -73,6 +76,20 @@ export interface ReportTemplateConfig {
     showTotal: boolean;
     showCommission: boolean;
   };
+}
+
+export interface ReportFieldElement {
+  id: string;
+  type: "field" | "static";
+  token: string;        
+  label: string;        
+  x: number;
+  y: number;
+  fontSize?: number;
+  fontWeight?: "normal" | "bold";
+  color?: string;        // NUEVO — color de texto en hex (#rrggbb)
+  align?: "left" | "center" | "right";
+  section: "header" | "detail" | "totals" | "footer";
 }
 
 export interface ReportTemplateMeta {
