@@ -1,10 +1,5 @@
 import jsPDF from "jspdf";
-
-// El .pdf exportado tiene dos partes:
-// 1) Página visual = captura real de la vista previa del diseñador (con
-//    datos de ejemplo), para que se vea como un documento real.
-// 2) Página(s) de datos ocultos = el JSON completo de la plantilla en
-//    base64, en texto blanco (invisible), para poder reimportarlo.
+import pako from "pako";
 
 export interface TemplateExportPayload {
   name: string;
@@ -14,26 +9,26 @@ export interface TemplateExportPayload {
 
 const START_MARK = "##TPLDATA_START##";
 const END_MARK = "##TPLDATA_END##";
-const CHARS_PER_LINE = 90;
-const LINE_HEIGHT = 4;
-const PAGE_BOTTOM = 285;
+const CHARS_PER_LINE = 110;
+const LINE_HEIGHT = 3.5;
+const PAGE_BOTTOM = 290;
 const MARGIN_MM = 12;
 
-function toBase64Utf8(value: string): string {
-  const bytes = new TextEncoder().encode(value);
+function toBase64Compressed(value: string): string {
+  const compressed = pako.deflate(value); // Uint8Array comprimido
   let binary = "";
   const CHUNK = 0x8000;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  for (let i = 0; i < compressed.length; i += CHUNK) {
+    binary += String.fromCharCode(...compressed.subarray(i, i + CHUNK));
   }
   return btoa(binary);
 }
 
-function fromBase64Utf8(b64: string): string {
+function fromBase64Compressed(b64: string): string {
   const binary = atob(b64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
+  return pako.inflate(bytes, { to: "string" });
 }
 
 export function exportTemplateToPdf(
@@ -59,7 +54,7 @@ export function exportTemplateToPdf(
   doc.setTextColor(255, 255, 255);
 
   const json = JSON.stringify({ name: payload.name, description: payload.description ?? "", config: payload.config });
-  const b64 = toBase64Utf8(json);
+  const b64 = toBase64Compressed(json);
 
   let y = 10;
   doc.text(START_MARK, 10, y);
@@ -102,7 +97,7 @@ export async function importTemplateFromPdf(file: File): Promise<TemplateExportP
   const b64 = matches.map((m) => m.slice(1, -1)).join("");
   if (!b64) throw new Error("invalid_pdf_template");
 
-  const parsed = JSON.parse(fromBase64Utf8(b64));
+  const parsed = JSON.parse(fromBase64Compressed(b64));
   if (!parsed?.config) throw new Error("invalid_pdf_template");
   return parsed as TemplateExportPayload;
 }

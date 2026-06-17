@@ -111,6 +111,37 @@ const DEFAULT_CONFIG: ReportTemplateConfig = {
   totals: { showSubtotal: true, showDiscount: true, showTotal: true, showCommission: false },
 };
 
+// Reportdesigner.tsx — reemplazar resizeLogoDataUrl por estas dos funciones
+function resizeDataUrlImage(dataUrl: string, maxDim = 800, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onerror = () => reject(new Error("invalid_image"));
+    img.onload = () => {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("no_canvas_ctx")); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      const keepPng = dataUrl.startsWith("data:image/png");
+      resolve(canvas.toDataURL(keepPng ? "image/png" : "image/jpeg", quality));
+    };
+    img.src = dataUrl;
+  });
+}
+
+function resizeLogoDataUrl(file: File, maxDim = 800, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => resizeDataUrlImage(reader.result as string, maxDim, quality).then(resolve, reject);
+    reader.readAsDataURL(file);
+  });
+}
+
 function genId() { return "el_" + Math.random().toString(36).slice(2, 8); }
 
 const DOC_W = 560;
@@ -602,7 +633,6 @@ export default function ReportDesigner() {
   }
 
   async function handleExportTemplate() {
-    const wasPreview = previewMode;
     const wasZoom = zoom;
     const wasSelectedId = selectedId;
     const wasSelectedColId = selectedColId;
@@ -611,7 +641,6 @@ export default function ReportDesigner() {
     setSelectedColId(null);
     setEditingId(null);
     setEditingColId(null);
-    setPreviewMode(true);
     setZoom(1);
 
     // esperar a que React repinte el canvas en modo vista previa antes de capturarlo
@@ -620,21 +649,33 @@ export default function ReportDesigner() {
     try {
       const node = docRef.current;
       if (!node) return;
-      const canvas = await html2canvas(node, { backgroundColor: "#ffffff", scale: 2 });
+      const canvas = await html2canvas(node, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        width: node.scrollWidth,
+        height: node.scrollHeight,
+        windowWidth: node.scrollWidth,
+        windowHeight: node.scrollHeight,
+      });
+      
       const imageDataUrl = canvas.toDataURL("image/png");
       const aspectRatio = canvas.width / canvas.height;
+
+      let exportLogo = logo;
+      if (logo) {
+        try { exportLogo = await resizeDataUrlImage(logo, 240, 0.6); } catch { /* si falla, se exporta tal cual estaba */ }
+      }
 
       exportTemplateToPdf(
         {
           name: currentTemplate?.name ?? "Plantilla sin nombre",
           description: currentTemplate?.description ?? "",
-          config: buildConfig(),
+          config: { ...buildConfig(), logoBase64: exportLogo ?? undefined },
         },
         imageDataUrl,
         aspectRatio,
       );
     } finally {
-      setPreviewMode(wasPreview);
       setZoom(wasZoom);
       setSelectedId(wasSelectedId);
       setSelectedColId(wasSelectedColId);
@@ -868,16 +909,19 @@ export default function ReportDesigner() {
           type="file"
           accept="image/*"
           style={{ display: "none" }}
-          onChange={e => {
+          onChange={async e => {
             const file = e.target.files?.[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ev => {
-              setLogo(ev.target?.result as string);
+            const input = e.target;
+            try {
+              const optimized = await resizeLogoDataUrl(file);
+              setLogo(optimized);
               markDirty();
-            };
-            reader.readAsDataURL(file);
-            e.target.value = "";
+            } catch {
+              message.error("No se pudo procesar la imagen del logo.");
+            } finally {
+              input.value = "";
+            }
           }}
         />
 
