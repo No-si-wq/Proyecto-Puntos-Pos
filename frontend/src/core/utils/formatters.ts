@@ -1,3 +1,9 @@
+export type SalePaymentMethod =
+  | "CASH"
+  | "CARD"
+  | "TRANSFER"
+  | "CREDIT";
+
 export function formatCurrency(
   value: number,
   currency = "HNL"
@@ -34,4 +40,15 @@ export function formatDate(
       minute: "2-digit",
     }),
   });
+}
+
+const PAYMENT_METHOD_LABELS: Record<SalePaymentMethod, string> = {
+  CASH: "Efectivo",
+  CARD: "Tarjeta",
+  TRANSFER: "Transferencia",
+  CREDIT: "Crédito",
+};
+
+export function paymentMethodLabel(method: SalePaymentMethod): string {
+  return PAYMENT_METHOD_LABELS[method] ?? method;
 }

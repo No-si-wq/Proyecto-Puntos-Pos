@@ -1,6 +1,7 @@
 import type { ReportFieldElement, ReportTemplateConfig, DetailColumn } from "../../report-templates/types/report-template";
 import type { Sale } from "../../sales/types/sale";
-import { formatCurrency, formatDate } from "../../../core/utils/formatters";
+import { formatCurrency, formatDate, paymentMethodLabel } from "../../../core/utils/formatters";
+import { numberToWords } from "../../../core/utils/numberToWords";
 
 export function resolveSaleTokens(sale: Sale): Record<string, string> {
   const now = new Date();
@@ -9,7 +10,7 @@ export function resolveSaleTokens(sale: Sale): Record<string, string> {
     "[Fecha]":            formatDate(sale.createdAt),
     "[Hora]":             now.toLocaleTimeString("es-HN", { hour: "2-digit", minute: "2-digit" }),
     "[Estatus]":          sale.status === "CANCELLED" ? "Cancelada" : "Completada",
-    "[MetodoPago]":       sale.paymentMethod ?? "",
+    "[MetodoPago]":       paymentMethodLabel(sale.paymentMethod) ?? "",
     "[ListaPrecios]":     sale.priceList?.name ?? "",
 
     "[NombreCliente]":    sale.customer?.name ?? "Consumidor final",
@@ -36,6 +37,7 @@ export function resolveSaleTokens(sale: Sale): Record<string, string> {
     "[DescTotal]":        formatCurrency(sale.discount ?? 0),
     "[ImpTotal]":         formatCurrency(sale.taxTotal ?? 0),
     "[Total]":            formatCurrency(sale.total ?? 0),
+    "[MontoEnLetras]":    numberToWords(Number(sale.total ?? 0)),
     "[TotalComision]":    formatCurrency(sale.totalCommission ?? 0),
     "[PuntosUsados]":     String(sale.pointsUsed ?? 0),
     "[PuntosGanados]":    String(sale.pointsEarned ?? 0),
@@ -70,12 +72,13 @@ export function resolveSaleItemTokens(item: Sale["items"][number]): Record<strin
   };
 }
 
-const DESIGNER_DOC_W = 560;
+export const DESIGNER_DOC_W = 560;
 
-function resolvePageCss(config: ReportTemplateConfig): {
+export function resolvePageCss(config: ReportTemplateConfig): {
   pageRule: string;
   docWidth: string;
   printWidthPx: number;
+  fixedHeightMm?: number;
 } {
   const size = config.pageSize ?? "ticket";
   const mmToPx = (mm: number) => Math.round(mm * 3.7795);
@@ -84,9 +87,11 @@ function resolvePageCss(config: ReportTemplateConfig): {
     return {
       pageRule: "@page { size: letter portrait; margin: 10mm; }",
       docWidth: "width:190mm;",
-      printWidthPx: mmToPx(190),   
+      printWidthPx: mmToPx(190),
+      fixedHeightMm: 255, // 279.4mm - 2x10mm de margen ≈ 259mm, dejo un pequeño colchón
     };
   }
+
   if (size === "half-letter") {
     return {
       pageRule: "@page { size: 216mm 140mm landscape; margin: 8mm; }",
@@ -94,6 +99,7 @@ function resolvePageCss(config: ReportTemplateConfig): {
       printWidthPx: mmToPx(200),   
     };
   }
+
   if (size === "custom") {
     const w = config.customPageWidth  ?? 80;
     const h = config.customPageHeight;
@@ -105,6 +111,7 @@ function resolvePageCss(config: ReportTemplateConfig): {
       printWidthPx: mmToPx(printW),
     };
   }
+
   return {
     pageRule: "@page { size: 80mm auto; margin: 4mm 2mm; }",
     docWidth: "width:76mm;",
@@ -131,7 +138,7 @@ export function buildSaleHtml(
   config: ReportTemplateConfig,
 ): string {
   const globalTokens = resolveSaleTokens(sale);
-  const { pageRule, docWidth, printWidthPx } = resolvePageCss(config);
+  const { pageRule, docWidth, printWidthPx, fixedHeightMm } = resolvePageCss(config);
 
   const scale = printWidthPx / DESIGNER_DOC_W;
 
@@ -204,10 +211,29 @@ export function buildSaleHtml(
   const headerEls = bySection("header").map(el => renderEl(el, globalTokens)).join("");
   const totalsEls = bySection("totals").map(el => renderEl(el, globalTokens)).join("");
   const footerEls = bySection("footer").map(el => renderEl(el, globalTokens)).join("");
-  const headerH = config.headerHeight ?? 130;
+
+  const isTicket = (config.pageSize ?? "ticket") === "ticket";
+
+  const sectionContentH = (sectionId: string, fallback: number) => {
+    const fields = bySection(sectionId);
+    return fields.length
+      ? Math.max(...fields.map(el => el.y + (el.fontSize ?? 11) + 8))
+      : fallback;
+  };
+
+  const headerFields = bySection("header");
+  const headerContentH = headerFields.length
+    ? Math.max(...headerFields.map(el => el.y + (el.fontSize ?? 11) + 8))
+    : 0;
+  const headerH = Math.max(config.headerHeight ?? 130, headerContentH);
   const detailH = config.detailHeight ?? 110;
-  const totalsH = config.totalsHeight ?? 90;
-  const footerH = config.footerHeight ?? 40;
+
+  const totalsH = isTicket
+    ? sectionContentH("totals", config.totalsHeight ?? 90)
+    : (config.totalsHeight ?? 90);
+  const footerH = isTicket
+    ? sectionContentH("footer", config.footerHeight ?? 40)
+    : (config.footerHeight ?? 40);
   const logoHtml = config.logoBase64
   ? `<img src="${config.logoBase64}" style="position:absolute;left:${Math.round((config.logoX ?? 8) * scale)}px;top:${Math.round((config.logoY ?? 8) * scale)}px;width:${Math.round((config.logoWidth ?? 80) * scale)}px;height:${Math.round((config.logoHeight ?? 60) * scale)}px;object-fit:contain;z-index:10;" />`
   : "";
@@ -217,20 +243,19 @@ export function buildSaleHtml(
     <html>
     <head>
       <meta charset="utf-8"/>
-      <title>Venta ${sale.saleNumber}</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial, sans-serif; font-size: 11px; color: #222; }
-        .doc { ${docWidth} margin: 0 auto; padding: 0; }
+        .doc { ${docWidth} margin: 0 auto; padding: 0; ${fixedHeightMm ? `display:flex; flex-direction:column; min-height:${fixedHeightMm}mm;` : ""} }
         .section { position: relative; width: 100%; }
-        .section-header { min-height: ${Math.round(headerH * scale)}px; border-bottom: 1px solid #ccc; overflow:hidden; }
+        .section-header { min-height: ${Math.round(headerH * scale)}px; border-bottom: 1px solid #ccc; flex-shrink:0; }
         .section-detail-header {
           display: flex; width:100%; background: #f5f5f5;
           border-bottom: 1px solid #ccc; border-top: 1px solid #ccc;
           font-weight: 600;
         }
-        .section-totals { min-height: ${Math.round(totalsH * scale)}px; border-top: 1px solid #ccc; overflow:hidden; }
-        .section-footer { min-height: ${Math.round(footerH * scale)}px; border-top: 1px solid #eee; font-size: ${Math.round(10 * scale)}px; color: #888; overflow:hidden; }
+        .section-totals { min-height: ${Math.round(totalsH * scale)}px; border-top: 1px solid #ccc; }
+        .section-footer { min-height: ${Math.round(footerH * scale)}px; border-top: 1px solid #eee; font-size: ${Math.round(10 * scale)}px; color: #888; }
         .cancelled-stamp {
           position: absolute; top: 40px; left: 50%; transform: translateX(-50%) rotate(-15deg);
           font-size: 48px; font-weight: 900; color: rgba(255,0,0,0.15);
@@ -254,7 +279,6 @@ export function buildSaleHtml(
           ${sale.status === "CANCELLED" ? '<div class="cancelled-stamp">CANCELADA</div>' : ""}
         </div>
 
-        <!-- Tabla de partidas -->
         <div class="section-detail-header" style="display:flex;width:100%;">
           ${detailHeaderHtml}
         </div>
@@ -262,12 +286,13 @@ export function buildSaleHtml(
           ${detailRowsHtml}
         </div>
 
-        <div class="section section-totals" style="min-height:${Math.round(totalsH * scale)}px;position:relative;">
-          ${totalsEls}
-        </div>
-
-        <div class="section section-footer" style="min-height:${Math.round(footerH * scale)}px;position:relative;">
-          ${footerEls}
+        <div style="${fixedHeightMm ? "margin-top:auto;" : ""}">
+          <div class="section section-totals" style="min-height:${Math.round(totalsH * scale)}px;">
+            ${totalsEls}
+          </div>
+          <div class="section section-footer" style="min-height:${Math.round(footerH * scale)}px;">
+            ${footerEls}
+          </div>
         </div>
       </div>
     </body>

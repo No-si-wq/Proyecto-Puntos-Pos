@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Button, Select, Input, Checkbox, Modal, Form,
-  message, Spin, Tooltip, Tag, Divider,
+  message, Spin, Tooltip, Tag, Divider, Dropdown, type MenuProps,
 } from "antd";
 import {
   SaveOutlined, FolderOpenOutlined, CopyOutlined, DeleteOutlined,
   StarFilled, StarOutlined, BoldOutlined, ItalicOutlined, UnderlineOutlined,
   AlignLeftOutlined, AlignCenterOutlined, AlignRightOutlined,
   ZoomInOutlined, ZoomOutOutlined, EyeOutlined, EyeInvisibleOutlined, FontSizeOutlined, 
-  ExportOutlined, ImportOutlined,
+  ExportOutlined, ImportOutlined, FileAddOutlined,
 } from "@ant-design/icons";
 import html2canvas from "html2canvas";
 import { exportTemplateToPdf, importTemplateFromPdf } from "../utils/templatePdf";
@@ -28,13 +28,13 @@ const SECTIONS: { id: SectionId; label: string; minHeight: number; bgColor: stri
 
 const FIELD_GROUPS = [
   { id: "venta", label: "Venta", fields: [
-    { token: "[Factura]",      label: "# Factura" },
-    { token: "[Fecha]",        label: "Fecha" },
-    { token: "[Estatus]",      label: "Estatus" },
-    { token: "[MetodoPago]",   label: "Método de pago" },
-    { token: "[ListaPrecios]", label: "Lista de precios" },
-    { token: "[Monto]",   label: "Monto" },
-    { token: "[Cambio]", label: "Cambio" },
+    { token: "[Factura]",       label: "# Factura" },
+    { token: "[Fecha]",         label: "Fecha" },
+    { token: "[Estatus]",       label: "Estatus" },
+    { token: "[MetodoPago]",    label: "Método de pago" },
+    { token: "[ListaPrecios]",  label: "Lista de precios" },
+    { token: "[Monto]",         label: "Monto" },
+    { token: "[Cambio]",        label: "Cambio" },
     { token: "[Observaciones]", label: "Observaciones" },
   ]},
   { id: "cliente", label: "Cliente", fields: [
@@ -42,7 +42,7 @@ const FIELD_GROUPS = [
     { token: "[DireccionCliente]", label: "Dirección" },
     { token: "[CiudadCliente]",    label: "Ciudad" },
     { token: "[DNI]",              label: "DNI" },
-    { token: "[TelefonoCliente]",    label: "Telefono" },
+    { token: "[TelefonoCliente]",  label: "Telefono" },
   ]},
   { id: "vendedor", label: "Vendedor", fields: [
     { token: "[NombreVendedor]",   label: "Vendedor" },
@@ -55,7 +55,7 @@ const FIELD_GROUPS = [
     { token: "[Cantidad]",    label: "Cantidad" },
     { token: "[PrecioUnit]",  label: "Precio unitario" },
     { token: "[Descuento]",   label: "% Descuento" },
-    { token: "[Impuesto]",   label: "Impuesto" },
+    { token: "[Impuesto]",    label: "Impuesto" },
     { token: "[Importe]",     label: "Importe" },
     { token: "[Totales]",     label: "Totales" },
     { token: "[Comision]",    label: "Comisión línea" },
@@ -63,8 +63,9 @@ const FIELD_GROUPS = [
   { id: "totales", label: "Totales", fields: [
     { token: "[Subtotal]",      label: "Subtotal" },
     { token: "[DescTotal]",     label: "Descuento total" },
-    { token: "[ImpTotal]",     label: "Impuestos" },
+    { token: "[ImpTotal]",      label: "Impuestos" },
     { token: "[Total]",         label: "Total" },
+    { token: "[MontoEnLetras]", label: "Monto en letras" },
     { token: "[TotalComision]", label: "Comisión total" },
     { token: "[PuntosUsados]",  label: "Puntos usados" },
     { token: "[PuntosGanados]", label: "Puntos ganados" },
@@ -798,14 +799,88 @@ export default function ReportDesigner() {
     );
   }
 
+  const fileMenuItems: MenuProps["items"] = [
+    { key: "new", icon: <FileAddOutlined />, label: "Nueva plantilla", onClick: () => handleSelectorChange("") },
+    { type: "divider" },
+    { key: "save", icon: <SaveOutlined />, label: currentTemplate ? "Guardar cambios" : "Guardar plantilla", disabled: !isDirty, onClick: handleSaveChanges },
+    { key: "saveAs", icon: <SaveOutlined />, label: "Guardar como...", onClick: () => { saveForm.resetFields(); setSaveModalOpen(true); } },
+    { key: "load", icon: <FolderOpenOutlined />, label: "Cargar plantilla...", onClick: () => { setLoadModalOpen(true); setSelectedLoadId(null); } },
+    { type: "divider" },
+    { key: "import", icon: <ImportOutlined />, label: "Importar plantilla (.pdf)...", onClick: () => importInputRef.current?.click() },
+    { key: "export", icon: <ExportOutlined />, label: "Exportar a PDF", onClick: handleExportTemplate },
+    { type: "divider" },
+    { key: "delete", icon: <DeleteOutlined />, label: "Eliminar plantilla actual", danger: true, disabled: !currentTemplate, onClick: () => currentTemplate && handleDelete(currentTemplate.id, currentTemplate.name) },
+  ];
+
+  const editMenuItems: MenuProps["items"] = [
+    { key: "addText", icon: <FontSizeOutlined />, label: "Agregar texto", onClick: addStaticText },
+    { type: "divider" },
+    { key: "deleteEl", icon: <DeleteOutlined />, label: "Eliminar elemento seleccionado", danger: true, disabled: !selectedEl, onClick: deleteEl },
+    { type: "divider" },
+    { key: "duplicate", icon: <CopyOutlined />, label: "Duplicar plantilla actual...", disabled: !currentTemplate, onClick: () => {
+      if (!currentTemplate) return;
+      setDupTargetId(currentTemplate.id);
+      dupForm.setFieldValue("name", `Copia de ${currentTemplate.name}`);
+      setDupModalOpen(true);
+    } },
+  ];
+
+  const viewMenuItems: MenuProps["items"] = [
+    { key: "preview", icon: previewMode ? <EyeInvisibleOutlined /> : <EyeOutlined />, label: previewMode ? "Salir de vista previa" : "Vista previa", onClick: () => {
+      setPreviewMode(p => !p); setSelectedId(null); setSelectedColId(null); setEditingId(null); setEditingColId(null);
+    } },
+    { type: "divider" },
+    { key: "zoomIn", icon: <ZoomInOutlined />, label: "Acercar", onClick: () => setZoom(z => Math.min(2, +(z + 0.1).toFixed(1))) },
+    { key: "zoomOut", icon: <ZoomOutOutlined />, label: "Alejar", onClick: () => setZoom(z => Math.max(0.5, +(z - 0.1).toFixed(1))) },
+    { key: "zoomReset", label: "Restablecer zoom (100%)", onClick: () => setZoom(1) },
+    { type: "divider" },
+    { key: "secHeader", label: "Ir a: Encabezado", onClick: () => setActiveSection("header") },
+    { key: "secDetail", label: "Ir a: Detalle", onClick: () => setActiveSection("detail") },
+    { key: "secTotals", label: "Ir a: Totales", onClick: () => setActiveSection("totals") },
+    { key: "secFooter", label: "Ir a: Pie", onClick: () => setActiveSection("footer") },
+  ];
+
+  const formatMenuItems: MenuProps["items"] = [
+    { key: "bold", icon: <BoldOutlined />, label: "Negrita", disabled: !selectedEl, onClick: () => updEl({ fontWeight: selectedEl?.fontWeight === "bold" ? "normal" : "bold" }) },
+    { key: "italic", icon: <ItalicOutlined />, label: "Cursiva", disabled: !selectedEl, onClick: () => updEl({ fontStyle: (selectedEl as any)?.fontStyle === "italic" ? "normal" : "italic" } as any) },
+    { key: "underline", icon: <UnderlineOutlined />, label: "Subrayado", disabled: !selectedEl, onClick: () => updEl({ textDecoration: (selectedEl as any)?.textDecoration === "underline" ? "none" : "underline" } as any) },
+    { type: "divider" },
+    { key: "alignLeft", icon: <AlignLeftOutlined />, label: "Alinear izquierda", disabled: !selectedEl, onClick: () => updEl({ align: "left" }) },
+    { key: "alignCenter", icon: <AlignCenterOutlined />, label: "Alinear centro", disabled: !selectedEl, onClick: () => updEl({ align: "center" }) },
+    { key: "alignRight", icon: <AlignRightOutlined />, label: "Alinear derecha", disabled: !selectedEl, onClick: () => updEl({ align: "right" }) },
+    { type: "divider" },
+    { key: "fontUp", icon: <FontSizeOutlined />, label: "Aumentar tamaño de fuente", disabled: !selectedEl, onClick: () => updEl({ fontSize: Math.min(24, (selectedEl?.fontSize ?? 11) + 1) }) },
+    { key: "fontDown", icon: <FontSizeOutlined />, label: "Reducir tamaño de fuente", disabled: !selectedEl, onClick: () => updEl({ fontSize: Math.max(8, (selectedEl?.fontSize ?? 11) - 1) }) },
+  ];
+
+  const toolsMenuItems: MenuProps["items"] = [
+    { key: "pageTicket", label: "Tamaño: Ticket (rollo)", onClick: () => { setPageSize("ticket"); markDirty(); } },
+    { key: "pageLetter", label: "Tamaño: Carta", onClick: () => { setPageSize("letter"); markDirty(); } },
+    { key: "pageHalf", label: "Tamaño: Media carta", onClick: () => { setPageSize("half-letter"); markDirty(); } },
+    { type: "divider" },
+    { key: "docSale", label: "Tipo: Venta / Factura", onClick: () => { setDocumentType("sale"); markDirty(); } },
+    { key: "docQuotation", label: "Tipo: Cotización", onClick: () => { setDocumentType("quotation"); markDirty(); } },
+    { type: "divider" },
+    { key: "logo", label: logo ? "Cambiar logo" : "Agregar logo", onClick: () => logoInputRef.current?.click() },
+    { key: "removeLogo", label: "Quitar logo", danger: true, disabled: !logo, onClick: () => { setLogo(null); markDirty(); } },
+  ];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#f0ede6", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
 
       <div style={{ height: 28, background: "#3c3b38", display: "flex", alignItems: "center", padding: "0 10px", gap: 2, flexShrink: 0, borderBottom: "1px solid #222" }}>
-        {["Archivo", "Edición", "Ver", "Formato", "Herramientas"].map(m => (
-          <span key={m} style={{ padding: "2px 10px", fontSize: 12, color: "#ccc", cursor: "pointer", borderRadius: 3, lineHeight: "22px" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "#555")}
-            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>{m}</span>
+        {[
+          { label: "Archivo",      items: fileMenuItems },
+          { label: "Edición",      items: editMenuItems },
+          { label: "Ver",          items: viewMenuItems },
+          { label: "Formato",      items: formatMenuItems },
+          { label: "Herramientas", items: toolsMenuItems },
+        ].map(({ label, items }) => (
+          <Dropdown key={label} menu={{ items }} trigger={["click"]} placement="bottomLeft">
+            <span style={{ padding: "2px 10px", fontSize: 12, color: "#ccc", cursor: "pointer", borderRadius: 3, lineHeight: "22px" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#555")}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>{label}</span>
+          </Dropdown>
         ))}
         <div style={{ flex: 1 }} />
         <span style={{ fontSize: 11, color: "#777" }}>{currentTemplate ? `${currentTemplate.name}${isDirty ? " *" : ""}` : "Nueva plantilla"}</span>

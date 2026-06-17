@@ -118,7 +118,7 @@ export function useReportTemplates() {
     try {
       const { data } = await http.post<ReportTemplate>(
         `/report-templates/${id}/duplicate`,
-        { name }
+        { newName: name }
       );
       await load();
       return data;

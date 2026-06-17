@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button, Card, Space, message, Tag, Alert, Dropdown, Typography, Divider, Descriptions, type MenuProps } from "antd";
+import { Button, Card, Space, message, Tag, Alert, Dropdown, Typography, Divider, Descriptions, type MenuProps, Tooltip } from "antd";
 import {
   PrinterOutlined,
   FilePdfOutlined,
@@ -12,8 +12,9 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { ConfirmModal } from "../../../core/components/common/ConfirmModal";
 import PageHeader from "../../../core/components/common/PageHeader";
-import { formatCurrency, formatDate } from "../../../core/utils/formatters";
-import type { Sale, SaleItems, SalePaymentMethod } from "../types/sale";
+import { formatCurrency, formatDate, paymentMethodLabel } from "../../../core/utils/formatters";
+import { numberToWords } from "../../../core/utils/numberToWords";
+import type { Sale, SaleItems } from "../types/sale";
 import { exportToPdf } from "../../../core/utils/exportPDF";
 import { useReportTemplates } from "../../report-templates/hooks/useReportTemplates";
 import { buildSaleHtml } from "../../report-templates/utils/resolveTemplate";
@@ -234,16 +235,6 @@ export default function SaleDetail() {
     );
   }
 
-  function paymentMethodLabel(method: SalePaymentMethod): string {
-    const labels: Record<SalePaymentMethod, string> = {
-      CASH: "Efectivo",
-      CARD: "Tarjeta",
-      TRANSFER: "Transferencia",
-      CREDIT: "Crédito",
-    };
-    return labels[method] ?? method;
-  }
-
   function buildTemplateMenuItems(action: "print" | "pdf"): MenuProps["items"] {
     if (!templates.length) {
       return [
@@ -352,9 +343,11 @@ export default function SaleDetail() {
       <Button onClick={() => navigate(-1)}>Volver</Button>
 
       <Dropdown menu={{ items: buildTemplateMenuItems("print") }} trigger={["click"]}>
-        <Button icon={<PrinterOutlined />} loading={loadingList}>
-          Imprimir <DownOutlined style={{ fontSize: 10 }} />
-        </Button>
+        <Tooltip title="Si aparece una fecha arriba del documento, desactívala en Más ajustes → Encabezados y pies de página">
+          <Button icon={<PrinterOutlined />} loading={loadingList}>
+            Imprimir <DownOutlined style={{ fontSize: 10 }} />
+          </Button>
+        </Tooltip>
       </Dropdown>
 
       <Dropdown menu={{ items: buildTemplateMenuItems("pdf") }} trigger={["click"]}>
@@ -494,7 +487,7 @@ export default function SaleDetail() {
                   ))}
                 </Space>
               ) : (
-                sale?.paymentMethod
+                sale?.paymentMethod && paymentMethodLabel(sale.paymentMethod)
               )}
             </Descriptions.Item>
 
@@ -558,9 +551,15 @@ export default function SaleDetail() {
             </Descriptions.Item>
             {(sale?.totalRefunded ?? 0) <= 0 && (
               <Descriptions.Item label="Total">
-                <Text strong style={{ fontSize: 16 }}>
-                  {formatCurrency(sale?.total ?? 0)}
-                </Text>
+                <div style={{ textAlign: "right" }}>
+                  <Text strong style={{ fontSize: 16 }}>
+                    {formatCurrency(sale?.total ?? 0)}
+                  </Text>
+                  <br />
+                  <Text type="secondary" style={{ fontSize: 11 }}>
+                    {numberToWords(Number(sale?.total ?? 0))}
+                  </Text>
+                </div>
               </Descriptions.Item>
             )}
             {(sale?.totalRefunded ?? 0) > 0 && (
@@ -576,9 +575,15 @@ export default function SaleDetail() {
                   </Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Total">
-                  <Text strong style={{ fontSize: 16, color: "#1677ff" }}>
-                    {formatCurrency((sale?.total ?? 0))}
-                  </Text>
+                  <div style={{ textAlign: "right" }}>
+                    <Text strong style={{ fontSize: 16, color: "#1677ff" }}>
+                      {formatCurrency(sale?.total ?? 0)}
+                    </Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: 11 }}>
+                      {numberToWords(Number(sale?.total ?? 0))}
+                    </Text>
+                  </div>
                 </Descriptions.Item>
               </>
             )}

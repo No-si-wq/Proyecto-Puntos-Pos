@@ -644,6 +644,9 @@ export default function Sales() {
             ? "Se usará la plantilla seleccionada."
             : "Se usará la plantilla por defecto."}
         </p>
+        <p style={{ color: "#aaa", fontSize: 11, marginTop: 4 }}>
+          Si ves una fecha arriba del documento al imprimir, desactívala en "Más ajustes → Encabezados y pies de página" del navegador.
+        </p>
       </Modal>
     </>
   )

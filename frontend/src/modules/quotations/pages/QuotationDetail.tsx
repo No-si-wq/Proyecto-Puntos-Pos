@@ -83,7 +83,6 @@ export default function QuotationDetail() {
     win.document.write(html);
     win.document.close();
     win.focus();
-    win.print();
     win.onafterprint = () => win.close();
   };
 
@@ -109,7 +108,6 @@ export default function QuotationDetail() {
     win.document.write(html);
     win.document.close();
     win.focus();
-    win.print();
   };
 
   function exportPdfFallback() {
