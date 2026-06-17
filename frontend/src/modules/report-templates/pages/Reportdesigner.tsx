@@ -885,10 +885,6 @@ export default function ReportDesigner() {
           {logo ? "Cambiar logo" : "+ Logo"}
         </Button>
 
-        {!logo && (
-          <Button size="small" onClick={() => logoInputRef.current?.click()}>+ Logo</Button>
-        )}
-
         <div style={{ flex: 1 }} />
 
         {isDirty && <Tag color="warning" style={{ margin: 0 }}>● Sin guardar</Tag>}
@@ -1245,9 +1241,6 @@ export default function ReportDesigner() {
               <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 10 }}>
                 <div>
                   <div style={propLabel}>Imagen</div>
-                  <Button size="small" block onClick={() => logoInputRef.current?.click()}>
-                    {logo ? "Cambiar imagen" : "Subir imagen"}
-                  </Button>
                 </div>
                 <div>
                   <div style={propLabel}>Tamaño</div>
