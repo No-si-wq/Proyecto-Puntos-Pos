@@ -11,7 +11,6 @@ const START_MARK = "##TPLDATA_START##";
 const END_MARK = "##TPLDATA_END##";
 const CHARS_PER_LINE = 110;
 const LINE_HEIGHT = 3.5;
-const PAGE_BOTTOM = 290;
 const MARGIN_MM = 12;
 
 function toBase64Compressed(value: string): string {
@@ -34,39 +33,38 @@ function fromBase64Compressed(b64: string): string {
 export function exportTemplateToPdf(
   payload: TemplateExportPayload,
   previewImageDataUrl: string,
-  previewAspectRatio: number, // ancho / alto de la imagen capturada
+  previewAspectRatio: number,
 ) {
   const imgWmm = 180;
   const imgHmm = imgWmm / previewAspectRatio;
 
+  // Calcular el payload ANTES de crear el documento, para saber cuánto alto necesita la página
+  const json = JSON.stringify({ name: payload.name, description: payload.description ?? "", config: payload.config });
+  const b64 = toBase64Compressed(json);
+
+  const totalLines = Math.ceil(b64.length / CHARS_PER_LINE) + 2;
+  const hiddenBlockHmm = totalLines * LINE_HEIGHT + LINE_HEIGHT * 2; // colchón pequeño
+
+  const pageWmm = imgWmm + MARGIN_MM * 2;
+  const pageHmm = imgHmm + MARGIN_MM * 2 + hiddenBlockHmm;
+
   const doc = new jsPDF({
     unit: "mm",
-    compress: false, // el payload debe quedar legible en los bytes crudos
-    format: [imgWmm + MARGIN_MM * 2, imgHmm + MARGIN_MM * 2],
+    compress: false,
+    format: [pageWmm, pageHmm],
   });
 
   doc.addImage(previewImageDataUrl, "PNG", MARGIN_MM, MARGIN_MM, imgWmm, imgHmm);
 
-  // --- Página(s) de datos ocultos, en A4 estándar (independiente del tamaño de la página 1) ---
-  doc.addPage("a4", "portrait");
+  // Datos ocultos en la MISMA página, debajo de la imagen — ya no se crea una segunda página
   doc.setFont("courier", "normal");
   doc.setFontSize(8);
   doc.setTextColor(255, 255, 255);
 
-  const json = JSON.stringify({ name: payload.name, description: payload.description ?? "", config: payload.config });
-  const b64 = toBase64Compressed(json);
-
-  let y = 10;
+  let y = imgHmm + MARGIN_MM * 2 + LINE_HEIGHT;
   doc.text(START_MARK, 10, y);
   y += LINE_HEIGHT;
   for (let i = 0; i < b64.length; i += CHARS_PER_LINE) {
-    if (y > PAGE_BOTTOM) {
-      doc.addPage("a4", "portrait");
-      doc.setFont("courier", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(255, 255, 255);
-      y = 10;
-    }
     doc.text(b64.slice(i, i + CHARS_PER_LINE), 10, y);
     y += LINE_HEIGHT;
   }
