@@ -10,6 +10,11 @@ export function buildFiscalNumber(parts: FiscalNumberParts): string {
   return `${parts.establishment}-${parts.emissionPoint}-${parts.documentType}-${seq}`;
 }
 
+export function extractSequence(fiscalNumber: string): bigint {
+  const parts = fiscalNumber.split("-");
+  return BigInt(parts[parts.length - 1]);
+}
+
 export function validateFiscalRange(
   number: string,
   rangeStart: string,

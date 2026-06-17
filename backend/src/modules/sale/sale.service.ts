@@ -1,5 +1,5 @@
 import prisma from "../../core/prisma";
-import { validateFiscalRange, buildFiscalNumber, isFiscalConfigExpired } from "../../utils/fiscal.util";
+import { validateFiscalRange, buildFiscalNumber, isFiscalConfigExpired, extractSequence } from "../../utils/fiscal.util";
 import { Prisma } from "@prisma/client";
 import { CommissionType, InventoryMovementType, SaleStatus } from "@prisma/client";
 import { InventoryService } from "../inventory/inventory.service";
@@ -307,6 +307,20 @@ export class SaleService {
 
       if (fiscalConfig && isFiscalConfigExpired(fiscalConfig.expiresAt)) {
         throw new Error(SaleError.FISCAL_CONFIG_EXPIRED);
+      }
+
+      // 1.1 Si el CAI autoriza un rango que arranca más adelante del correlativo
+      // actual de esta bodega, alinear antes de incrementar
+      if (fiscalConfig) {
+        const rangeStartSeq = extractSequence(fiscalConfig.rangeStart);
+        const existingSequence = await tx.saleSequence.findUnique({ where: { warehouseId } });
+        if (!existingSequence || existingSequence.current < rangeStartSeq - 1n) {
+          await tx.saleSequence.upsert({
+            where: { warehouseId },
+            update: { current: rangeStartSeq - 1n },
+            create: { tenantId, warehouseId, current: rangeStartSeq - 1n },
+          });
+        }
       }
 
       // 2. Secuencia siempre incrementa (con o sin CAI)
