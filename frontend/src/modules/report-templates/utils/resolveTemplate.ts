@@ -202,6 +202,8 @@ export function buildSaleHtml(
   };
 
   const headerEls = bySection("header").map(el => renderEl(el, globalTokens)).join("");
+  const totalsEls = bySection("totals").map(el => renderEl(el, globalTokens)).join("");
+  const footerEls = bySection("footer").map(el => renderEl(el, globalTokens)).join("");
   const headerH = config.headerHeight ?? 130;
   const detailH = config.detailHeight ?? 110;
   const totalsH = config.totalsHeight ?? 90;
@@ -256,14 +258,17 @@ export function buildSaleHtml(
         <div class="section-detail-header" style="display:flex;width:100%;">
           ${detailHeaderHtml}
         </div>
-        <div class="section section-detail" style="width:100%;overflow:hidden;">
+        <div class="section section-detail" style="width:100%;overflow:hidden;min-height:${Math.round(detailH * scale)}px;">
           ${detailRowsHtml}
         </div>
 
-        <div class="section section-detail" style="width:100%;overflow:hidden;min-height:${Math.round(detailH * scale)}px;">
         <div class="section section-totals" style="min-height:${Math.round(totalsH * scale)}px;position:relative;">
-        <div class="section section-footer" style="min-height:${Math.round(footerH * scale)}px;position:relative;">
+          ${totalsEls}
+        </div>
 
+        <div class="section section-footer" style="min-height:${Math.round(footerH * scale)}px;position:relative;">
+          ${footerEls}
+        </div>
       </div>
     </body>
     </html>

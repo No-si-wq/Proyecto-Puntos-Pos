@@ -89,8 +89,6 @@ export class SaleService {
 
     if (!sale) throw new Error(SaleError.SALE_NOT_FOUND);
 
-    if (!sale) throw new Error(SaleError.SALE_NOT_FOUND);
-
     const { fiscalConfig: fc, ...saleData } = sale;
 
     const saleWithEffectiveQty = {
