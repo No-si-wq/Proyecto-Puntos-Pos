@@ -51,6 +51,7 @@ export function resolveSaleTokens(sale: Sale): Record<string, string> {
     "[Impuesto]":   "",
     "[Totales]":      "",
     "[Comision]":   "",
+    "[Obs.]":       "",
   };
 }
 
@@ -69,6 +70,7 @@ export function resolveSaleItemTokens(item: Sale["items"][number]): Record<strin
     "[Impuesto]":   formatCurrency(item.taxAmount),
     "[Totales]":      formatCurrency(item.lineTotal),
     "[Comision]":   formatCurrency(item.commissionAmount ?? 0),
+    "[Obs.]":       item.observations ?? "",
   };
 }
 
@@ -144,10 +146,11 @@ export function buildSaleHtml(
 
   const DEFAULT_DETAIL_COLUMNS: DetailColumn[] = [
     { id: "dc1", header: "Cant.",       token: "[Cantidad]",   width: 44,  align: "center", fontSize: 8 },
-    { id: "dc2", header: "Descripción", token: "[Producto]",   width: 0,   align: "left", fontSize: 9   },
+    { id: "dc2", header: "Descripción", token: "[Producto]",   width: 0,   align: "left",   fontSize: 9 },
     { id: "dc3", header: "P.U.",        token: "[PrecioUnit]", width: 70,  align: "right"  },
-    { id: "dc4", header: "% Desc",      token: "[Descuento]",  width: 60,  align: "right", fontSize: 7  },
+    { id: "dc4", header: "% Desc",      token: "[Descuento]",  width: 60,  align: "right",  fontSize: 7 },
     { id: "dc5", header: "Importe",     token: "[Importe]",    width: 72,  align: "right"  },
+    { id: "dc6", header: "Observac...", token: "[Obs.]",       width: 90,  align: "left",   fontSize: 7, wrap: true },
   ];
 
   const detailColumns: DetailColumn[] =
@@ -160,25 +163,26 @@ export function buildSaleHtml(
   const detailPadPx  = Math.max(1, Math.round(3 * scale));
 
   const colStyle = (col: DetailColumn): string => {
-    const colFontPx = col.fontSize           
+    const colFontPx = col.fontSize
       ? Math.max(6, Math.round(col.fontSize * scale))
-      : detailFontPx;                         
+      : detailFontPx;
 
-    const pad = `padding:${detailPadPx}px;overflow:hidden;font-size:${colFontPx}px;white-space:nowrap;`;
-    
+    const wrapCss = col.wrap
+      ? `white-space:normal;word-break:break-word;`
+      : `white-space:nowrap;text-overflow:ellipsis;`;
+    const pad = `padding:${detailPadPx}px;overflow:hidden;font-size:${colFontPx}px;${wrapCss}box-sizing:border-box;`;
+
     if (col.width === 0) {
-      const flexPct = flexCount > 0
-        ? ((DESIGNER_DOC_W - totalFixedPx) / flexCount / DESIGNER_DOC_W * 100).toFixed(2)
-        : "20";
-      return `width:${flexPct}%;text-align:${col.align};${pad}`;
+      const flexBasis = ((DESIGNER_DOC_W - totalFixedPx) / Math.max(flexCount, 1) / DESIGNER_DOC_W * 100).toFixed(2);
+      return `flex:1 1 ${flexBasis}%;min-width:0;text-align:${col.align};${pad}`;
     }
-    const pct = (col.width / DESIGNER_DOC_W * 100).toFixed(2);
-    return `width:${pct}%;flex-shrink:0;text-align:${col.align};${pad}`;
+    const scaledW = Math.round(col.width * scale);
+    return `width:${scaledW}px;flex-shrink:0;text-align:${col.align};${pad}`;
   };
 
-  const detailHeaderHtml = detailColumns
-    .map(col => `<span style="${colStyle(col)}">${col.header}</span>`)
-    .join("");
+  const detailHeaderHtml = `<div style="display:flex;width:100%;overflow:hidden;">${
+    detailColumns.map(col => `<span style="${colStyle(col)}">${col.header}</span>`).join("")
+  }</div>`;
 
   const detailRowsHtml = (sale.items ?? []).map(item => {
     const itemTokens = resolveSaleItemTokens(item);
@@ -186,7 +190,7 @@ export function buildSaleHtml(
       .map(col => `<span style="${colStyle(col)}">${resolveToken(col.token, itemTokens)}</span>`)
       .join("");
 
-    return `<div style="display:flex;width:100%;padding:${detailPadPx}px 0;border-bottom:1px solid #f5f5f5;">${cells}</div>`;
+    return `<div style="display:flex;width:100%;padding:${detailPadPx}px 0;border-bottom:1px solid #f5f5f5;overflow:hidden;">${cells}</div>`;
   }).join("");
 
   const bySection = (sectionId: string) =>
@@ -250,9 +254,9 @@ export function buildSaleHtml(
         .section { position: relative; width: 100%; }
         .section-header { min-height: ${Math.round(headerH * scale)}px; border-bottom: 1px solid #ccc; flex-shrink:0; }
         .section-detail-header {
-          display: flex; width:100%; background: #f5f5f5;
+          width:100%; background: #f5f5f5;
           border-bottom: 1px solid #ccc; border-top: 1px solid #ccc;
-          font-weight: 600;
+          font-weight: 600; overflow:hidden;
         }
         .section-totals { min-height: ${Math.round(totalsH * scale)}px; border-top: 1px solid #ccc; }
         .section-footer { min-height: ${Math.round(footerH * scale)}px; border-top: 1px solid #eee; font-size: ${Math.round(10 * scale)}px; color: #888; }
@@ -279,9 +283,10 @@ export function buildSaleHtml(
           ${sale.status === "CANCELLED" ? '<div class="cancelled-stamp">CANCELADA</div>' : ""}
         </div>
 
-        <div class="section-detail-header" style="display:flex;width:100%;">
+        <div class="section-detail-header">
           ${detailHeaderHtml}
         </div>
+
         <div class="section section-detail" style="width:100%;overflow:hidden;min-height:${Math.round(detailH * scale)}px;">
           ${detailRowsHtml}
         </div>

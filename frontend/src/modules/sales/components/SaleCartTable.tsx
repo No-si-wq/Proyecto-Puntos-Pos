@@ -1,5 +1,6 @@
-import { InputNumber, Select, Input } from "antd";
-import { DeleteOutlined } from "@ant-design/icons";
+import { useState } from "react";
+import { InputNumber, Select, Input, Modal } from "antd";
+import { DeleteOutlined, FileTextOutlined } from "@ant-design/icons";
 import { formatCurrency } from "../../../core/utils/formatters";
 import type { SaleCartItem } from "../types/saleCart.store";
 import { useDeviceType } from "../../../core/hooks/useDeviceType";
@@ -38,6 +39,7 @@ export function SaleCartTable({
   priceLists,
   products,
 }: Props) {
+  const [obsModal, setObsModal] = useState<{ productId: number; name: string; value: string } | null>(null);
   const { isMobile } = useDeviceType();
   const { isAdmin } = usePermissions();
 
@@ -62,6 +64,32 @@ export function SaleCartTable({
         : Number(product?.price ?? item.price);
     onPriceListChange(item.productId, v, resolvedPrice);
   }
+
+  const observationsModal = (
+    <Modal
+      title={`Observaciones — ${obsModal?.name ?? ""}`}
+      open={!!obsModal}
+      onOk={() => {
+        if (obsModal) onObservationsChange(obsModal.productId, obsModal.value);
+        setObsModal(null);
+      }}
+      onCancel={() => setObsModal(null)}
+      okText="Guardar"
+      cancelText="Cancelar"
+      width={420}
+    >
+      <Input.TextArea
+        rows={4}
+        maxLength={500}
+        showCount
+        placeholder="Nota del ítem (opcional)"
+        value={obsModal?.value ?? ""}
+        onChange={(e) =>
+          setObsModal((prev) => prev ? { ...prev, value: e.target.value } : prev)
+        }
+      />
+    </Modal>
+  );
 
   if (isMobile) {
     return (
@@ -132,14 +160,23 @@ export function SaleCartTable({
                   </div>
                 </div>
                 <div style={{ marginTop: 8 }}>
-                  <span style={mobileLabelStyle}>Observaciones</span>
-                  <Input
-                    size="small"
-                    maxLength={500}
-                    placeholder="Nota del ítem (opcional)"
-                    value={i.observations}
-                    onChange={(e) => onObservationsChange(i.productId, e.target.value)}
-                  />
+                  <button
+                    style={{
+                      ...removeBtnStyle,
+                      color: i.observations ? "#1677ff" : "#ccc",
+                      background: i.observations ? "#f0f7ff" : "transparent",
+                      width: "100%",
+                      justifyContent: "center",
+                      gap: 6,
+                      padding: "6px 10px",
+                      borderRadius: 6,
+                      fontSize: 13,
+                    }}
+                    onClick={() => setObsModal({ productId: i.productId, name: i.name, value: i.observations ?? "" })}
+                  >
+                    <FileTextOutlined />
+                    {i.observations ? "Ver/editar nota" : "Agregar nota"}
+                  </button>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderTop: "1px solid #f0f0f0", paddingTop: 10, marginTop: 8 }}>
                   <div style={{ fontSize: 12, color: "#888" }}>
@@ -169,6 +206,7 @@ export function SaleCartTable({
             </div>
           );
         })}
+        {observationsModal}
       </div>
     );
   }
@@ -183,7 +221,7 @@ export function SaleCartTable({
           <col style={{ width: 112 }} />
           <col style={{ width: 185 }} />
           <col style={{ width: 106 }} />
-          <col style={{ width: 160 }} />
+          <col style={{ width: 38 }} />
           <col style={{ width: 38 }} />
         </colgroup>
 
@@ -324,14 +362,18 @@ export function SaleCartTable({
                   </strong>
                 </td>
 
-                <td style={td()}>
-                  <Input
-                    size="small"
-                    maxLength={500}
-                    placeholder="Nota…"
-                    value={i.observations}
-                    onChange={(e) => onObservationsChange(i.productId, e.target.value)}
-                  />
+                <td style={td({ textAlign: "center" })}>
+                  <button
+                    style={{
+                      ...removeBtnStyle,
+                      color: i.observations ? "#1677ff" : "#ccc",
+                      background: i.observations ? "#f0f7ff" : "transparent",
+                    }}
+                    title={i.observations ? i.observations : "Agregar observación"}
+                    onClick={() => setObsModal({ productId: i.productId, name: i.name, value: i.observations ?? "" })}
+                  >
+                    <FileTextOutlined style={{ fontSize: 14 }} />
+                  </button>
                 </td>
 
                 <td style={td({ textAlign: "center" })}>
@@ -350,6 +392,7 @@ export function SaleCartTable({
           })}
         </tbody>
       </table>
+      {observationsModal}
     </div>
   );
 }

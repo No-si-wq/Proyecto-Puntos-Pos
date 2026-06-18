@@ -24,6 +24,7 @@ export interface DetailColumn {
   width: number;         
   align: "left" | "center" | "right";
   fontSize?: number;
+  wrap?: boolean;
 }
 
 export interface ReportColumn {

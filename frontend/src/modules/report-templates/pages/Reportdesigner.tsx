@@ -59,6 +59,7 @@ const FIELD_GROUPS = [
     { token: "[Importe]",     label: "Importe" },
     { token: "[Totales]",     label: "Totales" },
     { token: "[Comision]",    label: "Comisión línea" },
+    { token: "[Obs.]",        label: "Observación" },
   ]},
   { id: "totales", label: "Totales", fields: [
     { token: "[Subtotal]",      label: "Subtotal" },
@@ -152,7 +153,7 @@ type CanvasElement = ReportFieldElement & { width?: number };
 const SAMPLE_VALUES: Record<string, string> = {
   "[Factura]": "FAC-001-00000123", "[Fecha]": "16/06/2026", "[Hora]": "10:42 AM",
   "[Estatus]": "Completada", "[MetodoPago]": "Efectivo", "[ListaPrecios]": "Lista general",
-  "[Monto]": "L. 850.00", "[Cambio]": "L. 0.00", "[Observaciones]": "Cliente frecuente",
+  "[Monto]": "L. 850.00", "[Cambio]": "L. 0.00", "[Observaciones]": "Cliente frecuente", "[Obs.]": "Producto",
   "[NombreCliente]": "Juan Pérez", "[DireccionCliente]": "Col. Trejo, SPS", "[CiudadCliente]": "San Pedro Sula",
   "[DNI]": "0501-1990-01234", "[TelefonoCliente]": "9988-7766",
   "[NombreVendedor]": "María López", "[Cajero]": "María López", "[ComisionVendedor]": "L. 25.50",
@@ -1366,7 +1367,7 @@ export default function ReportDesigner() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                     <div>
                       <div style={{ fontSize: 10, color: "#aaa", marginBottom: 2 }}>Ancho (px)</div>
-                      <Input size="small" type="number" value={logoWidth} min={20} max={400}
+                      <Input size="small" type="number" value={logoWidth} min={20} max={1500}
                         onChange={e => { setLogoWidth(Number(e.target.value) || 80); markDirty(); }} />
                     </div>
                     <div>
@@ -1444,6 +1445,20 @@ export default function ReportDesigner() {
                       ))}
                     </Select>
                   </div>
+
+                  <div>
+                    <div style={propLabel}>Texto multilínea</div>
+                    <Checkbox
+                      checked={col.wrap ?? false}
+                      onChange={e => {
+                        setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, wrap: e.target.checked } : c));
+                        markDirty();
+                      }}
+                    >
+                      Permitir salto de línea
+                    </Checkbox>
+                  </div>
+
                   <Divider style={{ margin: "2px 0" }} />
                   <Button size="small" danger icon={<DeleteOutlined />} onClick={() => { setDetailColumns(p => p.filter(c => c.id !== col.id)); setSelectedColId(null); markDirty(); }} block>Eliminar columna</Button>
                 </div>
