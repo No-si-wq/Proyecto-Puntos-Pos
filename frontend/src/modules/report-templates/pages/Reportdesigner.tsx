@@ -153,7 +153,7 @@ type CanvasElement = ReportFieldElement & { width?: number };
 const SAMPLE_VALUES: Record<string, string> = {
   "[Factura]": "FAC-001-00000123", "[Fecha]": "16/06/2026", "[Hora]": "10:42 AM",
   "[Estatus]": "Completada", "[MetodoPago]": "Efectivo", "[ListaPrecios]": "Lista general",
-  "[Monto]": "L. 850.00", "[Cambio]": "L. 0.00", "[Observaciones]": "Cliente frecuente", "[Obs.]": "Producto",
+  "[Monto]": "L. 850.00", "[Cambio]": "L. 0.00", "[Observaciones]": "Cliente frecuente",
   "[NombreCliente]": "Juan Pérez", "[DireccionCliente]": "Col. Trejo, SPS", "[CiudadCliente]": "San Pedro Sula",
   "[DNI]": "0501-1990-01234", "[TelefonoCliente]": "9988-7766",
   "[NombreVendedor]": "María López", "[Cajero]": "María López", "[ComisionVendedor]": "L. 25.50",
@@ -167,9 +167,9 @@ const SAMPLE_VALUES: Record<string, string> = {
 };
 
 const SAMPLE_DETAIL_ROWS: Record<string, string>[] = [
-  { "[Cantidad]": "2", "[Producto]": "Coca-Cola 600ml", "[SKU]": "BEB-0012", "[PrecioUnit]": "L. 18.00", "[Descuento]": "0%",  "[Impuesto]": "L. 4.32", "[Importe]": "L. 36.00", "[Totales]": "L. 40.32", "[Comision]": "L. 1.80" },
-  { "[Cantidad]": "1", "[Producto]": "Pan Bimbo Grande", "[SKU]": "PAN-0045", "[PrecioUnit]": "L. 45.00", "[Descuento]": "10%", "[Impuesto]": "L. 4.86", "[Importe]": "L. 40.50", "[Totales]": "L. 45.36", "[Comision]": "L. 2.03" },
-  { "[Cantidad]": "3", "[Producto]": "Jabón Protex 90g", "[SKU]": "ASO-0078", "[PrecioUnit]": "L. 22.00", "[Descuento]": "0%",  "[Impuesto]": "L. 7.92", "[Importe]": "L. 66.00", "[Totales]": "L. 73.92", "[Comision]": "L. 3.30" },
+  { "[Cantidad]": "2", "[Producto]": "Coca-Cola 600ml", "[Obs.]": "Producto-1", "[SKU]": "BEB-0012", "[PrecioUnit]": "L. 18.00", "[Descuento]": "0%",  "[Impuesto]": "L. 4.32", "[Importe]": "L. 36.00", "[Totales]": "L. 40.32", "[Comision]": "L. 1.80" },
+  { "[Cantidad]": "1", "[Producto]": "Pan Bimbo Grande", "[Obs.]": "Producto-2", "[SKU]": "PAN-0045", "[PrecioUnit]": "L. 45.00", "[Descuento]": "10%", "[Impuesto]": "L. 4.86", "[Importe]": "L. 40.50", "[Totales]": "L. 45.36", "[Comision]": "L. 2.03" },
+  { "[Cantidad]": "3", "[Producto]": "Jabón Protex 90g", "[Obs.]": "Producto-3", "[SKU]": "ASO-0078", "[PrecioUnit]": "L. 22.00", "[Descuento]": "0%",  "[Impuesto]": "L. 7.92", "[Importe]": "L. 66.00", "[Totales]": "L. 73.92", "[Comision]": "L. 3.30" },
 ];
 
 function resolveTokens(text: string): string {
