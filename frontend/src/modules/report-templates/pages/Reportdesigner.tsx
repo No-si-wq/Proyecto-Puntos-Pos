@@ -316,6 +316,7 @@ export default function ReportDesigner() {
   const [logoHeight, setLogoHeight] = useState(60);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const docRef = useRef<HTMLDivElement>(null);
+  const exportOverlayRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const draggingLogoRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [documentType,   setDocumentType]   = useState<'sale' | 'quotation'>('sale');
@@ -635,17 +636,20 @@ export default function ReportDesigner() {
   }
 
   async function handleExportTemplate() {
+    const wasPreview = previewMode;
     const wasZoom = zoom;
     const wasSelectedId = selectedId;
     const wasSelectedColId = selectedColId;
+
+    if (exportOverlayRef.current) exportOverlayRef.current.style.display = "flex";
 
     setSelectedId(null);
     setSelectedColId(null);
     setEditingId(null);
     setEditingColId(null);
+    setPreviewMode(true);
     setZoom(1);
 
-    // esperar a que React repinte el canvas en modo vista previa antes de capturarlo
     await new Promise(r => setTimeout(r, 120));
 
     try {
@@ -678,9 +682,11 @@ export default function ReportDesigner() {
         aspectRatio,
       );
     } finally {
+      setPreviewMode(wasPreview);
       setZoom(wasZoom);
       setSelectedId(wasSelectedId);
       setSelectedColId(wasSelectedColId);
+      if (exportOverlayRef.current) exportOverlayRef.current.style.display = "none";
     }
   }
 
