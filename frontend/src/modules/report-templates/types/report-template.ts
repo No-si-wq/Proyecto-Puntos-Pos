@@ -68,7 +68,8 @@ export interface ReportTemplateConfig {
   logoX?: number;
   logoY?: number;
   logoWidth?: number;
-  logoHeight?: number;  
+  logoHeight?: number;
+  logoBackground?: string;  
   documentType?: 'sale' | 'quotation';
   groupBy?: "seller" | "customer" | "paymentMethod" | "date" | "product" | "";
   totals: {

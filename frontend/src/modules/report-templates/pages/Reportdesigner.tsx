@@ -314,6 +314,7 @@ export default function ReportDesigner() {
   const [logoY,      setLogoY]      = useState(8);
   const [logoWidth,  setLogoWidth]  = useState(80);
   const [logoHeight, setLogoHeight] = useState(60);
+  const [logoBg, setLogoBg] = useState<string>("transparent");
   const logoInputRef = useRef<HTMLInputElement>(null);
   const docRef = useRef<HTMLDivElement>(null);
   const exportOverlayRef = useRef<HTMLDivElement>(null);
@@ -324,7 +325,7 @@ export default function ReportDesigner() {
   type DesignSnapshot = {
     elements: CanvasElement[]; detailColumns: DetailColumn[]; pageSize: PageSize; documentType: 'sale' | 'quotation';
     headerHeight: number; detailHeight: number; totalsHeight: number; footerHeight: number;
-    logo: string | null; logoX: number; logoY: number; logoWidth: number; logoHeight: number;
+    logo: string | null; logoX: number; logoY: number; logoWidth: number; logoHeight: number, logoBg: string;
   };
 
   // Snapshot de la última config "guardada" (al cargar o guardar una plantilla).
@@ -334,7 +335,7 @@ export default function ReportDesigner() {
       elements: DEFAULT_ELEMENTS, detailColumns: DEFAULT_DETAIL_COLUMNS,
       pageSize: "ticket", documentType: "sale",
       headerHeight: 130, detailHeight: 110, totalsHeight: 100, footerHeight: 50,
-      logo: null, logoX: 8, logoY: 8, logoWidth: 80, logoHeight: 60,
+      logo: null, logoX: 8, logoY: 8, logoWidth: 80, logoHeight: 60, logoBg: "transparent",
     } as DesignSnapshot)
   );
 
@@ -342,7 +343,7 @@ export default function ReportDesigner() {
     return JSON.stringify({
       elements, detailColumns, pageSize, documentType,
       headerHeight, detailHeight, totalsHeight, footerHeight,
-      logo, logoX, logoY, logoWidth, logoHeight,
+      logo, logoX, logoY, logoWidth, logoHeight, logoBg,
       ...over,
     });
   }
@@ -390,6 +391,7 @@ export default function ReportDesigner() {
     const newLogoY = t.config.logoY ?? 8;
     const newLogoWidth = t.config.logoWidth ?? 80;
     const newLogoHeight = t.config.logoHeight ?? 60;
+    setLogoBg(t.config.logoBackground ?? "transparent");
 
     setCurrentTemplate(t);
     setElements(newElements);
@@ -434,7 +436,7 @@ export default function ReportDesigner() {
   // Si el usuario revierte un cambio (vuelve al valor original), el indicador
   useEffect(() => {
     setIsDirty(getSnapshot() !== baselineRef.current);
-  }, [elements, detailColumns, pageSize, documentType, headerHeight, detailHeight, totalsHeight, footerHeight, logo, logoX, logoY, logoWidth, logoHeight]);
+  }, [elements, detailColumns, pageSize, documentType, headerHeight, detailHeight, totalsHeight, footerHeight, logo, logoX, logoY, logoWidth, logoHeight, logoBg]);
 
   const onFieldDragStart = useCallback((token: string, label: string) => {
     dragFieldRef.current = { token, label };
@@ -712,6 +714,7 @@ export default function ReportDesigner() {
       setLogoY(parsed.config.logoY ?? 8);
       setLogoWidth(parsed.config.logoWidth ?? 80);
       setLogoHeight(parsed.config.logoHeight ?? 60);
+      setLogoBg(parsed.config.logoBackground ?? "transparent");
       setIsDirty(true);
       setSelectedId(null);
       setSelectedColId(null);
@@ -1127,6 +1130,7 @@ export default function ReportDesigner() {
                             cursor: "move",
                             userSelect: "none",
                             border: selectedId === "__logo__" ? "1px dashed #1677ff" : "none",
+                            backgroundColor: logoBg !== "transparent" ? logoBg : undefined,
                             zIndex: 10,
                           }}
                         />
@@ -1396,6 +1400,29 @@ export default function ReportDesigner() {
                       <Input size="small" type="number" value={logoY}
                         onChange={e => { setLogoY(parseInt(e.target.value) || 0); markDirty(); }} />
                     </div>
+                  </div>
+                </div>
+                <div>
+                  <div style={propLabel}>Fondo</div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <Select
+                      size="small"
+                      style={{ flex: 1 }}
+                      value={logoBg === "transparent" || !logoBg ? "transparent" : "color"}
+                      onChange={val => { setLogoBg(val === "transparent" ? "transparent" : (logoBg === "transparent" ? "#ffffff" : logoBg)); markDirty(); }}
+                      options={[
+                        { value: "transparent", label: "Transparente" },
+                        { value: "color",       label: "Color sólido" },
+                      ]}
+                    />
+                    {logoBg !== "transparent" && logoBg && (
+                      <input
+                        type="color"
+                        value={logoBg}
+                        style={{ width: 32, height: 24, border: "none", padding: 0, cursor: "pointer", borderRadius: 4 }}
+                        onChange={e => { setLogoBg(e.target.value); markDirty(); }}
+                      />
+                    )}
                   </div>
                 </div>
                 <Divider style={{ margin: "2px 0" }} />

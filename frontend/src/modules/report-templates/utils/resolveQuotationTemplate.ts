@@ -162,8 +162,11 @@ export function resolveQuotationTemplate(
     return `<div style="position:absolute;left:${scaledX}px;top:${scaledY}px;${fw}${cl}${fs}${ta}white-space:nowrap;max-width:calc(100% - ${scaledX}px);overflow:hidden;">${text}</div>`;
   };
 
+  const logoBg = config.logoBackground && config.logoBackground !== "transparent"
+    ? `background-color:${config.logoBackground};`
+    : "";
   const logoHtml = config.logoBase64
-    ? `<img src="${config.logoBase64}" style="position:absolute;left:${Math.round((config.logoX ?? 8) * scale)}px;top:${Math.round((config.logoY ?? 8) * scale)}px;width:${Math.round((config.logoWidth ?? 80) * scale)}px;height:${Math.round((config.logoHeight ?? 60) * scale)}px;object-fit:contain;z-index:10;" />`
+    ? `<img src="${config.logoBase64}" style="position:absolute;left:${Math.round((config.logoX ?? 8) * scale)}px;top:${Math.round((config.logoY ?? 8) * scale)}px;width:${Math.round((config.logoWidth ?? 80) * scale)}px;height:${Math.round((config.logoHeight ?? 60) * scale)}px;object-fit:contain;z-index:10;${logoBg}" />`
     : "";
 
   const headerEls = bySection("header").map(el => renderEl(el, globalTokens)).join("");
