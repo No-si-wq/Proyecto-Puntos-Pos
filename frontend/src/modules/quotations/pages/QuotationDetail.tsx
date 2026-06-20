@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Descriptions, Table, Tag, Spin, Space, Modal, Select, Popconfirm, Dropdown, message, type MenuProps } from 'antd';
+import { Button, Descriptions, Table, Tag, Spin, Space, Modal, Select, Popconfirm, Dropdown, message, type MenuProps, Alert } from 'antd';
 import {
   ArrowLeftOutlined,
-  CheckOutlined,
   CloseOutlined,
   SwapOutlined,
   PrinterOutlined,
@@ -21,7 +20,6 @@ import { exportToPdf } from '../../../core/utils/exportPDF';
 
 const STATUS_COLOR: Record<QuotationStatus, string> = {
   PENDING: 'orange',
-  ACCEPTED: 'green',
   REJECTED: 'red',
   EXPIRED: 'default',
   CONVERTED: 'blue',
@@ -29,7 +27,6 @@ const STATUS_COLOR: Record<QuotationStatus, string> = {
 
 const STATUS_LABEL: Record<QuotationStatus, string> = {
   PENDING: 'Pendiente',
-  ACCEPTED: 'Aceptada',
   REJECTED: 'Rechazada',
   EXPIRED: 'Expirada',
   CONVERTED: 'Convertida',
@@ -58,8 +55,6 @@ export default function QuotationDetail() {
   if (!quotation) return <p>Cotización no encontrada</p>;
 
   const currentQuotation = quotation;
-
-  const isPending = currentQuotation.status === 'PENDING' || currentQuotation.status === 'ACCEPTED';
 
   const handlePrint = async (templateId?: number) => {
     let config;
@@ -158,7 +153,7 @@ function buildTemplateMenuItems(action: 'print' | 'pdf'): MenuProps['items'] {
   ];
 }
 
-  const handleStatus = async (status: 'ACCEPTED' | 'REJECTED' | 'EXPIRED') => {
+  const handleStatus = async (status: 'REJECTED') => {
     setActing(true);
     try {
       await updateStatus(quotation.id, status);
@@ -220,6 +215,16 @@ function buildTemplateMenuItems(action: 'print' | 'pdf'): MenuProps['items'] {
     },
   ];
 
+  const expiryWarning = (() => {
+    if (quotation.status !== 'PENDING' || !quotation.expiresAt) return null;
+    const diff = new Date(quotation.expiresAt).getTime() - Date.now();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    if (days < 0) return null; // ya expiró, el cron lo marcará
+    if (days === 0) return { type: 'error' as const, text: 'Esta cotización vence hoy' };
+    if (days <= 5) return { type: 'warning' as const, text: `Esta cotización vence en ${days} día${days > 1 ? 's' : ''}` };
+    return null;
+  })();
+
   return (
     <>
       <div style={{
@@ -245,22 +250,11 @@ function buildTemplateMenuItems(action: 'print' | 'pdf'): MenuProps['items'] {
           </Button>
         </Dropdown>
 
-        {quotation.status !== 'CONVERTED' && quotation.status !== 'REJECTED' && (
+        {quotation.status === 'PENDING' && (
           <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : undefined }}>
-            {quotation.status === 'PENDING' && (
-              <Popconfirm title="¿Marcar como aceptada?" onConfirm={() => handleStatus('ACCEPTED')} okText="Sí" cancelText="No">
-                <Button type="primary" icon={<CheckOutlined />} loading={acting} block={isMobile}>
-                  Aceptar
-                </Button>
-              </Popconfirm>
-            )}
-
-            {isPending && (
-              <Button icon={<SwapOutlined />} onClick={() => setConvertOpen(true)} loading={acting} block={isMobile}>
-                Convertir a Venta
-              </Button>
-            )}
-
+            <Button icon={<SwapOutlined />} onClick={() => setConvertOpen(true)} loading={acting} block={isMobile}>
+              Convertir a Venta
+            </Button>
             <Popconfirm title="¿Rechazar esta cotización?" onConfirm={() => handleStatus('REJECTED')} okText="Sí" cancelText="No">
               <Button danger icon={<CloseOutlined />} loading={acting} block={isMobile}>
                 Rechazar
@@ -275,6 +269,24 @@ function buildTemplateMenuItems(action: 'print' | 'pdf'): MenuProps['items'] {
           </Button>
         )}
       </div>
+
+      {quotation.status === 'EXPIRED' && (
+        <Alert
+          type="error"
+          message="Esta cotización ha expirado y ya no puede ser convertida a venta"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      {expiryWarning && (
+        <Alert
+          type={expiryWarning.type}
+          message={expiryWarning.text}
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
       <Descriptions
         title={`Cotización ${quotation.quotationNumber}`}

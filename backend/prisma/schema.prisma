@@ -693,7 +693,6 @@ model QuotationItem {
 
 enum QuotationStatus {
   PENDING
-  ACCEPTED
   REJECTED
   EXPIRED
   CONVERTED

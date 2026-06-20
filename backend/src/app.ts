@@ -3,6 +3,7 @@ import routes from "./routes";
 import { logger } from "./core/config/logger";
 import { errorMiddleware } from "./core/middlewares/error.middleware";
 import { ENV } from "./core/config/env";
+import { startQuotationCron } from "./modules/quotation/quotation.cron";
 import cors from "cors";
 
 export const app = express();
@@ -26,3 +27,5 @@ if (ENV.NODE_ENV === "development") {
 app.use("/api", routes);
 
 app.use(errorMiddleware);
+
+startQuotationCron();

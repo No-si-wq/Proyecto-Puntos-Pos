@@ -34,7 +34,6 @@ interface QuotationForPrint {
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING:   "Pendiente",
-  ACCEPTED:  "Aceptada",
   REJECTED:  "Rechazada",
   EXPIRED:   "Expirada",
   CONVERTED: "Convertida a venta",

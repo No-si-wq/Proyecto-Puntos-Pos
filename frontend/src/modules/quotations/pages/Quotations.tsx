@@ -36,7 +36,6 @@ export default function Quotations() {
 
   const statusLabel: Record<string, string> = {
     PENDING: "Pendiente",
-    ACCEPTED: "Aceptada",
     REJECTED: "Rechazada",
     EXPIRED: "Expirada",
     CONVERTED: "Convertida",
@@ -75,9 +74,18 @@ export default function Quotations() {
     const product = products.find((p) => p.id === Number(val));
     if (!product) return;
     if (cart.some((i) => i.productId === product.id)) {
+      setCart((prev) =>
+        prev.map((i) =>
+          i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i
+        )
+      );
       setProductSearch('');
       return;
     }
+    const priceListId: number | undefined = form.getFieldValue('priceListId');
+    const customPrice = priceListId
+      ? product.prices?.find((pp) => pp.priceListId === priceListId && pp.active)?.price
+      : undefined;
     setCart((prev) => [
       ...prev,
       {
@@ -85,7 +93,7 @@ export default function Quotations() {
         productName: product.name,
         sku: product.sku,
         quantity: 1,
-        price: Number(product.price),
+        price: customPrice !== undefined ? Number(customPrice) : Number(product.price),
         discountType: 'NONE',
         discountValue: 0,
         tax: Number(product.tax ?? 0) * 100,
@@ -133,7 +141,7 @@ export default function Quotations() {
         priceListId: values.priceListId,
         sellerId: values.sellerId,
         observations: values.observations,
-        expiresAt: values.expiresAt?.toISOString(),
+        expiresAt: values.expiresAt?.endOf('day').toISOString(),
         items: cart.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -195,7 +203,7 @@ export default function Quotations() {
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            <Col xs={24} sm={12}>   {/* ← era span={12} */}
+            <Col xs={24} sm={12}>
               <Form.Item
                 name="warehouseId"
                 label="Almacén"
@@ -208,7 +216,7 @@ export default function Quotations() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>   {/* ← era span={12} */}
+            <Col xs={24} sm={12}>
               <Form.Item name="customerId" label="Cliente (opcional)">
                 <Select placeholder="Sin cliente" allowClear showSearch optionFilterProp="children">
                   {customers.map((c) => (
@@ -217,7 +225,7 @@ export default function Quotations() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>   {/* ← era span={12} */}
+            <Col xs={24} sm={12}> 
               <Form.Item name="priceListId" label="Lista de precios">
                 <Select 
                   placeholder="Precio base" 
@@ -230,9 +238,12 @@ export default function Quotations() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>   {/* ← era span={12} */}
+            <Col xs={24} sm={12}>
               <Form.Item name="expiresAt" label="Fecha de expiración">
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker
+                  style={{ width: '100%' }} 
+                  disabledDate={(current) => current && current.isBefore(dayjs().startOf('day'))}
+                />
               </Form.Item>
             </Col>
           </Row>

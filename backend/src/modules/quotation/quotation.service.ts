@@ -76,11 +76,21 @@ export class QuotationService {
     });
   }
 
-  async updateStatus(tenantId: number, id: number, status: 'ACCEPTED' | 'REJECTED' | 'EXPIRED') {
+  async updateStatus(tenantId: number, id: number, status: 'REJECTED') {
     const quotation = await prisma.quotation.findFirst({ where: { tenantId, id } });
     if (!quotation) throw new Error('Cotización no encontrada');
     if (quotation.status === 'CONVERTED') throw new Error('La cotización ya fue convertida');
     return prisma.quotation.update({ where: { id }, data: { status } });
+  }
+
+  async expireOverdue() {
+    return prisma.quotation.updateMany({
+      where: {
+        status: 'PENDING',
+        expiresAt: { lt: new Date() },
+      },
+      data: { status: 'EXPIRED' },
+    });
   }
 
   async convertToSale(tenantId: number, id: number, userId: number, paymentMethod: string) {

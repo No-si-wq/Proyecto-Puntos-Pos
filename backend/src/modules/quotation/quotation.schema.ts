@@ -20,7 +20,7 @@ const createQuotationBody = z.object({
 });
 
 const updateQuotationStatusBody = z.object({
-  status: z.enum(['ACCEPTED', 'REJECTED', 'EXPIRED']),
+  status: z.enum(['REJECTED']),
 });
 
 const quotationParamsSchema = z.object({

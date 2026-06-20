@@ -7,7 +7,6 @@ import { useDeviceType } from '../../../core/hooks/useDeviceType';
 
 const STATUS_COLOR: Record<QuotationStatus, string> = {
   PENDING: 'orange',
-  ACCEPTED: 'green',
   REJECTED: 'red',
   EXPIRED: 'default',
   CONVERTED: 'blue',
@@ -15,7 +14,6 @@ const STATUS_COLOR: Record<QuotationStatus, string> = {
 
 const STATUS_LABEL: Record<QuotationStatus, string> = {
   PENDING: 'Pendiente',
-  ACCEPTED: 'Aceptada',
   REJECTED: 'Rechazada',
   EXPIRED: 'Expirada',
   CONVERTED: 'Convertida',

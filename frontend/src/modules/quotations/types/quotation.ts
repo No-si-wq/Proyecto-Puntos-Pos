@@ -1,4 +1,4 @@
-export type QuotationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CONVERTED';
+export type QuotationStatus = 'PENDING' | 'REJECTED' | 'EXPIRED' | 'CONVERTED';
 export type DiscountType = 'NONE' | 'PERCENTAGE' | 'FIXED';
 
 export interface QuotationItem {
