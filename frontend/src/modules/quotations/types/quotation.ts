@@ -33,6 +33,7 @@ export interface Quotation {
   priceList?: { id: number; name: string }; 
   warehouse: { id: number; name: string };
   convertedSale?: { id: number; saleNumber: string };
+  customerId?: number | null;
   items: QuotationItem[];
 }
 

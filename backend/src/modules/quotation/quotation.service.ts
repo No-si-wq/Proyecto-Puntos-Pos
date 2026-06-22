@@ -17,6 +17,17 @@ export class QuotationService {
   }
 
   async getById(tenantId: number, id: number) {
+
+    await prisma.quotation.updateMany({
+      where: {
+        tenantId,
+        id,
+        status: 'PENDING',
+        expiresAt: { lt: new Date() },
+      },
+      data: { status: 'EXPIRED' },
+    });
+
     const quotation = await prisma.quotation.findFirst({
       where: { tenantId, id },
       include: {

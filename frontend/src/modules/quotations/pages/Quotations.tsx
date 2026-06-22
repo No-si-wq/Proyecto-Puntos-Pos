@@ -32,6 +32,7 @@ export default function Quotations() {
   const [form] = Form.useForm();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [productSearch, setProductSearch] = useState('');
+  const [filterCustomerId, setFilterCustomerId] = useState<number | undefined>(undefined);
   const [saving, setSaving] = useState(false);
 
   const statusLabel: Record<string, string> = {
@@ -157,6 +158,10 @@ export default function Quotations() {
     }
   };
 
+  const filteredQuotations = filterCustomerId
+    ? quotations.filter((q) => q.customerId === filterCustomerId)
+    : quotations;
+
   return (
     <>
       <PageHeader
@@ -185,7 +190,22 @@ export default function Quotations() {
       />
 
       <div style={{ marginTop: 16 }}>
-        <QuotationsTable data={quotations} loading={loading} />
+        <div style={{ marginBottom: 12, maxWidth: isMobile ? '100%' : 300 }}>
+          <Select
+            placeholder="Filtrar por cliente"
+            allowClear
+            showSearch
+            optionFilterProp="children"
+            style={{ width: '100%' }}
+            value={filterCustomerId}
+            onChange={(val) => setFilterCustomerId(val)}
+          >
+            {customers.map((c) => (
+              <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
+            ))}
+          </Select>
+        </div>
+        <QuotationsTable data={filteredQuotations} loading={loading} />
       </div>
 
       <Modal
