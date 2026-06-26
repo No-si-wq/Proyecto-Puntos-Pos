@@ -142,7 +142,7 @@ export default function Quotations() {
         priceListId: values.priceListId,
         sellerId: values.sellerId,
         observations: values.observations,
-        expiresAt: values.expiresAt?.endOf('day').toISOString(),
+        expiresAt: expiresAt: values.expiresAt?.add(1, 'day').startOf('day').toISOString(),,
         items: cart.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
