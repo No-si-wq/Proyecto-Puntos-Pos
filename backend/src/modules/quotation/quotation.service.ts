@@ -1,6 +1,8 @@
 import prisma from '../../core/prisma';
+import { InventoryMovementType, Prisma } from '@prisma/client';
 import { CreateQuotationInput } from './quotation';
 import { buildFiscalNumber, validateFiscalRange, isFiscalConfigExpired, extractSequence } from '../../utils/fiscal.util';
+import { InventoryService } from '../inventory/inventory.service';
 
 export class QuotationService {
   async getAll(tenantId: number) {
@@ -179,21 +181,51 @@ export class QuotationService {
           sellerId: quotation.sellerId,
           observations: quotation.observations,
           paymentMethod: paymentMethod as any,
-          items: {
-            create: quotation.items.map((i) => ({
-              productId: i.productId,
-              quantity: i.quantity,
-              price: i.price,
-              discountAmount: i.discountAmount,
-              discountType: i.discountType,
-              discountValue: i.discountValue,
-              lineSubtotal: i.lineSubtotal,
-              tax: i.tax,
-              taxAmount: i.taxAmount,
-              lineTotal: i.lineTotal,
-            })),
-          },
         },
+      });
+
+      // Crear ítems individualmente para obtener sus IDs y consumir inventario FIFO
+      let totalCogs = new Prisma.Decimal(0);
+
+      for (const i of quotation.items) {
+        const saleItem = await tx.saleItem.create({
+          data: {
+            saleId: sale.id,
+            productId: i.productId,
+            quantity: i.quantity,
+            price: i.price,
+            discountAmount: i.discountAmount,
+            discountType: i.discountType,
+            discountValue: i.discountValue,
+            lineSubtotal: i.lineSubtotal,
+            tax: i.tax,
+            taxAmount: i.taxAmount,
+            lineTotal: i.lineTotal,
+          },
+        });
+
+        const itemCogs = await InventoryService.consumeStockFIFO(
+          tx, tenantId, saleItem.id, i.productId, quotation.warehouseId, i.quantity
+        );
+
+        totalCogs = totalCogs.add(itemCogs);
+
+        await InventoryService.createMovementTX(tx, {
+          tenantId,
+          productId: i.productId,
+          warehouseId: quotation.warehouseId,
+          type: InventoryMovementType.OUT,
+          quantity: i.quantity,
+          movementValue: itemCogs,
+          referenceType: 'SALE',
+          referenceId: sale.id,
+          note: `Venta ${saleNumber}`,
+        });
+      }
+
+      await tx.sale.update({
+        where: { id: sale.id },
+        data: { cogs: totalCogs },
       });
 
       await tx.quotation.update({
