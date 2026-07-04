@@ -132,7 +132,7 @@ export class AdminDashboardService {
   }
 
   private static async getInventoryValue(tenantId: number) {
-
+    
     const lots = await prisma.purchaseItem.findMany({
       where: {
         tenantId,
