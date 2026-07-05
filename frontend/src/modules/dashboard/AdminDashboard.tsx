@@ -21,6 +21,7 @@ import {
   SwapOutlined,
 } from "@ant-design/icons";
 
+import { useNavigate } from "react-router-dom";
 import { useAdminDashboard } from "./useAdminDashboard";
 import { useResponsiveSizes } from "../../core/hooks/useResponsiveSizes";
 import type { AdminDashboardData } from "./type/dashboard";
@@ -67,6 +68,7 @@ type MetricCardProps = {
   suffix?: string;
   precision?: number;
   valueColor?: string;
+  onClick?: () => void;
 };
 
 function MetricCard({
@@ -79,10 +81,13 @@ function MetricCard({
   suffix,
   precision = 2,
   valueColor,
+  onClick,
 }: MetricCardProps) {
   return (
     <Card
       loading={loading}
+      onClick={onClick}
+      hoverable={!!onClick}
       styles={{
         body: { padding: "20px 24px" },
       }}
@@ -90,6 +95,7 @@ function MetricCard({
         borderTop: `3px solid ${accentColor}`,
         borderRadius: 10,
         height: "100%",
+        cursor: onClick ? "pointer" : "default",
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
@@ -134,6 +140,7 @@ function MetricCard({
 export default function AdminDashboard() {
   const { data, loading } = useAdminDashboard();
   const sizes = useResponsiveSizes();
+  const navigate = useNavigate();
 
   const financial = data?.financial;
   const warehouses = data?.salesByWarehouse ?? [];
@@ -294,6 +301,7 @@ export default function AdminDashboard() {
             icon={<DollarOutlined />}
             accentColor="#1677ff"
             formatter={(v) => formatCurrency(Number(v))}
+            onClick={() => navigate("/reports/sold-products")}
           />
         </Col>
         <Col xs={24} sm={12} lg={6}>
@@ -336,6 +344,7 @@ export default function AdminDashboard() {
             icon={<StockOutlined />}
             accentColor="#13c2c2"
             formatter={(v) => formatCurrency(Number(v))}
+            onClick={() => navigate("/reports/general-inventory")}
           />
         </Col>
         <Col xs={24} sm={12} lg={6}>
@@ -355,6 +364,7 @@ export default function AdminDashboard() {
             loading={loading}
             icon={<SwapOutlined />}
             accentColor="#52c41a"
+            onClick={() => navigate("/reports/product-outputs")}
           />
         </Col>
       </Row>
