@@ -19,9 +19,38 @@ interface UpdateUserInput {
 }
 
 export class UserService {
-  static async list(tenantId: number) {
+  static async list(params: {
+    tenantId: number, 
+    search?: string, 
+    onlyInactive?: boolean,
+  }) {
+
+    const { tenantId, search, onlyInactive } = params;
+
+    const normalizedSearch = search?.trim() || undefined;
+
     return prisma.user.findMany({
-      where: { active: true, tenantId },
+      where: { 
+        active: onlyInactive ? false : true, 
+        tenantId,
+        ...(normalizedSearch && {
+          OR : [
+            {
+              name: {
+                contains: normalizedSearch,
+                mode: "insensitive",
+              },
+            },
+            {
+              username: {
+                contains: normalizedSearch,
+                mode: "insensitive",
+              },
+            },
+          ],
+        }),
+      },
+
       include: {
         warehouse: {
           select: {

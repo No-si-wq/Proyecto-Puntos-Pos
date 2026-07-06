@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import http from "../../core/http/http";
-import type { User, CreateUserDTO, UpdateUserDTO } from "./user";
+import type { User, CreateUserDTO, UpdateUserDTO, UserSearch } from "./user";
 
 export function useUsers() {
   const [users, setUsers] = useState<User[]>([]);
+  const [filters, setFilters] = useState<UserSearch>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -11,14 +12,19 @@ export function useUsers() {
     try {
       setLoading(true);
       setError(null);
-      const { data } = await http.get<User[]>("/users")
+      const { data } = await http.get<User[]>("/users", {
+        params: { 
+          search: filters.search,
+          onlyInactive: filters.onlyInactive ? "true" : undefined,
+        },
+      });
       setUsers(data);
     } catch {
       setError("Error cargando usuarios");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters.search, filters.onlyInactive]);
 
   useEffect(() => {
     load();
@@ -48,6 +54,8 @@ export function useUsers() {
     users,
     loading,
     error,
+    filters,
+    setFilters,
     reload: load,
     create,
     update,

@@ -15,6 +15,11 @@ export interface User {
   updatedAt?: string;
 }
 
+export interface UserSearch {
+  search?: string,
+  onlyInactive?: boolean,
+};
+
 export interface AuthUser {
   id: number;
   username: string;

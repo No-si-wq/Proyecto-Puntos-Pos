@@ -3,7 +3,19 @@ import { UserService } from "./user.service";
 
 export async function listUsers(req: Request, res: Response) {
   const { tenantId } = req.user!;
-  const users = await UserService.list(tenantId);
+  const search =
+    typeof req.query.search === "string"
+      ? req.query.search
+      : undefined;
+
+  const onlyInactive = req.query.onlyInactive === "true";
+
+  const users = await UserService.list({
+    tenantId,
+    search,
+    onlyInactive,
+  });
+  
   res.json(users);
 }
 

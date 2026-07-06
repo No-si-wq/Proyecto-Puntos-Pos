@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { message, Tag, Dropdown, Typography, Space, Button } from "antd";
+import { useState, useEffect } from "react";
+import { message, Tag, Dropdown, Typography, Space, Button, Input, Switch } from "antd";
 import { PlusOutlined, MoreOutlined, EditOutlined, StopOutlined, CheckCircleOutlined, LogoutOutlined, FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { MenuProps } from "antd";
@@ -22,13 +22,21 @@ import { usePermissions } from "../../core/hooks/usePermissions";
 const { Text } = Typography;
 
 export default function Users() {
-  const { users, loading, create, update, toggleActive, logoutAll } = useUsers();
+  const { users, loading, create, update, toggleActive, logoutAll, filters, setFilters } = useUsers();
   const sizes      = useResponsiveSizes();
   const { isMobile } = useDeviceType();
   const { canAccess } = usePermissions();
 
   const [open, setOpen]       = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
+  const [searchValue, setSearchValue] = useState("");
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setFilters({ search: searchValue || undefined });
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [searchValue]);
 
   function buildExportRows(data: User[]) {
     return data.filter(u => u.active).map((u) => ({
@@ -200,6 +208,25 @@ export default function Users() {
           )
         }
       />
+
+      <div style={{ marginBottom: 12 }}>
+        <Input
+          placeholder="Buscar por nombre"
+          allowClear
+          size={sizes.input}
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          style={{ width: "100%" }}
+        />
+
+        <Space style={{ marginTop: 12 }}> 
+          <Switch
+            checked={filters.onlyInactive}
+            onChange={(val) => { setFilters((prev) => ({...prev, onlyInactive: val})) }}
+          />
+          <Text>Mostrar inactivos</Text>
+        </Space>
+      </div>
 
       <SimpleTable<User> data={users} columns={desktopColumns} mobileColumns={mobileColumns} loading={loading} />
 
