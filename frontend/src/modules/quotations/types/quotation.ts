@@ -6,6 +6,7 @@ export interface QuotationItem {
   productId: number;
   quantity: number;
   price: number;
+  priceListId?: number | null;
   discountType: DiscountType; 
   discountValue: number;        
   discountAmount: number;
@@ -41,6 +42,7 @@ export interface QuotationItemInput {
   productId: number;
   quantity: number;
   price: number;
+  priceListId?: number | null;
   discountType?: DiscountType;
   discountValue?: number;
   tax?: number;

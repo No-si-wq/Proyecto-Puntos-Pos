@@ -13,8 +13,9 @@ import {
   Select as AntSelect,
   Drawer,
 } from "antd";
-import { ShoppingCartOutlined } from "@ant-design/icons";
+import { ShoppingCartOutlined, UploadOutlined } from "@ant-design/icons";
 
+import * as XLSX from "xlsx";
 import { usePurchases } from "../hooks/usePurchases";
 import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehouse";
 import { purchaseCartStore } from "../types/purchaseCart.store";
@@ -39,6 +40,7 @@ export default function Purchases() {
   const { products, reload: reloadProducts }  = useWarehouseProducts();
   const { create, creating, unitConversions, loadUnitConversions } = usePurchases();
   const selectRef = useRef<any>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const cart      = purchaseCartStore();
   const sizes     = useResponsiveSizes();
   const { suppliers } = useSuppliers();
@@ -154,6 +156,60 @@ export default function Purchases() {
     </div>
   );
 
+  async function handleImportExcel(file: File) {
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: "" });
+
+      if (rows.length === 0) {
+        message.warning("El archivo no contiene filas");
+        return;
+      }
+
+      const notFound: string[] = [];
+      let importedCount = 0;
+
+      for (const row of rows) {
+        const sku = String(row.Codigo ?? row.codigo).trim();
+        if (!sku) continue;
+
+        const product = products.find((p) => p.sku === sku);
+        if (!product) {
+          notFound.push(sku);
+          continue;
+        }
+
+        const quantity = Number(row.Cantidad ?? row.cantidad ?? 1);
+        const cost = Number(row.Costo ?? row.costo ?? product.cost);
+        const lotNumber = row.Lote || row.lote || undefined;
+        const expiresRaw = row.Vencimiento ?? row.vencimiento;
+        const expiresAt =
+          expiresRaw instanceof Date
+            ? expiresRaw
+            : expiresRaw
+            ? new Date(expiresRaw)
+            : null;
+
+        cart.addImportedItem(product, quantity, cost, lotNumber, expiresAt);
+        importedCount++;
+
+        if (!unitConversions[product.id]) void loadUnitConversions(product.id);
+      }
+
+      if (notFound.length > 0) {
+        message.warning(
+          `${importedCount} productos importados. No encontrados: ${notFound.join(", ")}`
+        );
+      } else {
+        message.success(`${importedCount} productos importados desde Excel`);
+      }
+    } catch {
+      message.error("No se pudo leer el archivo Excel");
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -168,6 +224,27 @@ export default function Purchases() {
         <div style={{ display: "flex", flexDirection: "column", gap: sizes.gap }}>
 
           <Card type="inner" title="Proveedor" style={{ marginBottom: 0 }}>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImportExcel(file);
+                e.target.value = "";
+              }}
+            />
+
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => importInputRef.current?.click()}
+              disabled={!warehouseId}
+              style={{ marginBottom: 16 }}
+            >
+              Importar Excel
+            </Button>
+
             <Select
               showSearch
               virtual

@@ -16,7 +16,9 @@ import { useDeviceType } from '../../../core/hooks/useDeviceType';
 import { exportToExcel } from '../../../core/utils/exportExcel';
 import { useResponsiveSizes } from '../../../core/hooks/useResponsiveSizes';
 import { useSettings } from '../../settings/hooks/useSettings';
+import { useUsers } from '../../users/useUsers';
 import dayjs from 'dayjs';
+import { Role } from '../../../core/auth/roles';
 
 export default function Quotations() {
   const { quotations, loading, create } = useQuotations();
@@ -26,6 +28,8 @@ export default function Quotations() {
   const { customers } = useCustomers();
   const { products } = useProducts();
   const { priceLists } = usePriceLists();
+  const { users } = useUsers();
+  const sellers = users.filter((u) => u.role === Role.SELLER);
   const sizes = useResponsiveSizes();
 
   const [open, setOpen] = useState(false);
@@ -83,10 +87,6 @@ export default function Quotations() {
       setProductSearch('');
       return;
     }
-    const priceListId: number | undefined = form.getFieldValue('priceListId');
-    const customPrice = priceListId
-      ? product.prices?.find((pp) => pp.priceListId === priceListId && pp.active)?.price
-      : undefined;
     setCart((prev) => [
       ...prev,
       {
@@ -94,7 +94,8 @@ export default function Quotations() {
         productName: product.name,
         sku: product.sku,
         quantity: 1,
-        price: customPrice !== undefined ? Number(customPrice) : Number(product.price),
+        price: Number(product.price),
+        priceListId: undefined,
         discountType: 'NONE',
         discountValue: 0,
         tax: Number(product.tax ?? 0) * 100,
@@ -107,22 +108,6 @@ export default function Quotations() {
     setOpen(false);
     form.resetFields();
     setCart([]);
-  };
-
-  const handlePriceListChange = (priceListId: number | undefined) => {
-    setCart((prev) =>
-      prev.map((item) => {
-        const product = products.find((p) => p.id === item.productId);
-        if (!product) return item;
-        const customPrice = priceListId
-          ? product.prices?.find((pp) => pp.priceListId === priceListId && pp.active)?.price
-          : undefined;
-        return {
-          ...item,
-          price: customPrice !== undefined ? Number(customPrice) : Number(product.price),
-        };
-      })
-    );
   };
 
   const toolsMenu: MenuProps = {
@@ -139,7 +124,6 @@ export default function Quotations() {
       await create({
         customerId: values.customerId,
         warehouseId: values.warehouseId,
-        priceListId: values.priceListId,
         sellerId: values.sellerId,
         observations: values.observations,
         expiresAt: values.expiresAt?.add(1, 'day').startOf('day').toISOString(),
@@ -245,15 +229,16 @@ export default function Quotations() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}> 
-              <Form.Item name="priceListId" label="Lista de precios">
-                <Select 
-                  placeholder="Precio base" 
-                  allowClear 
-                  onChange={handlePriceListChange}
+            <Col xs={24} sm={12}>
+              <Form.Item name="sellerId" label="Vendedor (opcional)">
+                <Select
+                  placeholder="Sin vendedor asignado"
+                  allowClear
+                  showSearch
+                  optionFilterProp="children"
                 >
-                  {priceLists.map((pl) => (
-                    <Select.Option key={pl.id} value={pl.id}>{pl.name}</Select.Option>
+                  {sellers.map((u) => (
+                    <Select.Option key={u.id} value={u.id}>{u.name}</Select.Option>
                   ))}
                 </Select>
               </Form.Item>
@@ -284,7 +269,13 @@ export default function Quotations() {
           </Form.Item>
         </Form>
 
-        <QuotationCartTable items={cart} onChange={setCart} priceMode={priceMode} />
+        <QuotationCartTable
+          items={cart}
+          onChange={setCart}
+          priceMode={priceMode}
+          products={products}
+          priceLists={priceLists}
+        />
       </Modal>
     </>
   );

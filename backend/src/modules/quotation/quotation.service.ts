@@ -194,6 +194,7 @@ export class QuotationService {
             productId: i.productId,
             quantity: i.quantity,
             price: i.price,
+            priceListId: i.priceListId,
             discountAmount: i.discountAmount,
             discountType: i.discountType,
             discountValue: i.discountValue,

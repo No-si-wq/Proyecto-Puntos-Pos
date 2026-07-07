@@ -4,6 +4,7 @@ const quotationItemSchema = z.object({
   productId: z.number().int().positive(),
   quantity: z.number().int().positive(),
   price: z.number().positive(),
+  priceListId: z.number().int().positive().optional(),
   discountType: z.enum(['NONE', 'PERCENTAGE', 'FIXED']).default('NONE'),
   discountValue: z.number().min(0).default(0),
   tax: z.number().min(0).default(0),

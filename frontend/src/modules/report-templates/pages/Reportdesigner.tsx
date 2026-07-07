@@ -60,6 +60,7 @@ const FIELD_GROUPS = [
     { token: "[Totales]",     label: "Totales" },
     { token: "[Comision]",    label: "Comisión línea" },
     { token: "[Obs.]",        label: "Observación" },
+    { token: "[NotaLinea]",   label: "Nota (remisión)" },
   ]},
   { id: "totales", label: "Totales", fields: [
     { token: "[Subtotal]",      label: "Subtotal" },
@@ -84,6 +85,15 @@ const FIELD_GROUPS = [
     { token: "[Estatus]",         label: "Estatus"           },
     { token: "[ListaPrecios]",    label: "Lista de precios"  },
     { token: "[Observaciones]",   label: "Observaciones"     },
+  ]},
+  { id: "remision", label: "Remisión", fields: [
+    { token: "[RemisionNumero]", label: "# Remisión"     },
+    { token: "[Fecha]",          label: "Fecha"          },
+    { token: "[Estatus]",        label: "Estatus"        },
+    { token: "[NombreCliente]",  label: "Cliente"        },
+    { token: "[Almacen]",        label: "Almacén"        },
+    { token: "[Cajero]",         label: "Creado por"     },
+    { token: "[Observaciones]",  label: "Nota"           },
   ]},
 ];
 
@@ -320,7 +330,7 @@ export default function ReportDesigner() {
   const exportOverlayRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const draggingLogoRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
-  const [documentType,   setDocumentType]   = useState<'sale' | 'quotation'>('sale');
+  const [documentType, setDocumentType] = useState<'sale' | 'quotation' | 'remission'>('sale');
 
   type DesignSnapshot = {
     elements: CanvasElement[]; detailColumns: DetailColumn[]; pageSize: PageSize; documentType: 'sale' | 'quotation';
@@ -961,10 +971,11 @@ export default function ReportDesigner() {
           size="small"
           style={{ width: 130 }}
           value={documentType}
-          onChange={(v: 'sale' | 'quotation') => { setDocumentType(v); markDirty(); }}
+          onChange={(v: 'sale' | 'quotation' | 'remission') => { setDocumentType(v); markDirty(); }}
           options={[
             { value: "sale",      label: "Venta / Factura" },
             { value: "quotation", label: "Cotización"      },
+            { value: "remission", label: "Remisión"        },
           ]}
         />
 

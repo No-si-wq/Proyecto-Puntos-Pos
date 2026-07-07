@@ -683,7 +683,6 @@ export default function Sales() {
                 .map((p) => ({
                   value: p.id,
                   label: `${p.barcodes[0]?.code ?? ""} - ${p.name} - ${p.stock}`,
-                  disabled: p.stock <= 0,
                 }))}
             />
           </div>
@@ -799,7 +798,6 @@ export default function Sales() {
                   .map((p) => ({
                     value: p.id,
                     label: `${p.sku} ${p.barcodes[0]?.code ?? ""} - ${p.name} - ${p.stock}`,
-                    disabled: p.stock <= 0,
                   }))}
               />
             </div>

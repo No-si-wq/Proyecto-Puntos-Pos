@@ -70,7 +70,7 @@ export interface ReportTemplateConfig {
   logoWidth?: number;
   logoHeight?: number;
   logoBackground?: string;  
-  documentType?: 'sale' | 'quotation';
+  documentType?: 'sale' | 'quotation' | 'remission';
   groupBy?: "seller" | "customer" | "paymentMethod" | "date" | "product" | "";
   totals: {
     showSubtotal: boolean;

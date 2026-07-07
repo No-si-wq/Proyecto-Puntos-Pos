@@ -22,6 +22,14 @@ interface PurchaseCartState {
     }
   ) => void;
 
+  addImportedItem: (
+    product: Product,
+    quantity: number,
+    cost: number,
+    lotNumber?: string | null,
+    expiresAt?: Date | null
+  ) => void;
+
   updateQuantity: (
     productId: number,
     quantity: number
@@ -87,6 +95,43 @@ export const purchaseCartStore =
               expiresAt:
                 options?.expiresAt ??
                 null,
+            },
+          ],
+        };
+      }),
+
+    addImportedItem: (product, quantity, cost, lotNumber, expiresAt) =>
+      set((state) => {
+        const existing = state.items.find(
+          (i) => i.productId === product.id
+        );
+
+        if (existing) {
+          return {
+            items: state.items.map((i) =>
+              i.productId === product.id
+                ? {
+                    ...i,
+                    quantity: i.quantity + quantity,
+                    cost,
+                    lotNumber: lotNumber ?? i.lotNumber,
+                    expiresAt: expiresAt ?? i.expiresAt,
+                  }
+                : i
+            ),
+          };
+        }
+
+        return {
+          items: [
+            ...state.items,
+            {
+              productId: product.id,
+              name: product.name,
+              quantity,
+              cost,
+              lotNumber,
+              expiresAt: expiresAt ?? null,
             },
           ],
         };

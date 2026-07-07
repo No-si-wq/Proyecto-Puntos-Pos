@@ -3,6 +3,8 @@ import { DeleteOutlined } from '@ant-design/icons';
 import type { DiscountType } from '../types/quotation';
 import { formatCurrency } from '../../../core/utils/formatters';
 import { useDeviceType } from '../../../core/hooks/useDeviceType';
+import type { Product } from '../../products/types/product';
+import type { PriceList } from '../../priceLists/types/pricelist';
 
 export interface CartItem {
   productId: number;
@@ -13,12 +15,15 @@ export interface CartItem {
   discountType: DiscountType;
   discountValue: number;
   tax: number;
+  priceListId?: number;
 }
 
 interface Props {
   items: CartItem[];
   onChange: (items: CartItem[]) => void;
   priceMode?: "TAX_INCLUDED" | "TAX_EXCLUDED";
+  products: Product[];
+  priceLists: PriceList[];
 }
 
 // reemplazar computeLine
@@ -44,7 +49,7 @@ function computeLine(item: CartItem, priceMode: "TAX_INCLUDED" | "TAX_EXCLUDED" 
   }
 }
 
-export function QuotationCartTable({ items, onChange, priceMode = "TAX_INCLUDED" }: Props) {
+export function QuotationCartTable({ items, onChange, priceMode = "TAX_INCLUDED", products, priceLists }: Props) {
   const { isMobile } = useDeviceType();
 
   const update = (productId: number, patch: Partial<CartItem>) => {
@@ -52,6 +57,26 @@ export function QuotationCartTable({ items, onChange, priceMode = "TAX_INCLUDED"
       items.map((i) => (i.productId === productId ? { ...i, ...patch } : i))
     );
   };
+
+  function getAvailableOptions(productId: number) {
+    const product = products.find((p) => p.id === productId);
+    const ids = new Set(
+      product?.prices?.filter((pp) => pp.active).map((pp) => pp.priceListId) ?? []
+    );
+    return priceLists
+      .filter((pl) => pl.active && ids.has(pl.id))
+      .map((pl) => ({ value: pl.id, label: pl.name }));
+  }
+
+  function handlePriceListChange(productId: number, priceListId: number | undefined) {
+    const product = products.find((p) => p.id === productId);
+    const customPrice = priceListId
+      ? product?.prices?.find((pp) => pp.priceListId === priceListId && pp.active)?.price
+      : undefined;
+    const resolvedPrice =
+      customPrice !== undefined ? Number(customPrice) : Number(product?.price ?? 0);
+    update(productId, { priceListId, price: resolvedPrice });
+  }
 
   const remove = (productId: number) => {
     onChange(items.filter((i) => i.productId !== productId));
@@ -82,6 +107,19 @@ export function QuotationCartTable({ items, onChange, priceMode = "TAX_INCLUDED"
                 size="small"
                 icon={<DeleteOutlined />}
                 onClick={() => remove(row.productId)}
+              />
+            </div>
+
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>Lista de precios</div>
+              <Select
+                allowClear
+                placeholder="Base"
+                style={{ width: '100%' }}
+                size="small"
+                value={row.priceListId}
+                onChange={(v) => handlePriceListChange(row.productId, v ?? undefined)}
+                options={getAvailableOptions(row.productId)}
               />
             </div>
 
@@ -177,6 +215,22 @@ export function QuotationCartTable({ items, onChange, priceMode = "TAX_INCLUDED"
   const columns = [
     { title: 'SKU', dataIndex: 'sku', key: 'sku', width: 100 },
     { title: 'Producto', dataIndex: 'productName', key: 'productName' },
+    {
+      title: 'Lista de precios',
+      key: 'priceList',
+      width: 160,
+      render: (_: unknown, row: CartItem) => (
+        <Select
+          allowClear
+          placeholder="Base"
+          size="small"
+          style={{ width: '100%' }}
+          value={row.priceListId}
+          onChange={(v) => handlePriceListChange(row.productId, v ?? undefined)}
+          options={getAvailableOptions(row.productId)}
+        />
+      ),
+    },
     {
       title: 'Precio',
       key: 'price',

@@ -2,6 +2,7 @@ export interface QuotationItemInput {
   productId: number;
   quantity: number;
   price: number;
+  priceListId?: number;
   discountType?: 'NONE' | 'PERCENTAGE' | 'FIXED';
   discountValue?: number;
   tax?: number;

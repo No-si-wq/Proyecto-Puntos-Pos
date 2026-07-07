@@ -1,9 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Descriptions, Table, Tag, Spin } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import { Button, Descriptions, Table, Tag, Spin, Dropdown, message, type MenuProps } from 'antd';
+import { ArrowLeftOutlined, PrinterOutlined, DownOutlined, FilePdfOutlined } from '@ant-design/icons';
 import { useRemissionDetail } from '../hooks/useRemissions';
 import type { RemissionStatus } from '../types/remission';
 import { useDeviceType } from '../../../core/hooks/useDeviceType';
+import { useReportTemplates } from '../../report-templates/hooks/useReportTemplates';
+import { resolveRemissionTemplate } from '../../report-templates/utils/resolveRemissionTemplate';
+import { exportToPdf } from '../../../core/utils/exportPDF';
 
 const STATUS_COLOR: Record<RemissionStatus, string> = {
   PENDING: 'orange', DELIVERED: 'green', CANCELLED: 'red',
@@ -18,8 +21,108 @@ export default function RemissionDetail() {
   const { remission, loading } = useRemissionDetail(Number(id));
   const { isMobile } = useDeviceType();
 
+  const { templates, loadingList, getById: getTemplateById, getDefaultByType } = useReportTemplates();
+
   if (loading) return <Spin style={{ marginTop: 80, display: 'block' }} />;
   if (!remission) return <p>Remisión no encontrada</p>;
+  const currentRemission = remission;
+
+  const handlePrint = async (templateId?: number) => {
+    let config;
+    try {
+      if (templateId) {
+        const t = await getTemplateById(templateId);
+        config = t.config;
+      } else {
+        const tpl = await getDefaultByType('remission');
+        if (!tpl) { window.print(); return; }
+        config = tpl.config;
+      }
+    } catch {
+      message.error('No se pudo cargar la plantilla');
+      window.print();
+      return;
+    }
+    const html = resolveRemissionTemplate(config, currentRemission);
+    const win = window.open('', '_blank', 'width=750,height=960');
+    if (!win) { message.error('No se pudo abrir la ventana de impresión'); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.onafterprint = () => win.close();
+  };
+
+  const handleExportPdf = async (templateId?: number) => {
+    let config;
+    try {
+      if (templateId) {
+        const t = await getTemplateById(templateId);
+        config = t.config;
+      } else {
+        const tpl = await getDefaultByType('remission');
+        if (!tpl) { exportPdfFallback(); return; }
+        config = tpl.config;
+      }
+    } catch {
+      message.error('No se pudo cargar la plantilla');
+      exportPdfFallback();
+      return;
+    }
+    const html = resolveRemissionTemplate(config, currentRemission);
+    const win = window.open('', '_blank', 'width=750,height=960');
+    if (!win) { message.error('No se pudo abrir la ventana'); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+  };
+
+  function exportPdfFallback() {
+    const rows = currentRemission.items.map((i) => ({
+      Producto: i.product.name,
+      SKU: i.product.sku,
+      Cantidad: i.quantity,
+      Nota: i.note ?? '',
+    }));
+    exportToPdf(
+      `Remisión ${currentRemission.remissionNumber}`,
+      [
+        { header: 'Producto', dataKey: 'Producto' },
+        { header: 'SKU', dataKey: 'SKU' },
+        { header: 'Cantidad', dataKey: 'Cantidad' },
+        { header: 'Nota', dataKey: 'Nota' },
+      ],
+      rows,
+      `Remisión ${currentRemission.remissionNumber}`
+    );
+  }
+
+  function buildTemplateMenuItems(action: 'print' | 'pdf'): MenuProps['items'] {
+    if (!templates.length) {
+      return [{
+        key: 'fallback',
+        label: action === 'print' ? 'Imprimir vista actual' : 'PDF genérico',
+        onClick: () => action === 'print' ? window.print() : exportPdfFallback(),
+      }];
+    }
+    return [
+      {
+        key: 'default',
+        label: 'Plantilla por defecto',
+        onClick: () => action === 'print' ? handlePrint() : handleExportPdf(),
+      },
+      { type: 'divider' as const },
+      ...templates.map((t) => ({
+        key: String(t.id),
+        label: (
+          <span>
+            {t.name}
+            {t.isDefault && <Tag color="blue" style={{ marginLeft: 6, fontSize: 10 }}>Default</Tag>}
+          </span>
+        ),
+        onClick: () => action === 'print' ? handlePrint(t.id) : handleExportPdf(t.id),
+      })),
+    ];
+  }
 
   const columns = [
     { title: 'SKU', dataIndex: ['product', 'sku'], key: 'sku' },
@@ -32,15 +135,21 @@ export default function RemissionDetail() {
   if (isMobile) {
     return (
       <div style={{ padding: '0 4px 32px' }}>
-        {/* Botón volver */}
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(-1)}
-          style={{ marginBottom: 16 }}
-          size="small"
-        >
-          Volver
-        </Button>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} size="small">
+            Volver
+          </Button>
+          <Dropdown menu={{ items: buildTemplateMenuItems('print') }} trigger={['click']}>
+            <Button icon={<PrinterOutlined />} loading={loadingList} size="small">
+              Imprimir <DownOutlined style={{ fontSize: 10 }} />
+            </Button>
+          </Dropdown>
+          <Dropdown menu={{ items: buildTemplateMenuItems('pdf') }} trigger={['click']}>
+            <Button icon={<FilePdfOutlined />} loading={loadingList} size="small">
+              PDF <DownOutlined style={{ fontSize: 10 }} />
+            </Button>
+          </Dropdown>
+        </div>
 
         {/* Encabezado */}
         <div style={{ marginBottom: 16 }}>
@@ -122,9 +231,21 @@ export default function RemissionDetail() {
   /* ── Vista desktop ───────────────────────────────────────── */
   return (
     <>
-      <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ marginBottom: 16 }}>
-        Volver
-      </Button>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
+          Volver
+        </Button>
+        <Dropdown menu={{ items: buildTemplateMenuItems('print') }} trigger={['click']}>
+          <Button icon={<PrinterOutlined />} loading={loadingList}>
+            Imprimir <DownOutlined style={{ fontSize: 10 }} />
+          </Button>
+        </Dropdown>
+        <Dropdown menu={{ items: buildTemplateMenuItems('pdf') }} trigger={['click']}>
+          <Button icon={<FilePdfOutlined />} loading={loadingList}>
+            PDF <DownOutlined style={{ fontSize: 10 }} />
+          </Button>
+        </Dropdown>
+      </div>
 
       <Descriptions title={`Remisión ${remission.remissionNumber}`} bordered column={2}>
         <Descriptions.Item label="Estado">
