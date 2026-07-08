@@ -1,3 +1,5 @@
+import { promises as fs } from "fs";
+import path from "path";
 import prisma from "../../core/prisma";
 import { Prisma } from "@prisma/client";
 import { CreateProductInput, UpdateProductInput, ProductError } from "./product";
@@ -25,6 +27,7 @@ const baseSelect = {
   tax: true,
   observations: true,
   laboratory: true,
+  imageUrl: true,
   active: true,
   categoryId: true,
   barcodes: { select: { code: true } },
@@ -41,6 +44,16 @@ function rethrowBarcodeError(error: unknown): never {
     throw new Error(ProductError.DUPLICATE_BARCODE);
   }
   throw error;
+}
+
+function deleteProductImageFile(imageUrl: string | null | undefined) {
+  if (!imageUrl) return;
+  // imageUrl guarda algo como "/uploads/products/169999-123.jpg"
+  const relativePath = imageUrl.replace(/^\/+/, ""); // quita el "/" inicial
+  const absolutePath = path.join(process.cwd(), relativePath);
+  fs.unlink(absolutePath).catch(() => {
+    // Si el archivo ya no existe o falla el borrado, no se interrumpe la actualización
+  });
 }
 
 export class ProductService {
@@ -180,30 +193,39 @@ export class ProductService {
     } catch (e) { rethrowBarcodeError(e); }
   }
 
-  static async update(id: number, data: UpdateProductInput, tenantId: number) {
-    if (data.categoryId) {
-      const category = await prisma.category.findUnique({
-        where: { id: data.categoryId, active: true, tenantId },
+static async update(id: number, data: UpdateProductInput, tenantId: number) {
+     if (data.categoryId) {
+       const category = await prisma.category.findUnique({
+         where: { id: data.categoryId, active: true, tenantId },
+       });
+       if (!category?.active) throw new Error(ProductError.INVALID_CATEGORY);
+
+       const children = await prisma.category.count({
+         where: { parentId: data.categoryId, active: true, tenantId },
+       });
+       if (children > 0) throw new Error(ProductError.CATEGORY_NOT_LEAF);
+     }
+
+     if (data.prices?.length) {
+       await ProductService._validatePriceLists(
+         data.prices.map((p) => p.priceListId),
+         tenantId
+       );
+     }
+
+     const { prices, barcodes, ...productFields } = data;
+
+     let previousImageUrl: string | null | undefined;
+     if (productFields.imageUrl !== undefined) {
+       const current = await prisma.product.findUnique({
+         where: { id, tenantId },
+         select: { imageUrl: true },
       });
-      if (!category?.active) throw new Error(ProductError.INVALID_CATEGORY);
+       previousImageUrl = current?.imageUrl;
+     }
 
-      const children = await prisma.category.count({
-        where: { parentId: data.categoryId, active: true, tenantId },
-      });
-      if (children > 0) throw new Error(ProductError.CATEGORY_NOT_LEAF);
-    }
-
-    if (data.prices?.length) {
-      await ProductService._validatePriceLists(
-        data.prices.map((p) => p.priceListId),
-        tenantId
-      );
-    }
-
-    const { prices, barcodes, ...productFields } = data;
-
-    try {
-      return await prisma.$transaction(async (tx) => {
+     try {
+       const updated = await prisma.$transaction(async (tx) => {
         if (prices !== undefined) {
           if (prices.length === 0) {
             await tx.productPrice.updateMany({ 
@@ -240,6 +262,17 @@ export class ProductService {
           include: { barcodes: true, ...pricesInclude, ...categoryInclude },
         });
       });
+
+      if (
+        productFields.imageUrl !== undefined &&
+        previousImageUrl &&
+        previousImageUrl !== productFields.imageUrl
+      ) {
+        deleteProductImageFile(previousImageUrl);
+      }
+
+      return updated;
+
     } catch (e) { rethrowBarcodeError(e); }
   }
 

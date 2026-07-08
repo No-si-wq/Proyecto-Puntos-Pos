@@ -11,6 +11,7 @@ export const createProductSchema = z.object({
     laboratory: z.string().optional(),
     observations: z.string().optional(),
     categoryId: z.number().int().positive(),
+    imageUrl: z.string().nullable().optional(),
 
     barcodes: z
       .array(
@@ -32,6 +33,7 @@ export const updateProductSchema = z.object({
     observations: z.string().optional(),
     categoryId: z.number().int().positive().optional(),
     active: z.boolean().optional(),
+    imageUrl: z.string().nullable().optional(),
 
     barcodes: z
       .array(

@@ -24,6 +24,8 @@ if (ENV.NODE_ENV === "development") {
   });
 }
 
+app.use("/uploads", express.static("uploads"));
+
 app.use("/api", routes);
 
 app.use(errorMiddleware);

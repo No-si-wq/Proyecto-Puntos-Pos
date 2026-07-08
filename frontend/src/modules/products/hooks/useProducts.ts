@@ -25,9 +25,19 @@ export function useProducts() {
 
   useEffect(() => { load(); }, [load]);
 
-  const create       = async (payload: CreateProductDTO)          => { await http.post(`/products`, payload);                  await load(); };
-  const update       = async (id: number, p: UpdateProductDTO)    => { await http.put(`/products/${id}`, p);                   await load(); };
-  const toggleActive = async (id: number, active: boolean)        => { await http.patch(`/products/${id}/activate`, { active }); await load(); };
+  const create = async (payload: CreateProductDTO | FormData) => {
+    const isFormData = payload instanceof FormData;
+    await http.post(`/products`, payload, isFormData ? { headers: { "Content-Type": "multipart/form-data" } } : undefined);
+    await load();
+  };
+  const update = async (id: number, p: UpdateProductDTO | FormData) => {
+    const isFormData = p instanceof FormData;
+    await http.put(`/products/${id}`, p, isFormData ? { headers: { "Content-Type": "multipart/form-data" } } : undefined);
+    await load();
+  };
+  const toggleActive = async (id: number, active: boolean) => { 
+    await http.patch(`/products/${id}/activate`, { active }); await load(); 
+  };
   const importExcel  = async (file: File) => {
     const form = new FormData();
     form.append("file", file);

@@ -262,6 +262,7 @@ model Product {
   tax                Decimal             @default(0) @db.Decimal(5, 2)
   laboratory         String?
   observations       String?
+  imageUrl           String?
   barcodes           Barcode[]
   inventoryMovements InventoryMovement[]
   category           Category            @relation(fields: [categoryId], references: [id])

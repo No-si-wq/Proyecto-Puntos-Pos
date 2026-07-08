@@ -84,16 +84,18 @@ export async function getProduct(req: Request, res: Response) {
 
 export async function createProduct(req: Request, res: Response) {
   const { tenantId } = req.user!;
-  const product = await ProductService.create(req.body, tenantId);
+  const imageUrl = req.file ? `/uploads/products/${req.file.filename}` : undefined;
+  const product = await ProductService.create({ ...req.body, ...(imageUrl && { imageUrl }) }, tenantId);
   res.status(201).json(product);
 }
 
 export async function updateProduct(req: Request, res: Response) {
-  const id = Number(req.params.id);
-  const { tenantId } = req.user!;
-  const product = await ProductService.update(id, req.body, tenantId);
-  res.json(product);
-}
+   const id = Number(req.params.id);
+   const { tenantId } = req.user!;
+   const imageUrl = req.file ? `/uploads/products/${req.file.filename}` : undefined;
+   const product = await ProductService.update(id, { ...req.body, ...(imageUrl && { imageUrl }) }, tenantId);
+   res.json(product);
+ }
 
 export async function getProductByBarcode(req: Request, res: Response) {
   const code = req.query.code;

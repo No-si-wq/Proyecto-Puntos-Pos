@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
-import { message, Tooltip, Form, Button, Upload, Badge, Tag, Dropdown, Typography, Space, Input, Switch } from "antd";
-import { TagsOutlined, ReloadOutlined, MoreOutlined, PlusOutlined, FileExcelOutlined, FilePdfOutlined, FileTextOutlined } from "@ant-design/icons";
+import { message, Tooltip, Form, Button, Upload, Badge, Tag, Dropdown, Typography, Space, Input, Switch, Image } from "antd";
+import { TagsOutlined, ReloadOutlined, MoreOutlined, PlusOutlined, FileExcelOutlined, FilePdfOutlined, FileTextOutlined, PictureOutlined } from "@ant-design/icons";
+import { resolveFileUrl } from "../../../core/utils/resolveFileUrl";
 import type { ColumnsType } from "antd/es/table";
 import type { MenuProps } from "antd";
 
@@ -165,6 +166,9 @@ export default function Products() {
       barcodes: editing.barcodes?.map((b) => b.code) ?? undefined,
       categoryPath: path.map(c => c.id),
       active: editing.active,
+      imageFile: editing.imageUrl
+        ? [{ uid: "-1", name: "imagen", status: "done", url: resolveFileUrl(editing.imageUrl) }]
+        : undefined,
     };
   }, [editing, categoryTree]);
 
@@ -197,36 +201,50 @@ export default function Products() {
   }
 
   async function submit(values: any) {
-    if (!values.categoryPath || values.categoryPath.length === 0) {
-      message.error("Debes seleccionar una categoria");
-      return;
-    }
+     if (!values.categoryPath || values.categoryPath.length === 0) {
+       message.error("Debes seleccionar una categoria");
+       return;
+     }
 
-    try {
-      const categoryId = values.categoryPath[values.categoryPath.length - 1];
-      const payload = {
-        sku: values.sku,
-        name: values.name,
-        description: values.description,
-        observations: values.observations,
-        price: values.price,
-        cost: values.cost,
-        tax: values.tax != null ? values.tax / 100 : values.tax,
-        laboratory: values.laboratory,
-        active: values.active,
-        categoryId,
-        ...(values.barcodes !== undefined && {
-          barcodes: values.barcodes,
-        }),
-      };
+     try {
+       const categoryId = values.categoryPath[values.categoryPath.length - 1];
+       const payload = {
+         sku: values.sku,
+         name: values.name,
+         description: values.description,
+         observations: values.observations,
+         price: values.price,
+         cost: values.cost,
+         tax: values.tax != null ? values.tax / 100 : values.tax,
+         laboratory: values.laboratory,
+         active: values.active,
+         categoryId,
+         ...(values.barcodes !== undefined && {
+           barcodes: values.barcodes,
+         }),
+       };
 
-      if (editing) {
-        await update(editing.id, payload);
-        message.success("Producto actualizado");
-      } else {
-        await create(payload);
-        message.success("Producto creado");
-      }
+       const imageFile: File | undefined = values.imageFile?.[0]?.originFileObj;
+       const imageWasRemoved =
+         editing?.imageUrl && Array.isArray(values.imageFile) && values.imageFile.length === 0;
+ 
+       let body: any = payload;
+       if (imageFile) {
+         const fd = new FormData();
+         fd.append("data", JSON.stringify(payload));
+         fd.append("image", imageFile);
+         body = fd;
+       } else if (imageWasRemoved) {
+         body = { ...payload, imageUrl: null };
+       }
+
+       if (editing) {
+         await update(editing.id, body);
+         message.success("Producto actualizado");
+       } else {
+         await create(body);
+         message.success("Producto creado");
+       }
       setOpen(false);
     } catch (error: any) {
       if (error.response?.status === 409) {
@@ -293,6 +311,29 @@ export default function Products() {
   };
  
   const desktopColumns: ColumnsType<Product> = [
+    {
+      title: "Imagen",
+      width: 64,
+      render: (_, record) => {
+        const src = resolveFileUrl(record.imageUrl);
+        return src ? (
+          <Image
+            src={src}
+            width={40}
+            height={40}
+            style={{ objectFit: "cover", borderRadius: 4 }}
+            placeholder
+          />
+        ) : (
+          <div style={{
+            width: 40, height: 40, display: "flex", alignItems: "center",
+            justifyContent: "center", background: "#f5f5f5", borderRadius: 4,
+          }}>
+            <PictureOutlined style={{ color: "#bfbfbf" }} />
+          </div>
+        );
+      },
+    },
     { title: "SKU",    dataIndex: "sku"  },
     { title: "Nombre", dataIndex: "name" },
     { title: "LB", dataIndex: "laboratory", render: (v: string) => v !== null ? v : "-" },
@@ -347,6 +388,22 @@ export default function Products() {
     {
       title: "Producto",
       render: (_, r) => (
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+        {resolveFileUrl(r.imageUrl) ? (
+          <Image
+            src={resolveFileUrl(r.imageUrl)}
+            width={36}
+            height={36}
+            style={{ objectFit: "cover", borderRadius: 4, flexShrink: 0 }}
+          />
+        ) : (
+          <div style={{
+            width: 36, height: 36, flexShrink: 0, display: "flex", alignItems: "center",
+            justifyContent: "center", background: "#f5f5f5", borderRadius: 4,
+          }}>
+            <PictureOutlined style={{ color: "#bfbfbf", fontSize: 14 }} />
+          </div>
+        )}
         <div>
           <Text strong style={{ display: "block" }}>{r.name}</Text>
           <Text type="secondary" style={{ fontSize: 11 }}>{r.sku}</Text>
@@ -357,6 +414,7 @@ export default function Products() {
             )}
           </div>
         </div>
+      </div>
       ),
     },
     {

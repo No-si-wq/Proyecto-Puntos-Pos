@@ -1,3 +1,4 @@
+import type { UploadFile } from "antd";
 import type { Category } from "../../categories/category";
 import type { ProductPrice } from "../../priceLists/types/pricelist";
 
@@ -30,6 +31,7 @@ export interface Product {
 
   prices: ProductPrice[];
 
+  imageUrl?: string | null;
   active: boolean;
 }
 
@@ -41,6 +43,7 @@ export interface ProductFormValues
   extends Omit<Partial<Product>, "barcodes" | "categoryId" | "category"> {
   barcodes?: string[];
   categoryPath?: number[];
+  imageFile?: UploadFile[];
 }
 
 export interface ProductFormProps {

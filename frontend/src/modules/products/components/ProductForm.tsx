@@ -1,4 +1,5 @@
-import { Form, Input, InputNumber, Switch, Button, Space } from "antd";
+import { Form, Input, InputNumber, Switch, Button, Space, Upload } from "antd";
+import { PlusOutlined } from "@ant-design/icons"
 import type { ProductFormProps } from "../types/product";
 import FormBase from "../../../core/components/forms/FormBase";
 import { CategoryCascader } from "../../categories/Components/CategoryCascader";
@@ -39,7 +40,26 @@ export default function ProductForm({
       </Form.Item>
 
       <Form.Item name="description" label="Descripción">
-        <Input />
+         <Input />
+       </Form.Item>
+
+      <Form.Item
+        name="imageFile"
+        label="Imagen del producto"
+        valuePropName="fileList"
+        getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+      >
+        <Upload
+          listType="picture-card"
+          maxCount={1}
+          beforeUpload={() => false}
+          accept="image/*"
+        >
+          <div>
+            <PlusOutlined />
+            <div style={{ marginTop: 8 }}>Subir</div>
+          </div>
+        </Upload>
       </Form.Item>
 
       <Form.Item name="laboratory" label="LB">

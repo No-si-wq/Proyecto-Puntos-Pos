@@ -19,6 +19,7 @@ export interface ProductBase {
   categoryId: CategoryId;
   prices: ProductPriceInput[];
   barcodes?: Barcode[];
+  imageUrl?: string | null;
 }
 
 export type CreateProductInput = ProductBase;
