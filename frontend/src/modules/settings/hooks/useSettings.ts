@@ -12,6 +12,7 @@ export function useSettings() {
   const [fiscalConfig, setFiscalConfig] = useState<FiscalConfig | null>(null);
   const [loadingFiscal, setLoadingFiscal] = useState(false);
   const [savingFiscal, setSavingFiscal] = useState(false);
+  const [fiscalConfigs, setFiscalConfigs] = useState<FiscalConfig[]>([]);
 
   const LOYALTY_CONFIG_KEY = "loyalty_config";
 
@@ -20,10 +21,11 @@ export function useSettings() {
     setLoadingLoyalty(true);
     setLoadingFiscal(true);
     try {
-      const [priceModeRes, loyaltyRes, fiscalRes] = await Promise.allSettled([
+      const [priceModeRes, loyaltyRes, fiscalRes, fiscalConfigsRes] = await Promise.allSettled([
         http.get<{ key: string; value: string }>(`/tenants/config/${PRICE_MODE_KEY}`),
         http.get<{ key: string; value: string }>(`/tenants/config/${LOYALTY_CONFIG_KEY}`),
         http.get<FiscalConfig>("/tenants/fiscal-config"),
+        http.get<FiscalConfig[]>("/tenants/fiscal-configs"),
 
       ]);
 
@@ -41,6 +43,10 @@ export function useSettings() {
 
       if (fiscalRes.status === "fulfilled") {
         setFiscalConfig(fiscalRes.value.data);
+      }
+
+      if (fiscalConfigsRes.status === "fulfilled") {
+        setFiscalConfigs(fiscalConfigsRes.value.data);
       }
 
     } finally {
@@ -93,6 +99,7 @@ export function useSettings() {
     savingLoyalty, 
     saveLoyaltyConfig,
     fiscalConfig,
+    fiscalConfigs,
     loadingFiscal,
     savingFiscal,
     saveFiscalConfig

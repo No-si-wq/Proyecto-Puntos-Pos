@@ -10,7 +10,8 @@ const router = Router();
 
 router.get("/config/:key", authMiddleware, requireAdmin, asyncHandler(TenantController.getConfig));
 router.put("/config/:key", authMiddleware, requireAdmin, asyncHandler(TenantController.setConfig));
-// Agregar junto a las rutas de config:
+
+router.get("/fiscal-configs", authMiddleware, requireAdmin, asyncHandler(TenantController.listFiscalConfigs));
 router.get("/fiscal-config",  authMiddleware, requireAdmin, asyncHandler(TenantController.getFiscalConfig));
 router.post("/fiscal-config", authMiddleware, requireAdmin, validate(setFiscalConfigSchema), asyncHandler(TenantController.setFiscalConfig));
 

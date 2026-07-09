@@ -1,13 +1,15 @@
 import {
   Card, Select, Typography, Space, message, Switch, InputNumber,
-  Row, Col, Form, Input, DatePicker, Button, Alert, Tag, Tabs,
+  Row, Col, Form, Input, DatePicker, Button, Tag, Tabs, Table,
 } from "antd";
 import { SettingOutlined, GiftOutlined, AuditOutlined } from "@ant-design/icons";
-import type { FiscalFormValues } from "../types/settings";
+import type { ColumnsType } from "antd/es/table";
+import type { FiscalFormValues, FiscalConfig } from "../types/settings";
 import dayjs from "dayjs";
 import PageHeader from "../../../core/components/common/PageHeader";
 import { PRICE_MODE_OPTIONS, type PriceMode } from "../types/settings";
 import { useSettings } from "../hooks/useSettings";
+import { useUsers } from "../../users/useUsers";
 
 const { Text } = Typography;
 
@@ -21,12 +23,14 @@ export default function Settings() {
     loyaltyConfig,
     savingLoyalty,
     saveLoyaltyConfig,
-    fiscalConfig,
+    fiscalConfigs,
     savingFiscal,
     saveFiscalConfig,
   } = useSettings();
 
-  const [fiscalForm] = Form.useForm<FiscalFormValues>();
+  const { users } = useUsers();
+
+  const [fiscalForm] = Form.useForm<FiscalFormValues & { userId?: number }>();
 
   async function handlePriceModeChange(value: PriceMode) {
     try {
@@ -36,6 +40,23 @@ export default function Settings() {
       message.error("Error al guardar la configuración");
     }
   }
+
+  const fiscalConfigColumns: ColumnsType<FiscalConfig> = [
+    {
+      title: "Asignado a",
+      render: (_, r) => r.user ? (r.user.name ?? r.user.username) : <Tag color="blue">General</Tag>,
+    },
+    { title: "CAI", render: (_, r) => <Tag>{r.cai.slice(0, 8)}…</Tag> },
+    { title: "Rango", render: (_, r) => `${r.rangeStart} – ${r.rangeEnd}` },
+    {
+      title: "Vence",
+      render: (_, r) => (
+        <Tag color={dayjs(r.expiresAt).isAfter(dayjs()) ? "green" : "red"}>
+          {dayjs(r.expiresAt).format("DD/MM/YYYY")}
+        </Tag>
+      ),
+    },
+  ];
 
   return (
     <>
@@ -173,23 +194,16 @@ export default function Settings() {
             ),
             children: (
               <Card>
-                {fiscalConfig && (
-                  <Alert
-                    type={dayjs(fiscalConfig.expiresAt).isAfter(dayjs()) ? "success" : "error"}
-                    showIcon
-                    style={{ marginBottom: 16 }}
-                    message="CAI activo"
-                    description={
-                      <Space wrap>
-                        <Tag>{fiscalConfig.cai.slice(0, 8)}…</Tag>
-                        <Tag>Rango: {fiscalConfig.rangeStart} – {fiscalConfig.rangeEnd}</Tag>
-                        <Tag color={dayjs(fiscalConfig.expiresAt).isAfter(dayjs()) ? "green" : "red"}>
-                          Vence: {dayjs(fiscalConfig.expiresAt).format("DD/MM/YYYY")}
-                        </Tag>
-                      </Space>
-                    }
-                  />
-                )}
+            {fiscalConfigs.length > 0 && (
+              <Table<FiscalConfig>
+                rowKey="id"
+                size="small"
+                style={{ marginBottom: 16 }}
+                pagination={false}
+                dataSource={fiscalConfigs}
+                columns={fiscalConfigColumns}
+              />
+            )}
 
                 <Form
                   form={fiscalForm}
@@ -199,6 +213,7 @@ export default function Settings() {
                     try {
                       await saveFiscalConfig({
                         ...values,
+                        userId: values.userId || undefined,
                         expiresAt: values.expiresAt.toISOString(),
                       });
                       message.success("Configuración fiscal guardada");
@@ -207,8 +222,16 @@ export default function Settings() {
                       message.error("Error al guardar la configuración fiscal");
                     }
                   }}
-                >
-                  <Form.Item label="CAI" name="cai" rules={[{ required: true, message: "Requerido" }]}>
+                  >
+                    <Form.Item label="Asignar a" name="userId" tooltip="Deja vacío para un CAI general del negocio, o elige un usuario para darle su propio folio">
+                      <Select
+                        allowClear
+                        placeholder="General (todo el negocio)"
+                        options={users.filter(u => u.active).map(u => ({ label: `${u.name} (${u.username})`, value: u.id }))}
+                      />
+                    </Form.Item>
+
+                    <Form.Item label="CAI" name="cai" rules={[{ required: true, message: "Requerido" }]}>
                     <Input
                       placeholder="XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX"
                       style={{ fontFamily: "monospace" }}
@@ -259,7 +282,7 @@ export default function Settings() {
                   </Form.Item>
 
                   <Button type="primary" htmlType="submit" loading={savingFiscal}>
-                    {fiscalConfig ? "Actualizar CAI" : "Registrar CAI"}
+                    Registrar CAI
                   </Button>
                 </Form>
               </Card>

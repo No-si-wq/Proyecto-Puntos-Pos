@@ -73,6 +73,7 @@ const caiRegex = /^[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[
 
 export const setFiscalConfigSchema = z.object({
   body: z.object({
+    userId:         z.coerce.number().int().positive().optional(), // folio para un usuario específico
     cai:            z.string().trim().toUpperCase().regex(caiRegex, "Formato de CAI inválido"),
     establishment:  z.string().regex(/^\d{3}$/, "Debe ser 3 dígitos"),
     emissionPoint:  z.string().regex(/^\d{3}$/, "Debe ser 3 dígitos"),

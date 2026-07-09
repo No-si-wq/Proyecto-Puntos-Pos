@@ -304,9 +304,6 @@ function buildTemplateMenuItems(action: 'print' | 'pdf'): MenuProps['items'] {
         <Descriptions.Item label="Cliente">
           {quotation.customer?.name ?? '—'}
         </Descriptions.Item>
-        <Descriptions.Item label="Lista de precios">
-          {quotation.priceList?.name ?? '—'}
-        </Descriptions.Item>
         <Descriptions.Item label="Vendedor">
           {quotation.seller?.name ?? '—'}
         </Descriptions.Item>

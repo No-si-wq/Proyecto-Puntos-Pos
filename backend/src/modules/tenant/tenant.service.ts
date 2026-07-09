@@ -140,14 +140,23 @@ export class TenantService {
     });
   }
 
-  static async getFiscalConfig(tenantId: number) {
+  static async getFiscalConfig(tenantId: number, userId?: number) {
     return prisma.fiscalConfig.findFirst({
+      where: { tenantId, userId: userId ?? null, active: true },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  static async listFiscalConfigs(tenantId: number) {
+    return prisma.fiscalConfig.findMany({
       where: { tenantId, active: true },
+      include: { user: { select: { id: true, username: true, name: true } } },
       orderBy: { createdAt: "desc" },
     });
   }
 
   static async setFiscalConfig(tenantId: number, data: {
+    userId?: number;
     cai: string;
     establishment: string;
     emissionPoint: string;
@@ -156,14 +165,16 @@ export class TenantService {
     rangeEnd: string;
     expiresAt: Date;
   }) {
-    // Desactivar el anterior si existe
+    const scopeUserId = data.userId ?? null;
+
+    // Desactivar solo el CAI anterior del mismo alcance (mismo usuario o el general)
     await prisma.fiscalConfig.updateMany({
-      where: { tenantId, active: true },
+      where: { tenantId, userId: scopeUserId, active: true },
       data: { active: false },
     });
 
     return prisma.fiscalConfig.create({
-      data: { ...data, tenantId, active: true },
+      data: { ...data, userId: scopeUserId, tenantId, active: true },
     });
   }
 }

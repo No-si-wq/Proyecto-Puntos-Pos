@@ -51,6 +51,18 @@ export function QuotationsTable({ data, loading }: Props) {
             render: (v?: string) => v ?? '—',
           },
           {
+            title: 'Observaciones',
+            dataIndex: 'observations',
+            key: 'observations',
+            render: (v?: string) => v ?? '—',
+          },
+          {
+            title: 'Vendedor',
+            dataIndex: ['seller', 'name'],
+            key: 'seller',
+            render: (v?: string) => v ?? '—',
+          },
+          {
             title: 'Almacén',
             dataIndex: ['warehouse', 'name'],
             key: 'warehouse',

@@ -51,6 +51,31 @@ export interface FiscalFormValues extends Omit<FiscalConfigInput, "expiresAt"> {
   expiresAt: dayjs.Dayjs;
 }
 
+export interface FiscalConfig {
+  id: number;
+  userId: number | null;
+  cai: string;
+  establishment: string;
+  emissionPoint: string;
+  documentType: string;
+  rangeStart: string;
+  rangeEnd: string;
+  expiresAt: string;
+  active: boolean;
+  user?: { id: number; username: string; name: string | null } | null;
+}
+
+export interface FiscalConfigInput {
+  userId?: number;
+  cai: string;
+  establishment: string;
+  emissionPoint: string;
+  documentType: string;
+  rangeStart: string;
+  rangeEnd: string;
+  expiresAt: string;
+}
+
 export const DEFAULT_LOYALTY_CONFIG: LoyaltyConfig = {
   earn: { enabled: true, amountPerPoint: 1 },
   redeem: { enabled: true, pointValue: 0.01 },

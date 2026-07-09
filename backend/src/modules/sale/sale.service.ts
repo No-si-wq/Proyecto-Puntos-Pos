@@ -1,5 +1,5 @@
 import prisma from "../../core/prisma";
-import { validateFiscalRange, buildFiscalNumber, isFiscalConfigExpired, extractSequence } from "../../utils/fiscal.util";
+import { validateFiscalRange, buildFiscalNumber, isFiscalConfigExpired, extractSequence, resolveSaleNumber } from "../../utils/fiscal.util";
 import { Prisma } from "@prisma/client";
 import { CommissionType, InventoryMovementType, SaleStatus } from "@prisma/client";
 import { InventoryService } from "../inventory/inventory.service";
@@ -300,54 +300,11 @@ export class SaleService {
         });
       }
  
-      // 1. Buscar FiscalConfig — opcional
-      const fiscalConfig = await tx.fiscalConfig.findFirst({
-        where: { tenantId, active: true },
+      const { saleNumber, fiscalConfig } = await resolveSaleNumber(tx, {
+        tenantId,
+        warehouseId,
+        sellerId: commissionUserId,
       });
-
-      if (fiscalConfig && isFiscalConfigExpired(fiscalConfig.expiresAt)) {
-        throw new Error(SaleError.FISCAL_CONFIG_EXPIRED);
-      }
-
-      // 1.1 Si el CAI autoriza un rango que arranca más adelante del correlativo
-      // actual de esta bodega, alinear antes de incrementar
-      if (fiscalConfig) {
-        const rangeStartSeq = extractSequence(fiscalConfig.rangeStart);
-        const existingSequence = await tx.saleSequence.findUnique({ where: { warehouseId } });
-        if (!existingSequence || existingSequence.current < rangeStartSeq - 1n) {
-          await tx.saleSequence.upsert({
-            where: { warehouseId },
-            update: { current: rangeStartSeq - 1n },
-            create: { tenantId, warehouseId, current: rangeStartSeq - 1n },
-          });
-        }
-      }
-
-      // 2. Secuencia siempre incrementa (con o sin CAI)
-      const sequence = await tx.saleSequence.upsert({
-        where: { warehouseId },
-        update: { current: { increment: 1 } },
-        create: { tenantId, warehouseId, current: 1 },
-      });
-
-      // 3. Construir número según si hay CAI o no
-      let saleNumber: string;
-
-      if (fiscalConfig) {
-        saleNumber = buildFiscalNumber({
-          establishment: fiscalConfig.establishment,
-          emissionPoint: fiscalConfig.emissionPoint,
-          documentType:  fiscalConfig.documentType,
-          sequence:      sequence.current,
-        });
-
-        if (!validateFiscalRange(saleNumber, fiscalConfig.rangeStart, fiscalConfig.rangeEnd)) {
-          throw new Error(SaleError.FISCAL_RANGE_EXCEEDED);
-        }
-      } else {
-        // Formato interno: FAC-001-00000001 (warehouseId + correlativo)
-        saleNumber = `FAC-${String(warehouseId).padStart(3, "0")}-${String(sequence.current).padStart(8, "0")}`;
-      }
 
       const subtotalDecimal = new Prisma.Decimal(subtotalAfterLineDiscount);
       const taxTotalDecimal = new Prisma.Decimal(totalTax);
