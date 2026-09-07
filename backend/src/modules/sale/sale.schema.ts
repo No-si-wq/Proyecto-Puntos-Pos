@@ -7,6 +7,7 @@ export const createSaleSchema = z.object({
     sellerId:    z.number().int().positive().optional(),
     observations: z.string().max(500).optional(),
     priceMode:     z.enum(["TAX_INCLUDED", "TAX_EXCLUDED"]).optional(),
+    invoiceDate: z.string().refine((val) => !isNaN(Date.parse(val))).optional(),
 
     dueDate: z.string().datetime({ message: "Fecha inválida" }).optional(),
 

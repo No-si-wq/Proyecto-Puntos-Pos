@@ -25,6 +25,3 @@ ecosystem.config.js
 # IDE
 .vscode/
 .idea/
-
-# Prisma (si aplica)
-prisma/migrations

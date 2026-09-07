@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "SaleItem" ADD COLUMN     "lineTotal" DECIMAL(65,30) NOT NULL DEFAULT 0;

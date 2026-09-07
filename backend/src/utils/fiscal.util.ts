@@ -31,6 +31,18 @@ export function isFiscalConfigExpired(expiresAt: Date): boolean {
 // Agregar al archivo existente (junto a buildFiscalNumber, validateFiscalRange, etc.)
 import { Prisma } from "@prisma/client";
 import { SaleError } from "../modules/sale/sale"; // ajusta la ruta relativa según donde viva este util
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const HONDURAS_TZ = "America/Tegucigalpa";
+
+export function getHondurasNow(): Date {
+  return dayjs().tz(HONDURAS_TZ).toDate(); // esto es equivalente a new Date(), no confíes en que "trae" la TZ
+}
 
 interface ResolveSaleNumberParams {
   tenantId: number;
@@ -43,14 +55,14 @@ export async function resolveSaleNumber(
   { tenantId, warehouseId, sellerId }: ResolveSaleNumberParams
 ) {
   // 1. Folio del vendedor primero; si no tiene uno propio, el general del tenant
-  const fiscalConfig =
+  let fiscalConfig =
     (sellerId
       ? await tx.fiscalConfig.findFirst({ where: { tenantId, active: true, userId: sellerId } })
       : null) ??
     (await tx.fiscalConfig.findFirst({ where: { tenantId, active: true, userId: null } }));
 
   if (fiscalConfig && isFiscalConfigExpired(fiscalConfig.expiresAt)) {
-    throw new Error(SaleError.FISCAL_CONFIG_EXPIRED);
+    fiscalConfig = null; // CAI vencido: se ignora y se usa la secuencia normal (FAC-...)
   }
 
   const usesUserSequence = !!fiscalConfig?.userId;

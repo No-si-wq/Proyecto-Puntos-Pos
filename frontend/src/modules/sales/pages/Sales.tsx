@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-
+import { Dayjs } from "dayjs";
 import { 
   Card, 
   Select, 
@@ -17,7 +17,7 @@ import {
   type InputRef,
 } from "antd";
 import { PrinterOutlined, ShoppingCartOutlined } from "@ant-design/icons";
-
+import { usePermissions } from "../../../core/hooks/usePermissions";
 import { useCustomers } from "../../customers/useCustomers";
 import { useSales } from "../hooks/useSales";
 import { useUsers } from "../../users/useUsers";
@@ -42,6 +42,7 @@ import PageHeader from "../../../core/components/common/PageHeader";
 export default function Sales() {
   const { customers, reload: reloadCustomers } = useCustomers();
   const { priceMode, loyaltyConfig } = useSettings();
+  const { isAdmin } = usePermissions();
   const { users = [] } = useUsers();
   const sellers = users.filter((u) => u.role === Role.SELLER);
   const [sellerId, setSellerId] = useState<number | undefined>();
@@ -61,6 +62,7 @@ export default function Sales() {
   const summarySpan = device === "desktop" ? 8  : device === "tablet" ? 10 : 24;
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [observations, setObservations] = useState<string>("");
+  const [invoiceDate, setInvoiceDate] = useState<Dayjs | null>(null);
   const inputRef = useRef<InputRef>(null);
   const sizes = useResponsiveSizes();
 
@@ -247,6 +249,7 @@ export default function Sales() {
         pointsUsed: pointsToUse,
         sellerId,
         observations,
+        invoiceDate: isAdmin && invoiceDate ? invoiceDate.toISOString() : undefined,
         items: cart.items.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -279,6 +282,7 @@ export default function Sales() {
       setDueDate(undefined);
       setPaymentModalOpen(false);
       setObservations("");
+      setInvoiceDate(null);
 
       message.success(
         result?.pointsEarned
@@ -348,6 +352,19 @@ export default function Sales() {
         style={{ resize: "none" }}
       />
     </div>
+
+    {isAdmin && (
+      <div>
+        <div style={{ fontSize: 11, color: "#888", marginBottom: 3 }}>FECHA DE FACTURA</div>
+        <DatePicker
+          style={{ width: "100%" }}
+          size={sizes.select}
+          placeholder="Seleccionar Fecha"
+          value={invoiceDate}
+          onChange={(date) => setInvoiceDate(date)}
+        />
+      </div>
+    )}
 
       {selectedCustomer && loyaltyConfig.redeem.enabled && (
         <div style={{ padding: "8px 10px", background: "#f6ffed", borderRadius: 6, border: "1px solid #b7eb8f" }}>

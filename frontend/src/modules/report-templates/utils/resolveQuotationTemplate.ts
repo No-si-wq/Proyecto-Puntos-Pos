@@ -1,6 +1,6 @@
 import type { ReportFieldElement, ReportTemplateConfig, DetailColumn } from "../types/report-template";
 import { formatCurrency } from "../../../core/utils/formatters";
-import { resolvePageCss, resolveToken, DESIGNER_DOC_W } from "./resolveTemplate";
+import { resolvePageCss, resolveToken, resolveDesignerWidth } from "./resolveTemplate";
 
 // Usa la misma forma que QuotationDetail espera
 interface QuotationItem {
@@ -95,7 +95,9 @@ export function resolveQuotationTemplate(
   const now = new Date();
   const globalTokens = resolveQuotationTokens(quotation, now);
   const { pageRule, docWidth, printWidthPx, fixedHeightMm } = resolvePageCss(config);
-  const scale = printWidthPx / DESIGNER_DOC_W;
+  const designerW = resolveDesignerWidth(config.pageSize, config.customPageWidth);
+  const scale = printWidthPx / designerW;
+  const isTicket = (config.pageSize ?? "ticket") === "ticket";
 
   const DEFAULT_DETAIL_COLUMNS: DetailColumn[] = [
     { id: "dc1", header: "Cant.",       token: "[Cantidad]",   width: 44, align: "center", fontSize: 8 },
@@ -116,16 +118,16 @@ export function resolveQuotationTemplate(
 
   const colStyle = (col: DetailColumn): string => {
     const colFontPx = col.fontSize
-      ? Math.max(6, Math.round(col.fontSize * scale))
+      ? Math.max(isTicket ? 8 : 6, Math.round(col.fontSize * scale))
       : detailFontPx;
     const pad = `padding:${detailPadPx}px;overflow:hidden;font-size:${colFontPx}px;white-space:nowrap;`;
     if (col.width === 0) {
       const flexPct = flexCount > 0
-        ? ((DESIGNER_DOC_W - totalFixedPx) / flexCount / DESIGNER_DOC_W * 100).toFixed(2)
+        ? ((designerW - totalFixedPx) / flexCount / designerW * 100).toFixed(2)
         : "20";
       return `width:${flexPct}%;text-align:${col.align};${pad}`;
     }
-    const pct = (col.width / DESIGNER_DOC_W * 100).toFixed(2);
+    const pct = (col.width / designerW * 100).toFixed(2);
     return `width:${pct}%;flex-shrink:0;text-align:${col.align};${pad}`;
   };
 
@@ -155,7 +157,8 @@ export function resolveQuotationTemplate(
     const cl = el.color ? `color:${el.color};` : "";
     const scaledX    = Math.round(el.x * scale);
     const scaledY    = Math.round(el.y * scale);
-    const scaledFont = Math.max(7, Math.round((el.fontSize ?? 11) * scale));
+    const minFont = isTicket ? 9 : 7;
+    const scaledFont = Math.max(minFont, Math.round((el.fontSize ?? 11) * scale));
     const fs = `font-size:${scaledFont}px;`;
     const ta = el.align ? `text-align:${el.align};` : "";
     return `<div style="position:absolute;left:${scaledX}px;top:${scaledY}px;${fw}${cl}${fs}${ta}white-space:nowrap;max-width:calc(100% - ${scaledX}px);overflow:hidden;">${text}</div>`;
@@ -171,8 +174,6 @@ export function resolveQuotationTemplate(
   const headerEls = bySection("header").map(el => renderEl(el, globalTokens)).join("");
   const totalsEls = bySection("totals").map(el => renderEl(el, globalTokens)).join("");
   const footerEls = bySection("footer").map(el => renderEl(el, globalTokens)).join("");
-
-  const isTicket = (config.pageSize ?? "ticket") === "ticket";
 
   const sectionContentH = (sectionId: string, fallback: number) => {
     const fields = bySection(sectionId);

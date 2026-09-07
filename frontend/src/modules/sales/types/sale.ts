@@ -77,6 +77,7 @@ export interface CreateSaleDTO {
   priceMode: PriceMode;
   amountPaid?: number;
   observations?: string | null;
+  invoiceDate?: string;
 }
 
 export type SaleStatus = "COMPLETED" | "CANCELLED";

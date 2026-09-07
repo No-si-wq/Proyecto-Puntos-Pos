@@ -21,6 +21,7 @@ interface BaseSaleInput {
   observations?: string | null;
   priceMode?: "TAX_INCLUDED" | "TAX_EXCLUDED";
   payments: SalePaymentInput[];
+  invoiceDate?: string;
 }
 
 export interface CreateSaleCashInput

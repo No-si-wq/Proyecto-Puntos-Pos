@@ -14,6 +14,7 @@ import html2canvas from "html2canvas";
 import { exportTemplateToPdf, importTemplateFromPdf } from "../utils/templatePdf";
 import { useReportTemplates } from "../hooks/useReportTemplates";
 import type { ReportTemplate, ReportTemplateConfig, ReportFieldElement, DetailColumn, PageSize } from "../types/report-template";
+import { resolveDesignerWidth } from "../utils/resolveTemplate";
 
 const { Option } = Select;
 
@@ -155,8 +156,6 @@ function resizeLogoDataUrl(file: File, maxDim = 800, quality = 0.85): Promise<st
 }
 
 function genId() { return "el_" + Math.random().toString(36).slice(2, 8); }
-
-const DOC_W = 560;
 
 type CanvasElement = ReportFieldElement & { width?: number };
 
@@ -315,6 +314,7 @@ export default function ReportDesigner() {
   const dragColRef = useRef<string | null>(null);
   const [editingColId, setEditingColId] = useState<string | null>(null);
   const [pageSize,       setPageSize]       = useState<PageSize>("ticket");
+  const [customPageWidth, setCustomPageWidth] = useState<number>(80);
   const [headerHeight, setHeaderHeight] = useState<number>(130);
   const [detailHeight, setDetailHeight] = useState<number>(110);
   const [totalsHeight, setTotalsHeight] = useState<number>(100);
@@ -332,8 +332,10 @@ export default function ReportDesigner() {
   const draggingLogoRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [documentType, setDocumentType] = useState<'sale' | 'quotation' | 'remission'>('sale');
 
+  const DOC_W = resolveDesignerWidth(pageSize, customPageWidth);
+
   type DesignSnapshot = {
-    elements: CanvasElement[]; detailColumns: DetailColumn[]; pageSize: PageSize; documentType: 'sale' | 'quotation';
+    elements: CanvasElement[]; detailColumns: DetailColumn[]; pageSize: PageSize; customPageWidth: number, documentType: 'sale' | 'quotation';
     headerHeight: number; detailHeight: number; totalsHeight: number; footerHeight: number;
     logo: string | null; logoX: number; logoY: number; logoWidth: number; logoHeight: number, logoBg: string;
   };
@@ -343,7 +345,7 @@ export default function ReportDesigner() {
   const baselineRef = useRef<string>(
     JSON.stringify({
       elements: DEFAULT_ELEMENTS, detailColumns: DEFAULT_DETAIL_COLUMNS,
-      pageSize: "ticket", documentType: "sale",
+      pageSize: "ticket", customPageWidth: 80, documentType: "sale",
       headerHeight: 130, detailHeight: 110, totalsHeight: 100, footerHeight: 50,
       logo: null, logoX: 8, logoY: 8, logoWidth: 80, logoHeight: 60, logoBg: "transparent",
     } as DesignSnapshot)
@@ -351,7 +353,7 @@ export default function ReportDesigner() {
 
   function getSnapshot(over: Partial<DesignSnapshot> = {}): string {
     return JSON.stringify({
-      elements, detailColumns, pageSize, documentType,
+      elements, detailColumns, pageSize, customPageWidth, documentType,
       headerHeight, detailHeight, totalsHeight, footerHeight,
       logo, logoX, logoY, logoWidth, logoHeight, logoBg,
       ...over,
@@ -391,6 +393,7 @@ export default function ReportDesigner() {
     const newElements = (t.config.elements?.length ? t.config.elements : DEFAULT_ELEMENTS) as CanvasElement[];
     const newDetailColumns = t.config.detailColumns?.length ? t.config.detailColumns : DEFAULT_DETAIL_COLUMNS;
     const newPageSize = t.config.pageSize ?? "ticket";
+    const newCustomPageWidth = t.config.customPageWidth ?? 80;
     const newHeaderHeight = t.config.headerHeight ?? 130;
     const newDetailHeight = t.config.detailHeight ?? 110;
     const newTotalsHeight = t.config.totalsHeight ?? 100;
@@ -407,6 +410,7 @@ export default function ReportDesigner() {
     setElements(newElements);
     setDetailColumns(newDetailColumns);
     setPageSize(newPageSize);
+    setCustomPageWidth(newCustomPageWidth); 
     setHeaderHeight(newHeaderHeight);
     setDetailHeight(newDetailHeight);
     setTotalsHeight(newTotalsHeight);
@@ -422,7 +426,7 @@ export default function ReportDesigner() {
     setSelectedColId(null);
 
     baselineRef.current = getSnapshot({
-      elements: newElements, detailColumns: newDetailColumns, pageSize: newPageSize, documentType: newDocumentType,
+      elements: newElements, detailColumns: newDetailColumns, pageSize: newPageSize, customPageWidth: newCustomPageWidth, documentType: newDocumentType,
       headerHeight: newHeaderHeight, detailHeight: newDetailHeight, totalsHeight: newTotalsHeight, footerHeight: newFooterHeight,
       logo: newLogo, logoX: newLogoX, logoY: newLogoY, logoWidth: newLogoWidth, logoHeight: newLogoHeight,
     });
@@ -435,7 +439,7 @@ export default function ReportDesigner() {
   function buildConfig(): ReportTemplateConfig {
     const base = currentTemplate?.config ?? DEFAULT_CONFIG;
     return { 
-      ...base, elements, detailColumns, pageSize, documentType, 
+      ...base, elements, detailColumns, pageSize, customPageWidth, documentType, 
       headerHeight, detailHeight, totalsHeight, footerHeight, 
       logoBase64: logo ?? undefined,
       logoX, logoY, logoWidth, logoHeight,
@@ -446,7 +450,7 @@ export default function ReportDesigner() {
   // Si el usuario revierte un cambio (vuelve al valor original), el indicador
   useEffect(() => {
     setIsDirty(getSnapshot() !== baselineRef.current);
-  }, [elements, detailColumns, pageSize, documentType, headerHeight, detailHeight, totalsHeight, footerHeight, logo, logoX, logoY, logoWidth, logoHeight, logoBg]);
+  }, [elements, detailColumns, pageSize, customPageWidth, documentType, headerHeight, detailHeight, totalsHeight, footerHeight, logo, logoX, logoY, logoWidth, logoHeight, logoBg]);
 
   const onFieldDragStart = useCallback((token: string, label: string) => {
     dragFieldRef.current = { token, label };
@@ -714,6 +718,7 @@ export default function ReportDesigner() {
       setElements(parsed.config.elements?.length ? parsed.config.elements : DEFAULT_ELEMENTS);
       setDetailColumns(parsed.config.detailColumns?.length ? parsed.config.detailColumns : DEFAULT_DETAIL_COLUMNS);
       setPageSize(parsed.config.pageSize ?? "ticket");
+      setCustomPageWidth(parsed.config.customPageWidth ?? 80);
       setHeaderHeight(parsed.config.headerHeight ?? 130);
       setDetailHeight(parsed.config.detailHeight ?? 110);
       setTotalsHeight(parsed.config.totalsHeight ?? 100);

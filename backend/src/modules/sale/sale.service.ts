@@ -1,5 +1,5 @@
 import prisma from "../../core/prisma";
-import { validateFiscalRange, buildFiscalNumber, isFiscalConfigExpired, extractSequence, resolveSaleNumber } from "../../utils/fiscal.util";
+import { resolveSaleNumber, getHondurasNow } from "../../utils/fiscal.util";
 import { Prisma } from "@prisma/client";
 import { CommissionType, InventoryMovementType, SaleStatus } from "@prisma/client";
 import { InventoryService } from "../inventory/inventory.service";
@@ -314,6 +314,15 @@ export class SaleService {
       const dominantMethod = hasCredit
         ? "CREDIT"
         : data.payments.reduce((a, b) => (b.amount > a.amount ? b : a)).method;
+
+      const invoiceDate = data.invoiceDate
+        ? new Date(
+            /^\d{4}-\d{2}-\d{2}$/.test(data.invoiceDate)
+              ? `${data.invoiceDate}T12:00:00`
+              : data.invoiceDate
+          )
+        : getHondurasNow();
+
  
       const sale = await tx.sale.create({
         data: {
@@ -335,6 +344,7 @@ export class SaleService {
           priceMode: data.priceMode ?? "TAX_INCLUDED",
           fiscalConfigId: fiscalConfig?.id ?? null,
           status: SaleStatus.COMPLETED,
+          createdAt: invoiceDate,
         },
       });
 

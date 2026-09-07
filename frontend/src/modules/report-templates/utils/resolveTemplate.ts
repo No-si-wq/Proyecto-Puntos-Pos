@@ -2,6 +2,19 @@ import type { ReportFieldElement, ReportTemplateConfig, DetailColumn } from "../
 import type { Sale } from "../../sales/types/sale";
 import { formatCurrency, formatDate, paymentMethodLabel } from "../../../core/utils/formatters";
 import { numberToWords } from "../../../core/utils/numberToWords";
+import { type PageSize } from "../../report-templates/types/report-template";
+
+// resolveTemplate.ts
+export function resolveDesignerWidth(
+  pageSize: PageSize | undefined,
+  customPageWidth?: number,
+): number {
+  const size = pageSize ?? "ticket";
+  if (size === "ticket") return 300;
+  if (size === "half-letter") return 620;
+  if (size === "custom") return Math.round((customPageWidth ?? 80) * 3.7795) - 30;
+  return 560; // letter
+}
 
 export function resolveSaleTokens(sale: Sale): Record<string, string> {
   const now = new Date();
@@ -74,8 +87,6 @@ export function resolveSaleItemTokens(item: Sale["items"][number]): Record<strin
   };
 }
 
-export const DESIGNER_DOC_W = 560;
-
 export function resolvePageCss(config: ReportTemplateConfig): {
   pageRule: string;
   docWidth: string;
@@ -142,7 +153,9 @@ export function buildSaleHtml(
   const globalTokens = resolveSaleTokens(sale);
   const { pageRule, docWidth, printWidthPx, fixedHeightMm } = resolvePageCss(config);
 
-  const scale = printWidthPx / DESIGNER_DOC_W;
+  const designerW = resolveDesignerWidth(config.pageSize, config.customPageWidth);
+  const scale = printWidthPx / designerW;
+  const isTicket = (config.pageSize ?? "ticket") === "ticket";
 
   const DEFAULT_DETAIL_COLUMNS: DetailColumn[] = [
     { id: "dc1", header: "Cant.",       token: "[Cantidad]",   width: 44,  align: "center", fontSize: 8 },
@@ -164,7 +177,7 @@ export function buildSaleHtml(
 
   const colStyle = (col: DetailColumn): string => {
     const colFontPx = col.fontSize
-      ? Math.max(6, Math.round(col.fontSize * scale))
+      ? Math.max(isTicket ? 8 : 6, Math.round(col.fontSize * scale))
       : detailFontPx;
 
     const wrapCss = col.wrap
@@ -173,7 +186,7 @@ export function buildSaleHtml(
     const pad = `padding:${detailPadPx}px;overflow:hidden;font-size:${colFontPx}px;${wrapCss}box-sizing:border-box;`;
 
     if (col.width === 0) {
-      const flexBasis = ((DESIGNER_DOC_W - totalFixedPx) / Math.max(flexCount, 1) / DESIGNER_DOC_W * 100).toFixed(2);
+      const flexBasis = ((designerW - totalFixedPx) / Math.max(flexCount, 1) / designerW * 100).toFixed(2);
       return `flex:1 1 ${flexBasis}%;min-width:0;text-align:${col.align};${pad}`;
     }
     const scaledW = Math.round(col.width * scale);
@@ -206,7 +219,8 @@ export function buildSaleHtml(
     const cl  = el.color ? `color:${el.color};` : "";
     const scaledX    = Math.round(el.x * scale);
     const scaledY    = Math.round(el.y * scale);
-    const scaledFont = Math.max(7, Math.round((el.fontSize ?? 11) * scale));
+    const minFont = isTicket ? 9 : 7;
+    const scaledFont = Math.max(minFont, Math.round((el.fontSize ?? 11) * scale));
     const fs  = `font-size:${scaledFont}px;`;
     const ta  = el.align ? `text-align:${el.align};` : "";
     return `<div style="position:absolute;left:${scaledX}px;top:${scaledY}px;${fw}${cl}${fs}${ta}white-space:nowrap;max-width:calc(100% - ${scaledX}px);overflow:hidden;">${text}</div>`;
@@ -215,8 +229,6 @@ export function buildSaleHtml(
   const headerEls = bySection("header").map(el => renderEl(el, globalTokens)).join("");
   const totalsEls = bySection("totals").map(el => renderEl(el, globalTokens)).join("");
   const footerEls = bySection("footer").map(el => renderEl(el, globalTokens)).join("");
-
-  const isTicket = (config.pageSize ?? "ticket") === "ticket";
 
   const sectionContentH = (sectionId: string, fallback: number) => {
     const fields = bySection(sectionId);

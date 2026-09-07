@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Product" ADD COLUMN     "tax" DECIMAL(5,2) NOT NULL DEFAULT 0;

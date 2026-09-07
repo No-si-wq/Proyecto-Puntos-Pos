@@ -92,7 +92,7 @@ export class InventoryService {
     // Esto hace que el stock agregado pueda quedar negativo.
     if (remaining > 0) {
       const fallbackLot =
-        lots[0] ??
+        lots.find((l) => l.quantity > 0) ??
         (await InventoryService.createNegativeStockLotTX(tx, {
           tenantId,
           productId,

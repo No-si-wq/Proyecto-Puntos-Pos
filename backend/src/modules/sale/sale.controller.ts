@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { SaleService } from "./sale.service";
+import { Role } from "../user/roles";
 
 export async function listSales(req: Request, res: Response) {
   const warehouseId = (req as any).warehouseId;
@@ -40,11 +41,14 @@ export async function createSale(req: Request, res: Response) {
   }
 
   const warehouseId = (req as any).warehouseId;
-  const { tenantId } = req.user!;
-  const { customerId, items, pointsUsed, payments, dueDate, sellerId, priceMode, observations } = req.body;
+  const { tenantId, role } = req.user!;
+  const { customerId, items, pointsUsed, payments, dueDate, sellerId, priceMode, observations, invoiceDate } = req.body;
 
   const sale = await SaleService.create(
-    { customerId, items, pointsUsed, payments, dueDate, sellerId, priceMode, observations },
+    { 
+      customerId, items, pointsUsed, payments, dueDate, sellerId, priceMode, observations,
+      invoiceDate: role === Role.ADMIN ? invoiceDate : undefined, 
+    },
     req.user.id,
     warehouseId,
     tenantId,
