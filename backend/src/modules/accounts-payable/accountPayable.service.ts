@@ -1,5 +1,6 @@
 import prisma from "../../core/prisma";
 import { Prisma } from "@prisma/client";
+import { bankService } from "../bank/bank.service";
 
 class AccountPayableService {
   async create(data: { purchaseId: number; dueDate?: Date, tenantId: number }) {
@@ -55,7 +56,9 @@ class AccountPayableService {
     tenantId: number,
     accountId: number,
     amount: Prisma.Decimal,
-    note?: string
+    note?: string,
+    bankId?: number,
+    userId?: number
   ) {
     return prisma.$transaction(async (tx) => {
       const account = await tx.accountPayable.findUnique({
@@ -72,13 +75,26 @@ class AccountPayableService {
       let status: any = "PARTIAL";
       if (newBalance.lte(0)) status = "PAID";
 
-      await tx.payablePayment.create({
+      const payment = await tx.payablePayment.create({
         data: {
           accountId,
           amount,
           note,
         },
       });
+
+      if (bankId) {
+        await bankService.registerMovementInTransaction(tx, {
+          tenantId,
+          bankId,
+          type: "WITHDRAWAL",
+          amount,
+          description: note ?? `Pago a proveedor - cuenta #${accountId}`,
+          referenceType: "PAYABLE_PAYMENT",
+          referenceId: payment.id,
+          createdBy: userId,
+        });
+      }
 
       return tx.accountPayable.update({
         where: { id: accountId },

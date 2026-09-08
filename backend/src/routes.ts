@@ -20,6 +20,7 @@ import commissionRoutes from "./modules/commission/Commission.routes";
 import reportTemplateRouter from "./modules/report-template/report-template.router";
 import remissionRoutes from './modules/remission/remission.routes';
 import quotationRoutes from './modules/quotation/quotation.routes';
+import bankRoutes from "./modules/bank/bank.routes";
 
 const router = Router();
 
@@ -43,5 +44,6 @@ router.use("/commissions", commissionRoutes);
 router.use("/report-templates", reportTemplateRouter);
 router.use('/remissions', remissionRoutes);
 router.use('/quotations', quotationRoutes);
+router.use("/banks", bankRoutes);
 
 export default router;

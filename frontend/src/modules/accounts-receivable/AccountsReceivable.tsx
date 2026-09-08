@@ -16,6 +16,7 @@ import { formatCurrency } from "../../core/utils/formatters";
 import { useCustomers } from "../customers/useCustomers";
 import PageHeader from "../../core/components/common/PageHeader";
 import FinancialAccountsTable from "../../core/components/table/FinancialAccountsTable";
+import { useBanks } from "../banks/hooks/useBanks";
 
 export default function AccountsReceivable() {
   const { data, loading, pay, reload } =
@@ -38,6 +39,11 @@ export default function AccountsReceivable() {
   const [note, setNote] =
     useState<string>();
 
+  const [bankId, setBankId] =
+    useState<number>();
+
+  const { data: banks } = useBanks();
+
   const handleSearch = useDebouncedCallback((value: string) => {
     setFiltersCustomer({ search: value });
   }, 400);
@@ -53,11 +59,12 @@ export default function AccountsReceivable() {
       return;
     }
 
-    await pay(selected.id, amount, note);
+    await pay(selected.id, amount, note, bankId);
     message.success("Pago registrado");
     setSelected(null);
     setAmount(0);
     setNote(undefined);
+    setBankId(undefined);
   }
 
   return (
@@ -129,9 +136,10 @@ export default function AccountsReceivable() {
       <Modal
         open={!!selected}
         title="Registrar Pago"
-        onCancel={() =>
-          setSelected(null)
-        }
+        onCancel={() => {
+          setSelected(null);
+          setBankId(undefined);
+        }}
         onOk={handlePayment}
       >
         <div style={{ marginBottom: 12 }}>
@@ -161,6 +169,20 @@ export default function AccountsReceivable() {
             setNote(e.target.value)
           }
           placeholder="Nota (opcional)"
+        />
+
+        <Select
+          allowClear
+          style={{ width: "100%", marginTop: 12 }}
+          placeholder="Cuenta bancaria (opcional)"
+          value={bankId}
+          onChange={setBankId}
+          options={banks
+            .filter((b) => b.active)
+            .map((b) => ({
+              label: `${b.name} (${formatCurrency(b.balance)})`,
+              value: b.id,
+            }))}
         />
       </Modal>
     </>

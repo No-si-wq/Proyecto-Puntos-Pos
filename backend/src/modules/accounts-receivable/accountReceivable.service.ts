@@ -1,5 +1,6 @@
 import prisma from "../../core/prisma";
 import { Prisma } from "@prisma/client";
+import { bankService } from "../bank/bank.service";
 
 class AccountReceivableService {
   async create(data: { saleId: number; dueDate?: Date, tenantId: number }) {
@@ -68,7 +69,9 @@ class AccountReceivableService {
     tenantId: number,
     accountId: number,
     amount: Prisma.Decimal,
-    note?: string
+    note?: string,
+    bankId?: number,
+    userId?: number
   ) {
     return prisma.$transaction(async (tx) => {
       const account = await tx.accountReceivable.findUnique({
@@ -85,13 +88,26 @@ class AccountReceivableService {
       let status: any = "PARTIAL";
       if (newBalance.lte(0)) status = "PAID";
 
-      await tx.receivablePayment.create({
+      const payment = await tx.receivablePayment.create({
         data: {
           accountId,
           amount,
           note,
         },
       });
+
+      if (bankId) {
+        await bankService.registerMovementInTransaction(tx, {
+          tenantId,
+          bankId,
+          type: "DEPOSIT",
+          amount,
+          description: note ?? `Cobro a cliente - cuenta #${accountId}`,
+          referenceType: "RECEIVABLE_PAYMENT",
+          referenceId: payment.id,
+          createdBy: userId,
+        });
+      }
 
       return tx.accountReceivable.update({
         where: { id: accountId },

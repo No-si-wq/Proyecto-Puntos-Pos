@@ -22,11 +22,13 @@ export function useAccountReceivable() {
   async function pay(
     id: number,
     amount: number,
-    note?: string
+    note?: string,
+    bankId?: number
   ) {
     await http.post(`/account-receivable/${id}/payments`, {
       amount,
       note,
+      bankId,
     });
     await load(currentFilters);
   }

@@ -41,6 +41,8 @@ import Quotations from "../../modules/quotations/pages/Quotations";
 import QuotationDetail from "../../modules/quotations/pages/QuotationDetail";
 import ProductOutputsReport from "../../modules/reports/ProductOutputsReport";
 import GeneralInventoryReport from "../../modules/reports/GeneralInventoryReport";
+import Banks from "../../modules/banks/pages/Banks";
+import BankDetail from "../../modules/banks/pages/BankDetail";
 
 import Unauthorized from "../../modules/Unauthorized";
 
@@ -234,6 +236,17 @@ export default function AppRouter() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/banks"
+            element={
+              <ProtectedRoute module="banks">
+                <Banks />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/banks/:id" element={<BankDetail />} />
 
           <Route
             path="/category"

@@ -19,6 +19,8 @@ model Tenant {
   registrationKey String?           @unique
   updatedAt       DateTime?         @updatedAt
   verified        Boolean           @default(false)
+  banks           Bank[]
+  bankTransaction BankTransaction[]
   categories      Category[]
   commissions     Commission[]
   commissionLevel CommissionLevel[]
@@ -47,6 +49,48 @@ model TenantInvite {
   used      Boolean   @default(false)
   createdAt DateTime  @default(now())
   usedAt    DateTime?
+}
+
+model Bank {
+  id                 Int                 @id @default(autoincrement())
+  tenantId           Int
+  name               String
+  bankName           String?
+  accountNumber      String?
+  accountType        String?
+  currency           String              @default("HNL")
+  balance            Decimal             @default(0) @db.Decimal(12, 2)
+  active             Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  tenant             Tenant              @relation(fields: [tenantId], references: [id])
+  transactions       BankTransaction[]
+  payablePayments    PayablePayment[]
+  receivablePayments ReceivablePayment[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model BankTransaction {
+  id              Int                 @id @default(autoincrement())
+  tenantId        Int
+  bankId          Int
+  type            BankTransactionType
+  amount          Decimal             @db.Decimal(12, 2)
+  description     String?
+  referenceType   String?
+  referenceId     Int?
+  transferGroupId Int?
+  reconciled      Boolean             @default(false)
+  reconciledAt    DateTime?
+  createdAt       DateTime            @default(now())
+  createdBy       Int?
+  bank            Bank                @relation(fields: [bankId], references: [id])
+  tenant          Tenant              @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, bankId])
+  @@index([tenantId, transferGroupId])
 }
 
 model User {
@@ -575,7 +619,9 @@ model ReceivablePayment {
   amount      Decimal           @db.Decimal(10, 2)
   paymentDate DateTime          @default(now())
   note        String?
+  bankId      Int?
   account     AccountReceivable @relation(fields: [accountId], references: [id])
+  bank        Bank?             @relation(fields: [bankId], references: [id])
 }
 
 model AccountPayable {
@@ -603,7 +649,9 @@ model PayablePayment {
   amount      Decimal        @db.Decimal(10, 2)
   paymentDate DateTime       @default(now())
   note        String?
+  bankId      Int?
   account     AccountPayable @relation(fields: [accountId], references: [id])
+  bank        Bank?          @relation(fields: [bankId], references: [id])
 }
 
 model SaleReturn {
@@ -705,6 +753,13 @@ model QuotationItem {
   priceListId    Int?
   product        Product      @relation(fields: [productId], references: [id])
   quotation      Quotation    @relation(fields: [quotationId], references: [id])
+}
+
+enum BankTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER_IN
+  TRANSFER_OUT
 }
 
 enum QuotationStatus {

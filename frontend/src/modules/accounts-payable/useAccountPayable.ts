@@ -22,11 +22,13 @@ export function useAccountPayable() {
   async function pay(
     id: number,
     amount: number,
-    note?: string
+    note?: string,
+    bankId?: number
   ) {
     await http.post(`/account-payable/${id}/payments`, {
       amount,
       note,
+      bankId,
     });
 
     await load(currentFilters);

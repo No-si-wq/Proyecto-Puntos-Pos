@@ -30,6 +30,7 @@ export type PermissionModule =
   | "settings"
   | "remissions"
   | "quotations"
+  | "banks"
 
 export const PERMISSIONS: Record<
   PermissionModule,
@@ -142,6 +143,13 @@ export const PERMISSIONS: Record<
 
   quotations: {
     view: [Role.ADMIN, Role.USER]
+  },
+
+  banks: {
+    view: [Role.ADMIN, Role.USER],
+    create: [Role.ADMIN],
+    edit: [Role.ADMIN],
+    manage: [Role.ADMIN],
   },
 
 };

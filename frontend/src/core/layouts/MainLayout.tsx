@@ -215,6 +215,23 @@ export default function MainLayout() {
         ],
       },
 
+      // ── Finanzas ───────────────────────────────────────────────────────────
+      {
+        key: "g-finanzas",
+        label: "Finanzas",
+        icon: <BankOutlined />,
+        visible: true,
+        children: [
+          {
+            key: "/banks",
+            label: "Bancos",
+            icon: <BankOutlined />,
+            onClick: () => navigate("/banks"),
+            visible: can("banks"),
+          },
+        ],
+      },
+
       // ── Inventario ─────────────────────────────────────────────────────────
       {
         key: "g-inventario",
