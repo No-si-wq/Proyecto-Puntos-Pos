@@ -27,6 +27,21 @@ export interface DetailColumn {
   wrap?: boolean;
 }
 
+// agregar junto a DetailColumn
+export interface DetailLineField {
+  token: string;
+  label?: string;
+  align: "left" | "center" | "right";
+  fontSize?: number;
+  fontWeight?: "normal" | "bold";
+  wrap?: boolean;
+}
+
+export interface DetailLine {
+  id: string;
+  fields: DetailLineField[];
+}
+
 export interface ReportColumn {
   key: string;
   label: string;
@@ -72,6 +87,8 @@ export interface ReportTemplateConfig {
   logoBackground?: string;  
   documentType?: 'sale' | 'quotation' | 'remission';
   groupBy?: "seller" | "customer" | "paymentMethod" | "date" | "product" | "";
+  detailLayout?: "table" | "stacked";  // "table" = comportamiento actual, "stacked" = ticket
+  detailLines?: DetailLine[];    
   totals: {
     showSubtotal: boolean;
     showDiscount: boolean;

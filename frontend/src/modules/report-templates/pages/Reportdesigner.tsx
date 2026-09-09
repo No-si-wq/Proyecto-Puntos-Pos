@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Button, Select, Input, Checkbox, Modal, Form,
+  Button, Select, Input, Checkbox, Modal, Form, Segmented,
   message, Spin, Tooltip, Tag, Divider, Dropdown, type MenuProps,
 } from "antd";
 import {
@@ -13,7 +13,7 @@ import {
 import html2canvas from "html2canvas";
 import { exportTemplateToPdf, importTemplateFromPdf } from "../utils/templatePdf";
 import { useReportTemplates } from "../hooks/useReportTemplates";
-import type { ReportTemplate, ReportTemplateConfig, ReportFieldElement, DetailColumn, PageSize } from "../types/report-template";
+import type { ReportTemplate, ReportTemplateConfig, ReportFieldElement, DetailColumn, DetailLine, DetailLineField, PageSize } from "../types/report-template";
 import { resolveDesignerWidth } from "../utils/resolveTemplate";
 
 const { Option } = Select;
@@ -42,7 +42,6 @@ const FIELD_GROUPS = [
     { token: "[NombreCliente]",    label: "Nombre del cliente" },
     { token: "[DireccionCliente]", label: "Dirección" },
     { token: "[CiudadCliente]",    label: "Ciudad" },
-    { token: "[DNI]",              label: "DNI" },
     { token: "[TelefonoCliente]",  label: "Telefono" },
   ]},
   { id: "vendedor", label: "Vendedor", fields: [
@@ -157,6 +156,12 @@ function resizeLogoDataUrl(file: File, maxDim = 800, quality = 0.85): Promise<st
 
 function genId() { return "el_" + Math.random().toString(36).slice(2, 8); }
 
+// Estimación heurística del ancho renderizado de un texto (sin medir el DOM real).
+// Factor 0.58 aproxima el ancho promedio de un caracter en fuentes tipo Segoe UI / Arial.
+function estimateTextWidth(text: string, fontSize: number): number {
+  return Math.round((text?.length ?? 0) * fontSize * 0.58);
+}
+
 type CanvasElement = ReportFieldElement & { width?: number };
 
 const SAMPLE_VALUES: Record<string, string> = {
@@ -164,9 +169,9 @@ const SAMPLE_VALUES: Record<string, string> = {
   "[Estatus]": "Completada", "[MetodoPago]": "Efectivo", "[ListaPrecios]": "Lista general",
   "[Monto]": "L. 850.00", "[Cambio]": "L. 0.00", "[Observaciones]": "Cliente frecuente",
   "[NombreCliente]": "Juan Pérez", "[DireccionCliente]": "Col. Trejo, SPS", "[CiudadCliente]": "San Pedro Sula",
-  "[DNI]": "0501-1990-01234", "[TelefonoCliente]": "9988-7766",
+  "[RTN]": "0501-1990-01234", "[TelefonoCliente]": "9988-7766",
   "[NombreVendedor]": "María López", "[Cajero]": "María López", "[ComisionVendedor]": "L. 25.50",
-  "[RTNEmisor]": "08019999012345", "[RTN]": "0501199001234",
+  "[RTNEmisor]": "08019999012345",
   "[Subtotal]": "L. 758.93", "[DescTotal]": "L. 0.00", "[ImpTotal]": "L. 91.07", "[Total]": "L. 850.00",
   "[TotalComision]": "L. 42.50", "[PuntosUsados]": "0", "[PuntosGanados]": "17",
   "[CAI]": "A1B2C3-D4E5F6-A1B2C3-D4E5F6-A1B2C3-DE",
@@ -195,15 +200,190 @@ const DEFAULT_DETAIL_COLUMNS: DetailColumn[] = [
   { id: "dc7", header: "Totales",       token: "[Totales]",      width: 72,  align: "right"  },
 ];
 
+  // Defaults específicos para pageSize "ticket" (canvas de 300px, ver resolveDesignerWidth).
+  // Se usan solo al cambiar el selector de tamaño en una plantilla NUEVA (sin currentTemplate).
+  const TICKET_ELEMENTS: ReportFieldElement[] = [
+    { id: "tk1",  type: "static", token: "", label: "MI EMPRESA S.A. DE C.V.", x: 0, y: 4,   fontSize: 11, fontWeight: "bold",   align: "center", section: "header" },
+    { id: "tk2",  type: "field",  token: "[RTNEmisor]",      label: "RTN Emisor",      x: 0, y: 20,  fontSize: 8,  fontWeight: "normal", align: "center", section: "header" },
+    { id: "tk3",  type: "field",  token: "[Factura]",        label: "# Factura",       x: 0, y: 36,  fontSize: 9,  fontWeight: "bold",   align: "center", section: "header" },
+    { id: "tk4",  type: "field",  token: "[Fecha]",          label: "Fecha",           x: 0, y: 52,  fontSize: 8,  fontWeight: "normal", align: "center", section: "header" },
+    { id: "tk5",  type: "field",  token: "[NombreCliente]",  label: "Cliente",         x: 4, y: 68,  fontSize: 8,  fontWeight: "normal", align: "left",   section: "header" },
+    { id: "tk6",  type: "field",  token: "[RTN]",             label: "RTN Cliente",     x: 4, y: 82,  fontSize: 8,  fontWeight: "normal", align: "left",   section: "header" },
+    { id: "tk7",  type: "field",  token: "[NombreVendedor]", label: "Vendedor",        x: 4, y: 96,  fontSize: 8,  fontWeight: "normal", align: "left",   section: "header" },
+    { id: "tk8",  type: "field",  token: "[MetodoPago]",     label: "Método de pago",  x: 4, y: 110, fontSize: 8,  fontWeight: "normal", align: "left",   section: "header" },
+    { id: "tk9",  type: "field",  token: "[Subtotal]",       label: "Subtotal",        x: 4, y: 4,   fontSize: 8,  fontWeight: "normal", align: "left",   section: "totals" },
+    { id: "tk10", type: "field",  token: "[DescTotal]",      label: "Descuento",       x: 4, y: 18,  fontSize: 8,  fontWeight: "normal", align: "left",   section: "totals" },
+    { id: "tk11", type: "field",  token: "[ImpTotal]",       label: "Impuesto",        x: 4, y: 32,  fontSize: 8,  fontWeight: "normal", align: "left",   section: "totals" },
+    { id: "tk12", type: "field",  token: "[Total]",          label: "Total",           x: 4, y: 48,  fontSize: 12, fontWeight: "bold",   align: "left",   section: "totals" },
+    { id: "tk13", type: "static", token: "", label: "Documento generado por el sistema — [Fecha] [Hora]", x: 0, y: 4, fontSize: 7, fontWeight: "normal", align: "center", section: "footer" },
+  ];
+
+  const TICKET_DETAIL_COLUMNS: DetailColumn[] = [
+    { id: "tkc1", header: "Cant.",       token: "[Cantidad]", width: 26, align: "center", fontSize: 8 },
+    { id: "tkc2", header: "Descripción", token: "[Producto]", width: 0,  align: "left",   fontSize: 8 },
+    { id: "tkc3", header: "Importe",     token: "[Importe]",  width: 60, align: "right",  fontSize: 8 },
+  ];
+
+  // después de TICKET_DETAIL_COLUMNS (línea ~225)
+  const DEFAULT_STACKED_LINES: DetailLine[] = [
+    { id: "dl1", fields: [
+      { token: "[Cantidad]", label: "Cant.", align: "left", fontSize: 8, fontWeight: "bold" },
+      { token: "[Producto]", label: "Descripción", align: "left", fontSize: 8, wrap: true },
+    ]},
+    { id: "dl2", fields: [
+      { token: "[PrecioUnit]", label: "P.U.", align: "left", fontSize: 7 },
+      { token: "[Importe]", label: "Importe", align: "right", fontSize: 8, fontWeight: "bold" },
+    ]},
+  ];
+
 const propLabel: React.CSSProperties = { fontSize: 10, fontWeight: 600, color: "#888", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 4 };
+
+interface StackedDetailEditorProps {
+  lines: DetailLine[];
+  setLines: React.Dispatch<React.SetStateAction<DetailLine[]>>;
+  selected: { lineId: string; fieldIdx: number } | null;
+  setSelected: (v: { lineId: string; fieldIdx: number } | null) => void;
+  isActive: boolean;
+  previewMode: boolean;
+  dragFieldRef: React.MutableRefObject<{ token: string; label: string } | null>;
+  markDirty: () => void;
+  setActiveSection: (s: SectionId) => void;
+  setSelectedId: (id: string | null) => void;
+}
+
+function StackedDetailEditor({
+  lines, setLines, selected, setSelected, isActive, previewMode,
+  dragFieldRef, markDirty, setActiveSection, setSelectedId,
+}: StackedDetailEditorProps) {
+  const updateField = (lineId: string, idx: number, patch: Partial<DetailLineField>) => {
+    setLines(prev => prev.map(l => l.id !== lineId ? l : {
+      ...l, fields: l.fields.map((f, i) => i === idx ? { ...f, ...patch } : f),
+    }));
+    markDirty();
+  };
+  const removeField = (lineId: string, idx: number) => {
+    setLines(prev => prev.map(l => l.id !== lineId ? l : { ...l, fields: l.fields.filter((_, i) => i !== idx) }));
+    setSelected(null);
+    markDirty();
+  };
+  const addField = (lineId: string, dragged: { token: string; label: string }) => {
+    setLines(prev => prev.map(l => l.id !== lineId ? l : {
+      ...l, fields: [...l.fields, { token: dragged.token, label: dragged.label, align: "left", fontSize: 8 }],
+    }));
+    markDirty();
+  };
+
+  if (previewMode) {
+    return (
+      <>
+        {SAMPLE_DETAIL_ROWS.map((row, ri) => (
+          <div key={ri} style={{ padding: "5px 6px", borderBottom: "1px dashed #eee" }}>
+            {lines.map(line => (
+              <div key={line.id} style={{ display: "flex", gap: 6 }}>
+                {line.fields.map((f, fi) => (
+                  <span key={fi} style={{
+                    flex: f.align === "left" && f.wrap ? 1 : "0 0 auto",
+                    textAlign: f.align, fontSize: f.fontSize ?? 8,
+                    fontWeight: f.fontWeight === "bold" ? 700 : 400,
+                    whiteSpace: f.wrap ? "normal" : "nowrap",
+                  }}>
+                    {f.label ? `${f.label} ` : ""}{f.token ? (row[f.token] ?? "") : ""}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <div>
+      {lines.map(line => (
+        <div key={line.id} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 6px", borderBottom: "1px dashed #e0dbd0" }}>
+          {line.fields.map((f, fi) => {
+            const isSel = selected?.lineId === line.id && selected.fieldIdx === fi;
+            return (
+              <div
+                key={fi}
+                onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+                onDrop={e => {
+                  e.preventDefault(); e.stopPropagation();
+                  const dragged = dragFieldRef.current;
+                  if (!dragged) return;
+                  dragFieldRef.current = null;
+                  updateField(line.id, fi, { token: dragged.token, label: f.label || dragged.label });
+                }}
+                onClick={e => { e.stopPropagation(); setSelected({ lineId: line.id, fieldIdx: fi }); setSelectedId(null); setActiveSection("detail"); }}
+                style={{
+                  padding: "3px 6px", fontSize: 11, fontFamily: "monospace",
+                  color: f.token ? "#555" : "#bbb",
+                  background: isSel ? "rgba(22,119,255,0.12)" : "#fafaf8",
+                  outline: isSel ? "1px solid #1677ff" : "1px solid #ece8e0",
+                  outlineOffset: -1, cursor: "pointer", position: "relative", minWidth: 40,
+                }}
+              >
+                {f.token || "↓ arrastra token"}
+                {isSel && (
+                  <div
+                    title="Eliminar campo"
+                    onClick={e => { e.stopPropagation(); removeField(line.id, fi); }}
+                    style={{ position: "absolute", top: -6, right: -6, fontSize: 9, color: "#f00", background: "#fff", borderRadius: "50%", width: 14, height: 14, textAlign: "center", lineHeight: "14px", border: "1px solid #f00", cursor: "pointer" }}
+                  >✕</div>
+                )}
+              </div>
+            );
+          })}
+
+          {isActive && (
+            <div
+              onClick={e => {
+                e.stopPropagation();
+                const emptyField: DetailLineField = { token: "", align: "left", fontSize: 8 };
+                setLines(prev => prev.map(l => l.id !== line.id ? l : { ...l, fields: [...l.fields, emptyField] }));
+                setSelected({ lineId: line.id, fieldIdx: line.fields.length });
+                setSelectedId(null);
+                setActiveSection("detail");
+                markDirty();
+              }}
+              onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+              onDrop={e => { e.preventDefault(); e.stopPropagation(); const d = dragFieldRef.current; if (!d) return; dragFieldRef.current = null; addField(line.id, d); }}
+              style={{ padding: "3px 8px", fontSize: 10, color: "#aaa", border: "1px dashed #ccc", cursor: "pointer", flexShrink: 0 }}
+              title="Clic para agregar campo vacío, o arrastra un token aquí"
+            >+ campo</div>
+          )}
+
+          {isActive && (
+            <div
+              title="Eliminar línea"
+              onClick={() => { setLines(prev => prev.filter(l => l.id !== line.id)); setSelected(null); markDirty(); }}
+              style={{ marginLeft: "auto", fontSize: 12, color: "#f00", cursor: "pointer", flexShrink: 0 }}
+            >🗑</div>
+          )}
+        </div>
+      ))}
+
+      {isActive && (
+        <div
+          onClick={() => { setLines(prev => [...prev, { id: genId(), fields: [] }]); markDirty(); }}
+          style={{ padding: "6px 8px", fontSize: 11, color: "#888", cursor: "pointer", textAlign: "center" }}
+        >+ Línea</div>
+      )}
+
+      <div style={{ padding: "4px 6px", fontSize: 10, color: "#ccc", fontStyle: "italic" }}>↕ Banda de repetición (una por partida)</div>
+    </div>
+  );
+}
 
 interface PropsPanelProps {
   selectedEl: CanvasElement | null;
   onUpdate: (patch: Partial<CanvasElement>) => void;
   onDelete: () => void;
+  docW: number;
 }
 
-function PropsPanel({ selectedEl, onUpdate, onDelete }: PropsPanelProps) {
+function PropsPanel({ selectedEl, onUpdate, onDelete, docW }: PropsPanelProps) {
   if (!selectedEl) return (
     <div style={{ padding: "20px 12px", textAlign: "center", color: "#bbb", fontSize: 12, lineHeight: 1.6 }}>
       Selecciona un elemento del canvas para editar sus propiedades.
@@ -232,7 +412,11 @@ function PropsPanel({ selectedEl, onUpdate, onDelete }: PropsPanelProps) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           <div>
             <div style={{ fontSize: 10, color: "#aaa", marginBottom: 2 }}>X (px)</div>
-            <Input size="small" type="number" value={selectedEl.x} onChange={e => onUpdate({ x: parseInt(e.target.value) || 0 })} />
+            <Input
+              size="small" type="number" max={docW}
+              value={selectedEl.x}
+              onChange={e => onUpdate({ x: Math.min(Math.max(parseInt(e.target.value) || 0, 0), docW) })}
+            />
           </div>
           <div>
             <div style={{ fontSize: 10, color: "#aaa", marginBottom: 2 }}>Y (px)</div>
@@ -293,14 +477,13 @@ function PropsPanel({ selectedEl, onUpdate, onDelete }: PropsPanelProps) {
   );
 }
 
-
 export default function ReportDesigner() {
   const {
     templates, loadingList, loadingDetail, saving, deleting, duplicating,
     getById, getDefaultCancellable, create, update, remove, duplicate,
   } = useReportTemplates();
 
-  const [elements,        setElements]        = useState<CanvasElement[]>(DEFAULT_ELEMENTS);
+  const [elements,        setElements]        = useState<CanvasElement[]>(TICKET_ELEMENTS);
   const [currentTemplate, setCurrentTemplate] = useState<ReportTemplate | null>(null);
   const [isDirty,         setIsDirty]         = useState(false);
   const [selectedId,      setSelectedId]      = useState<string | null>(null);
@@ -309,7 +492,10 @@ export default function ReportDesigner() {
   const [previewMode,     setPreviewMode] = useState(false);
   const [openGroups,      setOpenGroups]      = useState<Record<string, boolean>>({ cliente: true, partidas: true });
 
-  const [detailColumns,   setDetailColumns]  = useState<DetailColumn[]>(DEFAULT_DETAIL_COLUMNS);
+  const [detailColumns,   setDetailColumns]  = useState<DetailColumn[]>(TICKET_DETAIL_COLUMNS);
+  const [detailLayout,    setDetailLayout]   = useState<"table" | "stacked">("table");
+  const [detailLines,     setDetailLines]    = useState<DetailLine[]>(DEFAULT_STACKED_LINES);
+  const [selectedStackedField, setSelectedStackedField] = useState<{ lineId: string; fieldIdx: number } | null>(null);
   const [selectedColId,  setSelectedColId]  = useState<string | null>(null);
   const dragColRef = useRef<string | null>(null);
   const [editingColId, setEditingColId] = useState<string | null>(null);
@@ -334,17 +520,69 @@ export default function ReportDesigner() {
 
   const DOC_W = resolveDesignerWidth(pageSize, customPageWidth);
 
+  // Recuerda el ancho de diseño anterior para poder reescalar proporcionalmente
+  // cuando cambia pageSize/customPageWidth (ej: Carta -> Ticket).
+  // applyTemplate() sincroniza este ref manualmente para que cargar una plantilla
+  // guardada NO dispare un reescalado (sus coordenadas ya son correctas para su propio pageSize).
+  const prevDocWRef = useRef<number>(DOC_W);
+  const skipNextRescaleRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    const prevW = prevDocWRef.current;
+    if (skipNextRescaleRef.current) {
+      skipNextRescaleRef.current = false;
+      prevDocWRef.current = DOC_W;
+      return;
+    }
+    if (prevW !== DOC_W && prevW > 0) {
+      const ratio = DOC_W / prevW;
+      setElements(prev => prev.map(el => ({
+        ...el,
+        x: Math.min(Math.max(0, Math.round(el.x * ratio)), DOC_W - 20),
+        fontSize: el.fontSize ? Math.max(7, Math.round(el.fontSize * Math.min(ratio, 1))) : el.fontSize,
+      })));
+      setDetailColumns(prev => prev.map(c =>
+        c.width > 0 ? { ...c, width: Math.max(20, Math.round(c.width * ratio)) } : c
+      ));
+      setLogoX(x => Math.min(Math.max(0, Math.round(x * ratio)), DOC_W - 20));
+      setLogoWidth(w => Math.max(20, Math.round(w * ratio)));
+      markDirty();
+    }
+    prevDocWRef.current = DOC_W;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [DOC_W]);
+
+  useEffect(() => {
+    const prevW = prevDocWRef.current;
+    if (prevW !== DOC_W && prevW > 0) {
+      const ratio = DOC_W / prevW;
+      setElements(prev => prev.map(el => ({
+        ...el,
+        x: Math.min(Math.round(el.x * ratio), DOC_W - 20),
+        fontSize: el.fontSize ? Math.max(7, Math.round(el.fontSize * Math.min(ratio, 1))) : el.fontSize,
+      })));
+      setDetailColumns(prev => prev.map(c =>
+        c.width > 0 ? { ...c, width: Math.max(20, Math.round(c.width * ratio)) } : c
+      ));
+      setLogoX(x => Math.min(Math.round(x * ratio), DOC_W - 20));
+      setLogoWidth(w => Math.max(20, Math.round(w * ratio)));
+      markDirty();
+    }
+    prevDocWRef.current = DOC_W;
+  }, [DOC_W]);
+
   type DesignSnapshot = {
-    elements: CanvasElement[]; detailColumns: DetailColumn[]; pageSize: PageSize; customPageWidth: number, documentType: 'sale' | 'quotation';
+    elements: CanvasElement[]; detailColumns: DetailColumn[];
+    detailLayout: "table" | "stacked"; detailLines: DetailLine[];
+    pageSize: PageSize; customPageWidth: number, documentType: 'sale' | 'quotation';
     headerHeight: number; detailHeight: number; totalsHeight: number; footerHeight: number;
     logo: string | null; logoX: number; logoY: number; logoWidth: number; logoHeight: number, logoBg: string;
   };
 
-  // Snapshot de la última config "guardada" (al cargar o guardar una plantilla).
-  // Se compara contra el estado actual para saber si hay cambios REALES pendientes,
   const baselineRef = useRef<string>(
     JSON.stringify({
       elements: DEFAULT_ELEMENTS, detailColumns: DEFAULT_DETAIL_COLUMNS,
+      detailLayout: "table", detailLines: DEFAULT_STACKED_LINES,
       pageSize: "ticket", customPageWidth: 80, documentType: "sale",
       headerHeight: 130, detailHeight: 110, totalsHeight: 100, footerHeight: 50,
       logo: null, logoX: 8, logoY: 8, logoWidth: 80, logoHeight: 60, logoBg: "transparent",
@@ -353,7 +591,7 @@ export default function ReportDesigner() {
 
   function getSnapshot(over: Partial<DesignSnapshot> = {}): string {
     return JSON.stringify({
-      elements, detailColumns, pageSize, customPageWidth, documentType,
+      elements, detailColumns, detailLayout, detailLines, pageSize, customPageWidth, documentType,
       headerHeight, detailHeight, totalsHeight, footerHeight,
       logo, logoX, logoY, logoWidth, logoHeight, logoBg,
       ...over,
@@ -404,7 +642,13 @@ export default function ReportDesigner() {
     const newLogoY = t.config.logoY ?? 8;
     const newLogoWidth = t.config.logoWidth ?? 80;
     const newLogoHeight = t.config.logoHeight ?? 60;
+    const newDetailLayout = (t.config as any).detailLayout ?? "table";
+    const newDetailLines = t.config.detailLines?.length ? t.config.detailLines : DEFAULT_STACKED_LINES;
     setLogoBg(t.config.logoBackground ?? "transparent");
+
+    // La plantilla ya trae coordenadas correctas para su propio pageSize:
+    // que el próximo cambio de DOC_W (si lo hay) no dispare un reescalado.
+    skipNextRescaleRef.current = true;
 
     setCurrentTemplate(t);
     setElements(newElements);
@@ -424,9 +668,14 @@ export default function ReportDesigner() {
     setIsDirty(false);
     setSelectedId(null);
     setSelectedColId(null);
+    setDetailLayout(newDetailLayout);
+    setDetailLines(newDetailLines);
+    setSelectedStackedField(null);
 
     baselineRef.current = getSnapshot({
-      elements: newElements, detailColumns: newDetailColumns, pageSize: newPageSize, customPageWidth: newCustomPageWidth, documentType: newDocumentType,
+      elements: newElements, detailColumns: newDetailColumns,
+      detailLayout: newDetailLayout, detailLines: newDetailLines,
+      pageSize: newPageSize, customPageWidth: newCustomPageWidth, documentType: newDocumentType,
       headerHeight: newHeaderHeight, detailHeight: newDetailHeight, totalsHeight: newTotalsHeight, footerHeight: newFooterHeight,
       logo: newLogo, logoX: newLogoX, logoY: newLogoY, logoWidth: newLogoWidth, logoHeight: newLogoHeight,
     });
@@ -439,7 +688,7 @@ export default function ReportDesigner() {
   function buildConfig(): ReportTemplateConfig {
     const base = currentTemplate?.config ?? DEFAULT_CONFIG;
     return { 
-      ...base, elements, detailColumns, pageSize, customPageWidth, documentType, 
+      ...base, elements, detailColumns, detailLayout, detailLines, pageSize, customPageWidth, documentType, 
       headerHeight, detailHeight, totalsHeight, footerHeight, 
       logoBase64: logo ?? undefined,
       logoX, logoY, logoWidth, logoHeight,
@@ -450,7 +699,7 @@ export default function ReportDesigner() {
   // Si el usuario revierte un cambio (vuelve al valor original), el indicador
   useEffect(() => {
     setIsDirty(getSnapshot() !== baselineRef.current);
-  }, [elements, detailColumns, pageSize, customPageWidth, documentType, headerHeight, detailHeight, totalsHeight, footerHeight, logo, logoX, logoY, logoWidth, logoHeight, logoBg]);
+  }, [elements, detailColumns, pageSize, customPageWidth, documentType, headerHeight, detailHeight, totalsHeight, footerHeight, logo, logoX, logoY, logoWidth, logoHeight, logoBg, detailLayout, detailLines]);
 
   const onFieldDragStart = useCallback((token: string, label: string) => {
     dragFieldRef.current = { token, label };
@@ -462,7 +711,7 @@ export default function ReportDesigner() {
     if (!dragged) return;
     dragFieldRef.current = null;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.max(0, Math.round((e.clientX - rect.left) / zoom) - 40);
+    const x = Math.min(Math.max(0, Math.round((e.clientX - rect.left) / zoom) - 40), DOC_W - 20);
     const y = Math.max(0, Math.round((e.clientY - rect.top) / zoom) - 10);
     const newEl: ReportFieldElement = {
       id: genId(), type: "field",
@@ -513,7 +762,9 @@ export default function ReportDesigner() {
       const dx = Math.round((ev.clientX - drag.startX) / zoom);
       const dy = Math.round((ev.clientY - drag.startY) / zoom);
       setElements(prev => prev.map(el =>
-        el.id === drag.id ? { ...el, x: Math.max(0, drag.origX + dx), y: Math.max(0, drag.origY + dy) } : el
+        el.id === drag.id
+          ? { ...el, x: Math.min(Math.max(0, drag.origX + dx), DOC_W - 20), y: Math.max(0, drag.origY + dy) }
+          : el
       ));
       markDirty();
     };
@@ -733,6 +984,9 @@ export default function ReportDesigner() {
       setIsDirty(true);
       setSelectedId(null);
       setSelectedColId(null);
+      setDetailColumns(parsed.config.detailColumns?.length ? parsed.config.detailColumns : DEFAULT_DETAIL_COLUMNS);
+      setDetailLayout(parsed.config.detailLayout ?? "table");
+      setDetailLines(parsed.config.detailLines?.length ? parsed.config.detailLines : DEFAULT_STACKED_LINES);
 
       saveForm.setFieldsValue({ name: parsed.name ?? "", description: parsed.description ?? "" });
       message.success("Plantilla importada. Revisa el logo y los textos antes de guardar.");
@@ -743,26 +997,55 @@ export default function ReportDesigner() {
     }
   }
 
+  // Estima el ancho real que ocupará el texto resuelto (con datos de ejemplo) y
+  // determina si el elemento se sale del ancho del documento actual (DOC_W) — muy
+  // común al pasar de Carta/Media carta a Ticket (rollo), donde el canvas se angosta.
+  function elementOverflows(el: CanvasElement): boolean {
+    const resolvedText = el.type === "field" ? resolveTokens(el.token) : resolveTokens(el.label);
+    const estWidth = el.width ?? estimateTextWidth(resolvedText, el.fontSize ?? 11);
+    return el.x + estWidth > DOC_W;
+  }
+
+  const overflowCount = elements.filter(elementOverflows).length;
+
   function renderEl(el: CanvasElement) {
     const isSel = el.id === selectedId;
     const isEditing = el.id === editingId;
     const elWidth = el.width;
+
+    const overflows = elementOverflows(el);
 
     return (
       <div
         key={el.id}
         onMouseDown={e => !previewMode && onElMouseDown(e, el.id)}
         onDoubleClick={e => { if (previewMode) return; e.stopPropagation(); setSelectedId(el.id); if (el.type === "static") setEditingId(el.id); }}
+        title={!previewMode && overflows ? "Este elemento se sale del ancho del documento en este tamaño de página" : undefined}
         style={{
           position: "absolute", left: el.x, top: el.y,
           cursor: previewMode ? "default" : (isEditing ? "text" : "move"),
           userSelect: "none", padding: previewMode ? 0 : "1px 3px",
-          border: previewMode ? "none" : `1px dashed ${isSel ? "#1677ff" : "transparent"}`,
-          background: previewMode ? "transparent" : (isSel ? "rgba(22,119,255,0.07)" : "transparent"),
+          border: previewMode
+            ? "none"
+            : overflows
+              ? "1.5px solid #ff4d4f"
+              : `1px dashed ${isSel ? "#1677ff" : "transparent"}`,
+          background: previewMode
+            ? "transparent"
+            : overflows
+              ? "rgba(255,77,79,0.08)"
+              : (isSel ? "rgba(22,119,255,0.07)" : "transparent"),
           zIndex: isSel ? 10 : 2, minWidth: 30,
           width: elWidth ? elWidth : undefined,
         }}
       >
+        {!previewMode && overflows && (
+          <div style={{
+            position: "absolute", top: -8, right: -8, width: 16, height: 16, borderRadius: "50%",
+            background: "#ff4d4f", color: "#fff", fontSize: 10, fontWeight: 700, lineHeight: "16px",
+            textAlign: "center", zIndex: 20, pointerEvents: "none",
+          }}>!</div>
+        )}
         {el.type === "field" ? (
           previewMode ? (
             <div style={{ fontSize: el.fontSize ?? 11, fontWeight: el.fontWeight ?? "normal", color: el.color ?? "#222", pointerEvents: "none" }}>
@@ -827,7 +1110,7 @@ export default function ReportDesigner() {
   const fileMenuItems: MenuProps["items"] = [
     { key: "new", icon: <FileAddOutlined />, label: "Nueva plantilla", onClick: () => handleSelectorChange("") },
     { type: "divider" },
-    { key: "save", icon: <SaveOutlined />, label: currentTemplate ? "Guardar cambios" : "Guardar plantilla", disabled: !isDirty, onClick: handleSaveChanges },
+    ...(currentTemplate ? [{ key: "save", icon: <SaveOutlined />, label: "Guardar cambios", disabled: !isDirty, onClick: handleSaveChanges }] : []),
     { key: "saveAs", icon: <SaveOutlined />, label: "Guardar como...", onClick: () => { saveForm.resetFields(); setSaveModalOpen(true); } },
     { key: "load", icon: <FolderOpenOutlined />, label: "Cargar plantilla...", onClick: () => { setLoadModalOpen(true); setSelectedLoadId(null); } },
     { type: "divider" },
@@ -961,11 +1244,49 @@ export default function ReportDesigner() {
             size="small"
             style={{ width: 128 }}
             value={pageSize}
-            onChange={(v: PageSize) => { setPageSize(v); markDirty(); }}
+            onChange={(v: PageSize) => {
+            // Sembrar layout correcto solo si es una plantilla NUEVA (nada cargado)
+            // y el usuario no ha tocado ya elementos/columnas manualmente.
+            if (!currentTemplate) {
+              const stillOnTicketDefaults =
+                elements === TICKET_ELEMENTS && detailColumns === TICKET_DETAIL_COLUMNS;
+              const stillOnLetterDefaults =
+                elements === DEFAULT_ELEMENTS && detailColumns === DEFAULT_DETAIL_COLUMNS;
+
+              if (v === "ticket" && stillOnLetterDefaults) {
+                skipNextRescaleRef.current = true;
+                setElements(TICKET_ELEMENTS);
+                setDetailColumns(TICKET_DETAIL_COLUMNS);
+                setSelectedId(null);
+                setSelectedColId(null);
+              } else if (v !== "ticket" && stillOnTicketDefaults) {
+                skipNextRescaleRef.current = true;
+                setElements(DEFAULT_ELEMENTS);
+                setDetailColumns(DEFAULT_DETAIL_COLUMNS);
+                setSelectedId(null);
+                setSelectedColId(null);
+              }
+            }
+              setPageSize(v);
+              markDirty();
+            }}
             options={[
               { value: "ticket",      label: "Ticket (rollo)" },
               { value: "letter",      label: "Carta" },
               { value: "half-letter", label: "Media carta" },
+            ]}
+          />
+        </Tooltip>
+
+        <div style={{ width: 1, height: 20, background: "#c0bbb0", margin: "0 2px" }} />
+        <Tooltip title="Cómo se dibuja cada partida: en columnas (Carta) o apiladas verticalmente (ticket térmico)">
+          <Segmented
+            size="small"
+            value={detailLayout}
+            onChange={v => { setDetailLayout(v as "table" | "stacked"); setSelectedColId(null); setSelectedStackedField(null); markDirty(); }}
+            options={[
+              { value: "table",   label: "Tabla" },
+              { value: "stacked", label: "Apilado" },
             ]}
           />
         </Tooltip>
@@ -1034,9 +1355,9 @@ export default function ReportDesigner() {
 
         {isDirty && <Tag color="warning" style={{ margin: 0 }}>● Sin guardar</Tag>}
 
-        {isDirty && (
+        {isDirty && currentTemplate && (
           <Button size="small" type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSaveChanges}>
-              {currentTemplate ? "Guardar cambios" : "Guardar plantilla"}
+              Guardar cambios
           </Button>
         )}
 
@@ -1107,7 +1428,7 @@ export default function ReportDesigner() {
             <div style={{ transform: `scale(${zoom})`, transformOrigin: "top center", flexShrink: 0 }}>
               <div style={{ width: DOC_W, height: 16, background: "#e8e4da", borderBottom: "1px solid #c8c4bc", display: "flex", alignItems: "flex-end", fontSize: 9, color: "#bbb", paddingLeft: 2 }}>
                 {Array.from({ length: 10 }).map((_, i) => (
-                  <span key={i} style={{ width: DOC_W / 10, flexShrink: 0 }}>{i * 56}</span>
+                  <span key={i} style={{ width: DOC_W / 10, flexShrink: 0 }}>{Math.round(i * DOC_W / 10)}</span>
                 ))}
               </div>
               <div ref={docRef} style={{ width: DOC_W, background: "white", boxShadow: "0 3px 14px rgba(0,0,0,.25)" }}>
@@ -1154,182 +1475,199 @@ export default function ReportDesigner() {
 
                       {sec.id === "detail" && (
                         <div style={{ userSelect: "none" }}>
-                          <div style={{ display: "flex", background: "#f0ece0", borderBottom: "1px solid #ccc", fontSize: 11, fontWeight: 600, color: "#444" }}>
-                            {detailColumns.map((col) => {
-                              const isFlex    = col.width === 0;
-                              const isSelCol  = col.id === selectedColId;
-                              const isEditHdr = col.id === editingColId;
-                              return (
-                                <div
-                                  key={col.id}
-                                  draggable={!isEditHdr}
-                                  onDragStart={() => { if (!isEditHdr) dragColRef.current = col.id; }}
-                                  onDragEnd={() => { dragColRef.current = null; }}
-                                  onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
-                                  onDrop={e => {
-                                    e.preventDefault(); e.stopPropagation();
-                                    if (!dragColRef.current || dragColRef.current === col.id) return;
-                                    setDetailColumns(prev => {
-                                      const from = prev.findIndex(c => c.id === dragColRef.current);
-                                      const to   = prev.findIndex(c => c.id === col.id);
-                                      const next = [...prev];
-                                      const [moved] = next.splice(from, 1);
-                                      next.splice(to, 0, moved);
-                                      return next;
-                                    });
-                                    dragColRef.current = null;
-                                    markDirty();
-                                  }}
-                                  onClick={e => { e.stopPropagation(); setSelectedColId(col.id); setSelectedId(null); setActiveSection("detail"); }}
-                                  onDoubleClick={e => { e.stopPropagation(); setSelectedColId(col.id); setEditingColId(col.id); setActiveSection("detail"); }}
-                                  style={{
-                                    width: isFlex ? undefined : col.width,
-                                    flex: isFlex ? 2 : undefined,
-                                    flexShrink: isFlex ? undefined : 0,
-                                    padding: isEditHdr ? "1px 2px" : "4px 6px",
-                                    textAlign: col.align,
-                                    cursor: isEditHdr ? "text" : "grab",
-                                    borderRight: "1px solid #d8d0c0",
-                                    background: isEditHdr ? "rgba(255,255,200,0.9)" : isSelCol ? "rgba(22,119,255,0.12)" : undefined,
-                                    outline: isSelCol ? `1px solid ${isEditHdr ? "#faad14" : "#1677ff"}` : undefined,
-                                    outlineOffset: -1,
-                                    position: "relative",
-                                  }}>
-                                  {isEditHdr ? (
-                                    <input
-                                      autoFocus
-                                      value={col.header}
-                                      onChange={e2 => { setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, header: e2.target.value } : c)); markDirty(); }}
-                                      onBlur={() => setEditingColId(null)}
-                                      onKeyDown={e2 => { if (e2.key === "Enter" || e2.key === "Escape") setEditingColId(null); }}
-                                      onClick={e2 => e2.stopPropagation()}
-                                      onMouseDown={e2 => e2.stopPropagation()}
-                                      style={{
-                                        width: "100%", border: "none", background: "transparent", outline: "none",
-                                        fontWeight: 600, fontSize: 11, color: "#333", padding: "3px 4px", cursor: "text",
+                          {detailLayout === "table" ? (
+                            <>
+                              <div style={{ display: "flex", background: "#f0ece0", borderBottom: "1px solid #ccc", fontSize: 11, fontWeight: 600, color: "#444" }}>
+                                {detailColumns.map((col) => {
+                                  const isFlex    = col.width === 0;
+                                  const isSelCol  = col.id === selectedColId;
+                                  const isEditHdr = col.id === editingColId;
+                                  return (
+                                    <div
+                                      key={col.id}
+                                      draggable={!isEditHdr}
+                                      onDragStart={() => { if (!isEditHdr) dragColRef.current = col.id; }}
+                                      onDragEnd={() => { dragColRef.current = null; }}
+                                      onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+                                      onDrop={e => {
+                                        e.preventDefault(); e.stopPropagation();
+                                        if (!dragColRef.current || dragColRef.current === col.id) return;
+                                        setDetailColumns(prev => {
+                                          const from = prev.findIndex(c => c.id === dragColRef.current);
+                                          const to   = prev.findIndex(c => c.id === col.id);
+                                          const next = [...prev];
+                                          const [moved] = next.splice(from, 1);
+                                          next.splice(to, 0, moved);
+                                          return next;
+                                        });
+                                        dragColRef.current = null;
+                                        markDirty();
                                       }}
-                                    />
-                                  ) : (
-                                    <>
-                                      {col.header}
-                                      {isSelCol && isActive && (
-                                        <div
-                                          title="Eliminar columna"
-                                          onClick={e => { e.stopPropagation(); setDetailColumns(p => p.filter(c => c.id !== col.id)); setSelectedColId(null); markDirty(); }}
-                                          style={{ position: "absolute", top: 1, right: 2, fontSize: 9, color: "#f00", cursor: "pointer", lineHeight: 1 }}>✕</div>
+                                      onClick={e => { e.stopPropagation(); setSelectedColId(col.id); setSelectedId(null); setActiveSection("detail"); }}
+                                      onDoubleClick={e => { e.stopPropagation(); setSelectedColId(col.id); setEditingColId(col.id); setActiveSection("detail"); }}
+                                      style={{
+                                        width: isFlex ? undefined : col.width,
+                                        flex: isFlex ? 2 : undefined,
+                                        flexShrink: isFlex ? undefined : 0,
+                                        padding: isEditHdr ? "1px 2px" : "4px 6px",
+                                        textAlign: col.align,
+                                        cursor: isEditHdr ? "text" : "grab",
+                                        borderRight: "1px solid #d8d0c0",
+                                        background: isEditHdr ? "rgba(255,255,200,0.9)" : isSelCol ? "rgba(22,119,255,0.12)" : undefined,
+                                        outline: isSelCol ? `1px solid ${isEditHdr ? "#faad14" : "#1677ff"}` : undefined,
+                                        outlineOffset: -1,
+                                        position: "relative",
+                                      }}>
+                                      {isEditHdr ? (
+                                        <input
+                                          autoFocus
+                                          value={col.header}
+                                          onChange={e2 => { setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, header: e2.target.value } : c)); markDirty(); }}
+                                          onBlur={() => setEditingColId(null)}
+                                          onKeyDown={e2 => { if (e2.key === "Enter" || e2.key === "Escape") setEditingColId(null); }}
+                                          onClick={e2 => e2.stopPropagation()}
+                                          onMouseDown={e2 => e2.stopPropagation()}
+                                          style={{
+                                            width: "100%", border: "none", background: "transparent", outline: "none",
+                                            fontWeight: 600, fontSize: 11, color: "#333", padding: "3px 4px", cursor: "text",
+                                          }}
+                                        />
+                                      ) : (
+                                        <>
+                                          {col.header}
+                                          {isSelCol && isActive && (
+                                            <div
+                                              title="Eliminar columna"
+                                              onClick={e => { e.stopPropagation(); setDetailColumns(p => p.filter(c => c.id !== col.id)); setSelectedColId(null); markDirty(); }}
+                                              style={{ position: "absolute", top: 1, right: 2, fontSize: 9, color: "#f00", cursor: "pointer", lineHeight: 1 }}>✕</div>
+                                          )}
+                                          {isSelCol && isActive && (
+                                            <div title="Doble clic para editar nombre" style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "#faad14", opacity: 0.6, pointerEvents: "none" }} />
+                                          )}
+                                        </>
                                       )}
-                                      {isSelCol && isActive && (
-                                        <div title="Doble clic para editar nombre" style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "#faad14", opacity: 0.6, pointerEvents: "none" }} />
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              );
-                            })}
-                            {isActive && !previewMode && (
-                              <div
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  const nc: DetailColumn = { id: genId(), header: "Nueva col.", token: "", width: 60, align: "right" };
-                                  setDetailColumns(p => [...p, nc]);
-                                  setSelectedColId(nc.id);
-                                  setEditingColId(nc.id);
-                                  markDirty();
-                                }}
-                                style={{ padding: "4px 8px", fontSize: 16, color: "#aaa", cursor: "pointer", flexShrink: 0, lineHeight: "16px" }}
-                                title="Agregar columna">+</div>
-                            )}
-                          </div>
-
-                          {!previewMode && (
-                          <>
-                            <div style={{ display: "flex", borderBottom: "1px dashed #ddd", background: "#fafaf8" }}>
-                              {detailColumns.map(col => {
-                                const isFlex   = col.width === 0;
-                                const isSelCol = col.id === selectedColId;
-                                const isEditTok = col.id + "_tok" === editingColId;
-                                return (
+                                    </div>
+                                  );
+                                })}
+                                {isActive && !previewMode && (
                                   <div
-                                    key={col.id}
-                                    onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
-                                    onDrop={e => {
-                                      e.preventDefault(); e.stopPropagation();
-                                      const dragged = dragFieldRef.current;
-                                      if (!dragged) return;
-                                      dragFieldRef.current = null;
-                                      setDetailColumns(prev => prev.map(c =>
-                                        c.id === col.id
-                                          ? { ...c, token: dragged.token, header: (c.header === "Nueva col." || c.header === "Col.") ? dragged.label : c.header }
-                                          : c
-                                      ));
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      const nc: DetailColumn = { id: genId(), header: "Nueva col.", token: "", width: 60, align: "right" };
+                                      setDetailColumns(p => [...p, nc]);
+                                      setSelectedColId(nc.id);
+                                      setEditingColId(nc.id);
                                       markDirty();
                                     }}
-                                    onClick={e => { e.stopPropagation(); setSelectedColId(col.id); setSelectedId(null); setActiveSection("detail"); }}
-                                    onDoubleClick={e => { e.stopPropagation(); setSelectedColId(col.id); setEditingColId(col.id + "_tok"); setActiveSection("detail"); }}
-                                    style={{
-                                      width: isFlex ? undefined : col.width,
-                                      flex: isFlex ? 2 : undefined,
-                                      flexShrink: isFlex ? undefined : 0,
-                                      padding: isEditTok ? "1px 2px" : "3px 6px",
-                                      textAlign: col.align,
-                                      fontSize: col.fontSize ?? 11,
-                                      fontFamily: "monospace",
-                                      color: col.token ? "#555" : "#ccc",
-                                      borderRight: "1px solid #ece8e0",
-                                      background: isEditTok ? "rgba(255,255,200,0.9)" : isSelCol ? "rgba(22,119,255,0.06)" : undefined,
-                                      outline: isSelCol ? `1px solid ${isEditTok ? "#faad14" : "#1677ff"}` : undefined,
-                                      outlineOffset: -1,
-                                      cursor: isEditTok ? "text" : "pointer",
-                                      minHeight: 24,
-                                      position: "relative",
-                                    }}>
-                                    {isEditTok ? (
-                                      <input
-                                        autoFocus
-                                        value={col.token}
-                                        onChange={e2 => { setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, token: e2.target.value } : c)); markDirty(); }}
-                                        onBlur={() => setEditingColId(null)}
-                                        onKeyDown={e2 => { if (e2.key === "Enter" || e2.key === "Escape") setEditingColId(null); }}
-                                        onClick={e2 => e2.stopPropagation()}
-                                        onMouseDown={e2 => e2.stopPropagation()}
-                                        placeholder="[Token]"
-                                        style={{
-                                          width: "100%", border: "none", background: "transparent", outline: "none",
-                                          fontFamily: "monospace", fontSize: 11, color: "#333", padding: "3px 4px", cursor: "text",
-                                        }}
-                                      />
-                                    ) : (
-                                      col.token
-                                        ? col.token
-                                        : isActive
-                                          ? <span style={{ color: "#bbb", fontSize: 10 }}>↓ arrastra · doble clic</span>
-                                          : ""
-                                    )}
-                                  </div>
-                                );
-                              })}
-                              {isActive && <div style={{ width: 26, flexShrink: 0 }} />}
-                            </div>
-                            <div style={{ padding: "4px 6px", fontSize: 10, color: "#ccc", fontStyle: "italic" }}>↕ Banda de repetición</div>
-                          </>
-                          )}
+                                    style={{ padding: "4px 8px", fontSize: 16, color: "#aaa", cursor: "pointer", flexShrink: 0, lineHeight: "16px" }}
+                                    title="Agregar columna">+</div>
+                                )}
+                              </div>
 
-                          {previewMode && SAMPLE_DETAIL_ROWS.map((row, i) => (
-                            <div key={i} style={{ display: "flex", borderBottom: "1px solid #eee" }}>
-                              {detailColumns.map(col => {
-                                const isFlex = col.width === 0;
-                                return (
-                                  <div key={col.id} style={{
-                                    width: isFlex ? undefined : col.width,
-                                    flex: isFlex ? 2 : undefined, flexShrink: isFlex ? undefined : 0,
-                                    padding: "4px 6px", textAlign: col.align, fontSize: col.fontSize ?? 11,
-                                  }}>
-                                    {col.token ? (row[col.token] ?? "") : ""}
+                              {!previewMode && (
+                              <>
+                                <div style={{ display: "flex", borderBottom: "1px dashed #ddd", background: "#fafaf8" }}>
+                                  {detailColumns.map(col => {
+                                    const isFlex   = col.width === 0;
+                                    const isSelCol = col.id === selectedColId;
+                                    const isEditTok = col.id + "_tok" === editingColId;
+                                    return (
+                                      <div
+                                        key={col.id}
+                                        onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+                                        onDrop={e => {
+                                          e.preventDefault(); e.stopPropagation();
+                                          const dragged = dragFieldRef.current;
+                                          if (!dragged) return;
+                                          dragFieldRef.current = null;
+                                          setDetailColumns(prev => prev.map(c =>
+                                            c.id === col.id
+                                              ? { ...c, token: dragged.token, header: (c.header === "Nueva col." || c.header === "Col.") ? dragged.label : c.header }
+                                              : c
+                                          ));
+                                          markDirty();
+                                        }}
+                                        onClick={e => { e.stopPropagation(); setSelectedColId(col.id); setSelectedId(null); setActiveSection("detail"); }}
+                                        onDoubleClick={e => { e.stopPropagation(); setSelectedColId(col.id); setEditingColId(col.id + "_tok"); setActiveSection("detail"); }}
+                                        style={{
+                                          width: isFlex ? undefined : col.width,
+                                          flex: isFlex ? 2 : undefined,
+                                          flexShrink: isFlex ? undefined : 0,
+                                          padding: isEditTok ? "1px 2px" : "3px 6px",
+                                          textAlign: col.align,
+                                          fontSize: col.fontSize ?? 11,
+                                          fontFamily: "monospace",
+                                          color: col.token ? "#555" : "#ccc",
+                                          borderRight: "1px solid #ece8e0",
+                                          background: isEditTok ? "rgba(255,255,200,0.9)" : isSelCol ? "rgba(22,119,255,0.06)" : undefined,
+                                          outline: isSelCol ? `1px solid ${isEditTok ? "#faad14" : "#1677ff"}` : undefined,
+                                          outlineOffset: -1,
+                                          cursor: isEditTok ? "text" : "pointer",
+                                          minHeight: 24,
+                                          position: "relative",
+                                        }}>
+                                        {isEditTok ? (
+                                          <input
+                                            autoFocus
+                                            value={col.token}
+                                            onChange={e2 => { setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, token: e2.target.value } : c)); markDirty(); }}
+                                            onBlur={() => setEditingColId(null)}
+                                            onKeyDown={e2 => { if (e2.key === "Enter" || e2.key === "Escape") setEditingColId(null); }}
+                                            onClick={e2 => e2.stopPropagation()}
+                                            onMouseDown={e2 => e2.stopPropagation()}
+                                            placeholder="[Token]"
+                                            style={{
+                                              width: "100%", border: "none", background: "transparent", outline: "none",
+                                              fontFamily: "monospace", fontSize: 11, color: "#333", padding: "3px 4px", cursor: "text",
+                                            }}
+                                          />
+                                        ) : (
+                                          col.token
+                                            ? col.token
+                                            : isActive
+                                              ? <span style={{ color: "#bbb", fontSize: 10 }}>↓ arrastra · doble clic</span>
+                                              : ""
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                  {isActive && <div style={{ width: 26, flexShrink: 0 }} />}
+                                </div>
+                                <div style={{ padding: "4px 6px", fontSize: 10, color: "#ccc", fontStyle: "italic" }}>↕ Banda de repetición</div>
+                              </>
+                              )}
+
+                              {previewMode && SAMPLE_DETAIL_ROWS.map((row, i) => (
+                                <div key={i} style={{ display: "flex", borderBottom: "1px solid #eee" }}>
+                                  {detailColumns.map(col => {
+                                    const isFlex = col.width === 0;
+                                    return (
+                                      <div key={col.id} style={{
+                                        width: isFlex ? undefined : col.width,
+                                        flex: isFlex ? 2 : undefined, flexShrink: isFlex ? undefined : 0,
+                                        padding: "4px 6px", textAlign: col.align, fontSize: col.fontSize ?? 11,
+                                      }}>
+                                        {col.token ? (row[col.token] ?? "") : ""}
+                                      </div>
+                                    );
+                                  })}
                                   </div>
-                                );
-                              })}
-                            </div>
-                          ))}
+                                ))}
+                              </>
+                              ) : (
+                                <StackedDetailEditor
+                                  lines={detailLines}
+                                  setLines={setDetailLines}
+                                  selected={selectedStackedField}
+                                  setSelected={setSelectedStackedField}
+                                  isActive={isActive}
+                                  previewMode={previewMode}
+                                  dragFieldRef={dragFieldRef}
+                                  markDirty={markDirty}
+                                  setActiveSection={setActiveSection}
+                                  setSelectedId={setSelectedId}
+                                />
+                              )}
 
                           <div
                             style={{
@@ -1447,72 +1785,56 @@ export default function ReportDesigner() {
                   Eliminar logo
                 </Button>
               </div>
-            ) : activeSection === "detail" && selectedColId ? (() => {
-              const col = detailColumns.find(c => c.id === selectedColId);
-              if (!col) return null;
-              const isFlex = col.width === 0;
+            ) : activeSection === "detail" && detailLayout === "stacked" && selectedStackedField ? (() => {
+              const line = detailLines.find(l => l.id === selectedStackedField.lineId);
+              const field = line?.fields[selectedStackedField.fieldIdx];
+              if (!line || !field) return null;
+              const patch = (p: Partial<DetailLineField>) => {
+                setDetailLines(prev => prev.map(l => l.id !== line.id ? l : {
+                  ...l, fields: l.fields.map((f, i) => i === selectedStackedField.fieldIdx ? { ...f, ...p } : f),
+                }));
+                markDirty();
+              };
               return (
                 <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 10 }}>
                   <div>
-                    <div style={propLabel}>Encabezado</div>
-                    <Input size="small" value={col.header} onChange={e => { setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, header: e.target.value } : c)); markDirty(); }} />
+                    <div style={propLabel}>Etiqueta (prefijo, opcional)</div>
+                    <Input size="small" value={field.label ?? ""} placeholder="Ej: P.U." onChange={e => patch({ label: e.target.value })} />
                   </div>
                   <div>
                     <div style={propLabel}>Token</div>
-                    <Input size="small" value={col.token} onChange={e => { setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, token: e.target.value } : c)); markDirty(); }} style={{ fontFamily: "monospace", fontSize: 11 }} />
-                  </div>
-                  <div>
-                    <div style={propLabel as any}>Ancho (px)</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <Input size="small" type="number" disabled={isFlex} value={isFlex ? "" : col.width} onChange={e => { setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, width: parseInt(e.target.value) || 60 } : c)); markDirty(); }} style={{ flex: 1 }} />
-                      <Tooltip title={isFlex ? "Quitar flexible (fijar ancho)" : "Hacer columna flexible (ocupa espacio restante)"}>
-                        <Button size="small" type={isFlex ? "primary" : "default"} onClick={() => { setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, width: isFlex ? 80 : 0 } : c)); markDirty(); }}>flex</Button>
-                      </Tooltip>
-                    </div>
-                  </div>
-                  <div>
-                    <div style={propLabel as any}>Alineación</div>
-                    <div style={{ display: "flex", gap: 4 }}>
-                      <Tooltip title="Izquierda"><Button size="small" icon={<AlignLeftOutlined />} type={col.align === "left" ? "primary" : "default"} onClick={() => { setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, align: "left" } : c)); markDirty(); }} /></Tooltip>
-                      <Tooltip title="Centro"><Button size="small" icon={<AlignCenterOutlined />} type={col.align === "center" ? "primary" : "default"} onClick={() => { setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, align: "center" } : c)); markDirty(); }} /></Tooltip>
-                      <Tooltip title="Derecha"><Button size="small" icon={<AlignRightOutlined />} type={col.align === "right" ? "primary" : "default"} onClick={() => { setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, align: "right" } : c)); markDirty(); }} /></Tooltip>
-                    </div>
-                  </div>
-                  <div>
-                  <div style={propLabel}>Tamaño de fuente</div>
-                    <Select
+                    <Input
                       size="small"
-                      style={{ width: "100%" }}
-                      value={col.fontSize ?? 9}
-                      onChange={v => {
-                        setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, fontSize: v } : c));
-                        markDirty();
-                      }}
-                    >
-                      {[6, 7, 8, 9, 10, 11, 12, 13, 14].map(s => (
-                        <Option key={s} value={s}>{s}px</Option>
-                      ))}
+                      value={field.token}
+                      onChange={e => patch({ token: e.target.value })}
+                      placeholder="[Token]"
+                      style={{ fontFamily: "monospace" }}
+                    />
+                  </div>
+                  <div>
+                    <div style={propLabel}>Alineación</div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <Tooltip title="Izquierda"><Button size="small" icon={<AlignLeftOutlined />} type={field.align === "left" ? "primary" : "default"} onClick={() => patch({ align: "left" })} /></Tooltip>
+                      <Tooltip title="Centro"><Button size="small" icon={<AlignCenterOutlined />} type={field.align === "center" ? "primary" : "default"} onClick={() => patch({ align: "center" })} /></Tooltip>
+                      <Tooltip title="Derecha"><Button size="small" icon={<AlignRightOutlined />} type={field.align === "right" ? "primary" : "default"} onClick={() => patch({ align: "right" })} /></Tooltip>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={propLabel}>Tamaño de fuente</div>
+                    <Select size="small" style={{ width: "100%" }} value={field.fontSize ?? 8} onChange={v => patch({ fontSize: v })}>
+                      {[6, 7, 8, 9, 10, 11, 12].map(s => <Option key={s} value={s}>{s}px</Option>)}
                     </Select>
                   </div>
-
-                  <div>
-                    <div style={propLabel}>Texto multilínea</div>
-                    <Checkbox
-                      checked={col.wrap ?? false}
-                      onChange={e => {
-                        setDetailColumns(p => p.map(c => c.id === col.id ? { ...c, wrap: e.target.checked } : c));
-                        markDirty();
-                      }}
-                    >
-                      Permitir salto de línea
-                    </Checkbox>
-                  </div>
-
+                  <Checkbox checked={field.fontWeight === "bold"} onChange={e => patch({ fontWeight: e.target.checked ? "bold" : "normal" })}>Negrita</Checkbox>
+                  <Checkbox checked={field.wrap ?? false} onChange={e => patch({ wrap: e.target.checked })}>Permitir salto de línea</Checkbox>
                   <Divider style={{ margin: "2px 0" }} />
-                  <Button size="small" danger icon={<DeleteOutlined />} onClick={() => { setDetailColumns(p => p.filter(c => c.id !== col.id)); setSelectedColId(null); markDirty(); }} block>Eliminar columna</Button>
+                  <Button size="small" danger icon={<DeleteOutlined />} block onClick={() => {
+                    setDetailLines(prev => prev.map(l => l.id !== line.id ? l : { ...l, fields: l.fields.filter((_, i) => i !== selectedStackedField.fieldIdx) }));
+                    setSelectedStackedField(null);
+                  }}>Eliminar campo</Button>
                 </div>
               );
-            })() : <PropsPanel selectedEl={selectedEl} onUpdate={updEl} onDelete={deleteEl} />}
+            })() : <PropsPanel selectedEl={selectedEl} onUpdate={updEl} onDelete={deleteEl} docW={DOC_W} />}
           </div>
         </div>
       </div>
@@ -1520,7 +1842,13 @@ export default function ReportDesigner() {
       <div style={{ height: 22, background: "#3c3b38", display: "flex", alignItems: "center", padding: "0 12px", gap: 16, fontSize: 11, color: "#888", flexShrink: 0 }}>
         <span>{currentTemplate ? `Plantilla: ${currentTemplate.name}` : "Nueva plantilla"}</span>
         {selectedEl && <span>| {selectedEl.label} — ({selectedEl.x}, {selectedEl.y})</span>}
-        <span style={{ marginLeft: "auto", color: isDirty ? "#f5a623" : "#5a9e5a" }}>{isDirty ? "● Cambios sin guardar" : "✓ Guardado"}</span>
+        <span style={{ marginLeft: "auto" }} />
+        {overflowCount > 0 && (
+          <span style={{ color: "#ff4d4f" }}>
+            ⚠ {overflowCount} elemento{overflowCount > 1 ? "s" : ""} fuera del ancho de página
+          </span>
+        )}
+        <span style={{ color: isDirty ? "#f5a623" : "#5a9e5a" }}>{isDirty ? "● Cambios sin guardar" : "✓ Guardado"}</span>
       </div>
 
       <Modal title="Guardar plantilla" open={saveModalOpen} onCancel={() => setSaveModalOpen(false)} footer={null} destroyOnClose>

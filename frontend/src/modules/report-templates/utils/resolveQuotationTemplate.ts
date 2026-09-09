@@ -1,6 +1,6 @@
 import type { ReportFieldElement, ReportTemplateConfig, DetailColumn } from "../types/report-template";
 import { formatCurrency } from "../../../core/utils/formatters";
-import { resolvePageCss, resolveToken, resolveDesignerWidth } from "./resolveTemplate";
+import { resolvePageCss, resolveToken, resolveDesignerWidth, renderStackedDetailRows, DEFAULT_SALE_DETAIL_LINES } from "./resolveTemplate";
 
 // Usa la misma forma que QuotationDetail espera
 interface QuotationItem {
@@ -57,7 +57,6 @@ function resolveQuotationTokens(q: QuotationForPrint, now: Date): Record<string,
     "[NombreCliente]":    q.customer ? `Cliente: ${q.customer.name}` : "",
     "[DireccionCliente]": q.customer?.direction ? `Dirección: ${q.customer.direction}` : "",
     "[TelefonoCliente]":  q.customer?.phone ? `Tel: ${String(q.customer.phone)}` : "",
-    "[DNI]":              q.customer?.dni ? `DNI/RTN: ${q.customer.dni}` : "",
     "[RTN]":              q.customer?.dni ? `RTN: ${q.customer.dni}` : "",
     "[RTNEmisor]":        "",
     "[NombreVendedor]":   q.seller?.name ? `Vendedor: ${q.seller.name}` : "",
@@ -131,17 +130,22 @@ export function resolveQuotationTemplate(
     return `width:${pct}%;flex-shrink:0;text-align:${col.align};${pad}`;
   };
 
-  const detailHeaderHtml = detailColumns
-    .map(col => `<span style="${colStyle(col)}">${col.header}</span>`)
-    .join("");
+  const useStacked = isTicket && config.detailLayout === "stacked";
+  const detailLines = config.detailLines?.length ? config.detailLines : DEFAULT_SALE_DETAIL_LINES;
 
-  const detailRowsHtml = quotation.items.map(item => {
-    const itemTokens = resolveQuotationItemTokens(item);
-    const cells = detailColumns
-      .map(col => `<span style="${colStyle(col)}">${resolveToken(col.token, itemTokens)}</span>`)
-      .join("");
-    return `<div style="display:flex;width:100%;padding:${detailPadPx}px 0;border-bottom:1px solid #f5f5f5;">${cells}</div>`;
-  }).join("");
+  const detailHeaderHtml = useStacked
+    ? ""
+    : detailColumns.map(col => `<span style="${colStyle(col)}">${col.header}</span>`).join("");
+
+  const detailRowsHtml = useStacked
+    ? renderStackedDetailRows(quotation.items.map(resolveQuotationItemTokens), detailLines, scale, isTicket)
+    : quotation.items.map(item => {
+        const itemTokens = resolveQuotationItemTokens(item);
+        const cells = detailColumns
+          .map(col => `<span style="${colStyle(col)}">${resolveToken(col.token, itemTokens)}</span>`)
+          .join("");
+        return `<div style="display:flex;width:100%;padding:${detailPadPx}px 0;border-bottom:1px solid #f5f5f5;">${cells}</div>`;
+      }).join("");
 
   const bySection = (sectionId: string) =>
     (config.elements ?? [])
@@ -241,9 +245,8 @@ export function resolveQuotationTemplate(
           ${stampLabel ? `<div class="status-stamp">${stampLabel}</div>` : ""}
         </div>
 
-        <div class="section-detail-header" style="display:flex;width:100%;">
-          ${detailHeaderHtml}
-        </div>
+        ${detailHeaderHtml ? `<div class="section-detail-header" style="display:flex;width:100%;">${detailHeaderHtml}</div>` : ""}
+        
         <div class="section section-detail" style="width:100%;overflow:hidden;min-height:${Math.round(detailH * scale)}px;">
           ${detailRowsHtml}
         </div>

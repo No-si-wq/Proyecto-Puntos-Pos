@@ -1,4 +1,4 @@
-import type { ReportFieldElement, ReportTemplateConfig, DetailColumn } from "../../report-templates/types/report-template";
+import type { ReportFieldElement, ReportTemplateConfig, DetailColumn, DetailLine } from "../../report-templates/types/report-template";
 import type { Sale } from "../../sales/types/sale";
 import { formatCurrency, formatDate, paymentMethodLabel } from "../../../core/utils/formatters";
 import { numberToWords } from "../../../core/utils/numberToWords";
@@ -16,6 +16,47 @@ export function resolveDesignerWidth(
   return 560; // letter
 }
 
+export function renderStackedDetailRows(
+  itemTokensList: Record<string, string>[],
+  detailLines: DetailLine[],
+  scale: number,
+  isTicket: boolean,
+): string {
+  const minFont = isTicket ? 8 : 7;
+  const rowPad = Math.max(2, Math.round(4 * scale));
+
+  return itemTokensList.map(tokens => {
+    const linesHtml = detailLines.map(line => {
+      const fieldsHtml = line.fields
+        .map(f => {
+          const text = resolveToken(f.token, tokens);
+          if (!text) return "";
+          const display = f.label ? `${f.label} ${text}` : text;
+          const fontPx = Math.max(minFont, Math.round((f.fontSize ?? 8) * scale));
+          const fw = f.fontWeight === "bold" ? "font-weight:700;" : "";
+          const wrapCss = f.wrap
+            ? "white-space:normal;word-break:break-word;"
+            : "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+          return `<span style="flex:1 1 0;min-width:0;text-align:${f.align};font-size:${fontPx}px;${fw}${wrapCss}">${display}</span>`;
+        })
+        .join("");
+      return `<div style="display:flex;width:100%;gap:4px;">${fieldsHtml}</div>`;
+    }).join("");
+    return `<div style="width:100%;padding:${rowPad}px 0;border-bottom:1px dashed #ddd;">${linesHtml}</div>`;
+  }).join("");
+}
+
+export const DEFAULT_SALE_DETAIL_LINES: DetailLine[] = [
+  { id: "dl1", fields: [
+    { token: "[Cantidad]", align: "left", fontSize: 8, fontWeight: "bold" },
+    { token: "[Producto]", align: "left", fontSize: 8, wrap: true },
+  ]},
+  { id: "dl2", fields: [
+    { token: "[PrecioUnit]", label: "P.U.", align: "left",  fontSize: 7 },
+    { token: "[Importe]",    align: "right", fontSize: 8, fontWeight: "bold" },
+  ]},
+];
+
 export function resolveSaleTokens(sale: Sale): Record<string, string> {
   const now = new Date();
   return {
@@ -30,7 +71,7 @@ export function resolveSaleTokens(sale: Sale): Record<string, string> {
     "[TelefonoCliente]":  sale.customer?.phone ?? "",
     "[DireccionCliente]": sale.customer?.direction ?? "",   
     "[CiudadCliente]":    "",
-    "[DNI]":              sale.customer?.dni ?? "",  
+    "[RTN]":              sale.customer?.dni ?? "",  
     "[Observaciones]":     sale.observations ?? "", 
 
     "[NombreVendedor]":   sale.seller?.name ?? "",
@@ -193,18 +234,24 @@ export function buildSaleHtml(
     return `width:${scaledW}px;flex-shrink:0;text-align:${col.align};${pad}`;
   };
 
-  const detailHeaderHtml = `<div style="display:flex;width:100%;overflow:hidden;">${
-    detailColumns.map(col => `<span style="${colStyle(col)}">${col.header}</span>`).join("")
-  }</div>`;
+const useStacked = isTicket && config.detailLayout === "stacked";
+const detailLines = config.detailLines?.length ? config.detailLines : DEFAULT_SALE_DETAIL_LINES;
 
-  const detailRowsHtml = (sale.items ?? []).map(item => {
-    const itemTokens = resolveSaleItemTokens(item);
-    const cells = detailColumns
-      .map(col => `<span style="${colStyle(col)}">${resolveToken(col.token, itemTokens)}</span>`)
-      .join("");
+const detailHeaderHtml = useStacked
+  ? ""   // en modo apilado no hay encabezado de columnas, como en un ticket real
+  : `<div style="display:flex;width:100%;overflow:hidden;">${
+      detailColumns.map(col => `<span style="${colStyle(col)}">${col.header}</span>`).join("")
+    }</div>`;
 
-    return `<div style="display:flex;width:100%;padding:${detailPadPx}px 0;border-bottom:1px solid #f5f5f5;overflow:hidden;">${cells}</div>`;
-  }).join("");
+const detailRowsHtml = useStacked
+  ? renderStackedDetailRows((sale.items ?? []).map(resolveSaleItemTokens), detailLines, scale, isTicket)
+  : (sale.items ?? []).map(item => {
+      const itemTokens = resolveSaleItemTokens(item);
+      const cells = detailColumns
+        .map(col => `<span style="${colStyle(col)}">${resolveToken(col.token, itemTokens)}</span>`)
+        .join("");
+      return `<div style="display:flex;width:100%;padding:${detailPadPx}px 0;border-bottom:1px solid #f5f5f5;overflow:hidden;">${cells}</div>`;
+    }).join("");
 
   const bySection = (sectionId: string) =>
     (config.elements ?? [])
@@ -298,9 +345,7 @@ export function buildSaleHtml(
           ${sale.status === "CANCELLED" ? '<div class="cancelled-stamp">CANCELADA</div>' : ""}
         </div>
 
-        <div class="section-detail-header">
-          ${detailHeaderHtml}
-        </div>
+        ${detailHeaderHtml ? `<div class="section-detail-header">${detailHeaderHtml}</div>` : ""}
 
         <div class="section section-detail" style="width:100%;overflow:hidden;min-height:${Math.round(detailH * scale)}px;">
           ${detailRowsHtml}

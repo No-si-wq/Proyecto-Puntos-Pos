@@ -1,5 +1,5 @@
-import type { ReportFieldElement, ReportTemplateConfig, DetailColumn } from "../types/report-template";
-import { resolvePageCss, resolveToken, resolveDesignerWidth } from "./resolveTemplate";
+import type { ReportFieldElement, ReportTemplateConfig, DetailColumn, DetailLine } from "../types/report-template";
+import { resolvePageCss, resolveToken, resolveDesignerWidth, renderStackedDetailRows } from "./resolveTemplate";
 
 interface RemissionItem {
   id: number;
@@ -12,7 +12,7 @@ interface RemissionForPrint {
   remissionNumber: string;
   status: string;
   createdAt: string;
-  customerName?: string | null;
+  customer?: { name: string; phone?: string; direction?: string | null; dni?: string | null } | null;
   note?: string | null;
   warehouse: { name: string };
   user: { name?: string | null; username?: string };
@@ -25,6 +25,16 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED: "Cancelada",
 };
 
+const DEFAULT_REMISSION_DETAIL_LINES: DetailLine[] = [
+  { id: "dl1", fields: [
+    { token: "[Cantidad]", align: "left", fontSize: 8, fontWeight: "bold" },
+    { token: "[Producto]", align: "left", fontSize: 8, wrap: true },
+  ]},
+  { id: "dl2", fields: [
+    { token: "[NotaLinea]", align: "left", fontSize: 7, wrap: true },
+  ]},
+];
+
 function fmtDatetime(d: string | Date) {
   return new Date(d).toLocaleString("es-HN");
 }
@@ -35,10 +45,11 @@ function resolveRemissionTokens(r: RemissionForPrint, now: Date): Record<string,
     "[Fecha]":            `Fecha: ${fmtDatetime(r.createdAt)}`,
     "[Hora]":             now.toLocaleTimeString("es-HN"),
     "[Estatus]":          `Estado: ${STATUS_LABEL[r.status] ?? r.status}`,
-    "[NombreCliente]":    r.customerName ? `Cliente: ${r.customerName}` : "",
+    "[NombreCliente]":    r.customer?.name ? `Cliente: ${r.customer?.name}` : "",
     "[Almacen]":          `Almacén: ${r.warehouse.name}`,
     "[Cajero]":           `Creado por: ${r.user.name ?? r.user.username ?? ""}`,
     "[Observaciones]":    r.note ? `Nota: ${r.note}` : "",
+    "[RTN]":              r.customer?.dni ? `RTN: ${r.customer.dni}` : "",
 
     // Tokens de otros tipos de documento que no aplican a remisión — se dejan vacíos
     // para que si alguien arrastra el campo por error no imprima el literal "[Token]"
@@ -109,17 +120,22 @@ export function resolveRemissionTemplate(
     return `width:${pct}%;flex-shrink:0;text-align:${col.align};${pad}`;
   };
 
-  const detailHeaderHtml = detailColumns
-    .map(col => `<span style="${colStyle(col)}">${col.header}</span>`)
-    .join("");
+const useStacked = isTicket && config.detailLayout === "stacked";
+const detailLines = config.detailLines?.length ? config.detailLines : DEFAULT_REMISSION_DETAIL_LINES;
 
-  const detailRowsHtml = remission.items.map(item => {
-    const itemTokens = resolveRemissionItemTokens(item);
-    const cells = detailColumns
-      .map(col => `<span style="${colStyle(col)}">${resolveToken(col.token, itemTokens)}</span>`)
-      .join("");
-    return `<div style="display:flex;width:100%;padding:${detailPadPx}px 0;border-bottom:1px solid #f5f5f5;">${cells}</div>`;
-  }).join("");
+  const detailHeaderHtml = useStacked
+    ? ""
+    : detailColumns.map(col => `<span style="${colStyle(col)}">${col.header}</span>`).join("");
+
+  const detailRowsHtml = useStacked
+    ? renderStackedDetailRows(remission.items.map(resolveRemissionItemTokens), detailLines, scale, isTicket)
+    : remission.items.map(item => {
+        const itemTokens = resolveRemissionItemTokens(item);
+        const cells = detailColumns
+          .map(col => `<span style="${colStyle(col)}">${resolveToken(col.token, itemTokens)}</span>`)
+          .join("");
+        return `<div style="display:flex;width:100%;padding:${detailPadPx}px 0;border-bottom:1px solid #f5f5f5;">${cells}</div>`;
+      }).join("");
 
   const bySection = (sectionId: string) =>
     (config.elements ?? [])
@@ -218,9 +234,8 @@ export function resolveRemissionTemplate(
           ${stampLabel ? `<div class="status-stamp">${stampLabel}</div>` : ""}
         </div>
 
-        <div class="section-detail-header" style="display:flex;width:100%;">
-          ${detailHeaderHtml}
-        </div>
+        ${detailHeaderHtml ? `<div class="section-detail-header" style="display:flex;width:100%;">${detailHeaderHtml}</div>` : ""}
+
         <div class="section section-detail" style="width:100%;overflow:hidden;min-height:${Math.round(detailH * scale)}px;">
           ${detailRowsHtml}
         </div>
