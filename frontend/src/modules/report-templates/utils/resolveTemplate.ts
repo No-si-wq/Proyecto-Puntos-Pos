@@ -4,7 +4,6 @@ import { formatCurrency, formatDate, paymentMethodLabel } from "../../../core/ut
 import { numberToWords } from "../../../core/utils/numberToWords";
 import { type PageSize } from "../../report-templates/types/report-template";
 
-// resolveTemplate.ts
 export function resolveDesignerWidth(
   pageSize: PageSize | undefined,
   customPageWidth?: number,

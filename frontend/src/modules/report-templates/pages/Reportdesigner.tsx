@@ -536,35 +536,28 @@ export default function ReportDesigner() {
     }
     if (prevW !== DOC_W && prevW > 0) {
       const ratio = DOC_W / prevW;
-      setElements(prev => prev.map(el => ({
-        ...el,
-        x: Math.min(Math.max(0, Math.round(el.x * ratio)), DOC_W - 20),
-        fontSize: el.fontSize ? Math.max(7, Math.round(el.fontSize * Math.min(ratio, 1))) : el.fontSize,
-      })));
+      // La fuente NO se reescala 1:1 con el ancho: escalarla igual que x/width
+      // hacía que el texto se viera minúsculo al pasar de Carta a Ticket.
+      // Se atenúa con sqrt(ratio) y se estima el ancho ya reescalado del texto
+      // para no dejarlo desbordado (mismo criterio que elementOverflows).
+      const fontRatio = Math.sqrt(ratio);
+      setElements(prev => prev.map(el => {
+        const newFontSize = el.fontSize ? Math.max(7, Math.round(el.fontSize * fontRatio)) : el.fontSize;
+        const newWidth = el.width ? Math.max(30, Math.round(el.width * ratio)) : el.width;
+        const resolvedText = el.type === "field" ? resolveTokens(el.token) : resolveTokens(el.label);
+        const estWidth = newWidth ?? estimateTextWidth(resolvedText, newFontSize ?? el.fontSize ?? 11);
+        const maxX = Math.max(0, DOC_W - estWidth);
+        return {
+          ...el,
+          x: Math.min(Math.max(0, Math.round(el.x * ratio)), maxX),
+          width: newWidth,
+          fontSize: newFontSize,
+        };
+      }));
       setDetailColumns(prev => prev.map(c =>
         c.width > 0 ? { ...c, width: Math.max(20, Math.round(c.width * ratio)) } : c
       ));
       setLogoX(x => Math.min(Math.max(0, Math.round(x * ratio)), DOC_W - 20));
-      setLogoWidth(w => Math.max(20, Math.round(w * ratio)));
-      markDirty();
-    }
-    prevDocWRef.current = DOC_W;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [DOC_W]);
-
-  useEffect(() => {
-    const prevW = prevDocWRef.current;
-    if (prevW !== DOC_W && prevW > 0) {
-      const ratio = DOC_W / prevW;
-      setElements(prev => prev.map(el => ({
-        ...el,
-        x: Math.min(Math.round(el.x * ratio), DOC_W - 20),
-        fontSize: el.fontSize ? Math.max(7, Math.round(el.fontSize * Math.min(ratio, 1))) : el.fontSize,
-      })));
-      setDetailColumns(prev => prev.map(c =>
-        c.width > 0 ? { ...c, width: Math.max(20, Math.round(c.width * ratio)) } : c
-      ));
-      setLogoX(x => Math.min(Math.round(x * ratio), DOC_W - 20));
       setLogoWidth(w => Math.max(20, Math.round(w * ratio)));
       markDirty();
     }
@@ -840,8 +833,15 @@ export default function ReportDesigner() {
   async function handleSelectorChange(val: string) {
     if (!val) {
       if (isDirty && !window.confirm("¿Descartar cambios sin guardar?")) return;
-      setCurrentTemplate(null); setElements(DEFAULT_ELEMENTS); setIsDirty(false); setSelectedId(null); 
-      baselineRef.current = getSnapshot({ elements: DEFAULT_ELEMENTS });
+      // Usar los defaults del pageSize ACTUAL: si no, estando en Ticket y
+      // eligiendo "Nueva plantilla" se cargaban los elementos de Carta
+      // (DEFAULT_ELEMENTS), que salen desbordados en el canvas angosto.
+      const isTicket = pageSize === "ticket";
+      const newElements = isTicket ? TICKET_ELEMENTS : DEFAULT_ELEMENTS;
+      const newDetailColumns = isTicket ? TICKET_DETAIL_COLUMNS : DEFAULT_DETAIL_COLUMNS;
+      setCurrentTemplate(null); setElements(newElements); setDetailColumns(newDetailColumns);
+      setIsDirty(false); setSelectedId(null);
+      baselineRef.current = getSnapshot({ elements: newElements, detailColumns: newDetailColumns });
       return;
     }
     if (isDirty && !window.confirm("¿Descartar cambios y cargar otra plantilla?")) return;
