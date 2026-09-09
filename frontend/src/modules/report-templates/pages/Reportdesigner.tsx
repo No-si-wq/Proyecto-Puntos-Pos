@@ -1785,7 +1785,57 @@ export default function ReportDesigner() {
                   Eliminar logo
                 </Button>
               </div>
-            ) : activeSection === "detail" && detailLayout === "stacked" && selectedStackedField ? (() => {
+            ) : activeSection === "detail" && detailLayout === "table" && selectedColId ? (() => {
+              const col = detailColumns.find(c => c.id === selectedColId);
+              if (!col) return null;
+              const patchCol = (p: Partial<DetailColumn>) => {
+                setDetailColumns(prev => prev.map(c => c.id === col.id ? { ...c, ...p } : c));
+                markDirty();
+              };
+              return (
+                <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div>
+                    <div style={propLabel}>Encabezado</div>
+                    <Input size="small" value={col.header} onChange={e => patchCol({ header: e.target.value })} />
+                  </div>
+                  <div>
+                    <div style={propLabel}>Token</div>
+                    <Input
+                      size="small"
+                      value={col.token}
+                      onChange={e => patchCol({ token: e.target.value })}
+                      placeholder="[Token]"
+                      style={{ fontFamily: "monospace" }}
+                    />
+                  </div>
+                  <div>
+                    <div style={propLabel}>Ancho (px, 0 = flexible)</div>
+                    <Input size="small" type="number" min={0} value={col.width} onChange={e => patchCol({ width: parseInt(e.target.value) || 0 })} />
+                  </div>
+                  <div>
+                    <div style={propLabel}>Alineación</div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <Tooltip title="Izquierda"><Button size="small" icon={<AlignLeftOutlined />} type={col.align === "left" ? "primary" : "default"} onClick={() => patchCol({ align: "left" })} /></Tooltip>
+                      <Tooltip title="Centro"><Button size="small" icon={<AlignCenterOutlined />} type={col.align === "center" ? "primary" : "default"} onClick={() => patchCol({ align: "center" })} /></Tooltip>
+                      <Tooltip title="Derecha"><Button size="small" icon={<AlignRightOutlined />} type={col.align === "right" ? "primary" : "default"} onClick={() => patchCol({ align: "right" })} /></Tooltip>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={propLabel}>Tamaño de fuente</div>
+                    <Select size="small" style={{ width: "100%" }} value={col.fontSize ?? 9} onChange={v => patchCol({ fontSize: v })}>
+                      {[6, 7, 8, 9, 10, 11, 12].map(s => <Option key={s} value={s}>{s}px</Option>)}
+                    </Select>
+                  </div>
+                  <Checkbox checked={col.wrap ?? false} onChange={e => patchCol({ wrap: e.target.checked })}>Permitir salto de línea</Checkbox>
+                  <Divider style={{ margin: "2px 0" }} />
+                  <Button size="small" danger icon={<DeleteOutlined />} block onClick={() => {
+                    setDetailColumns(p => p.filter(c => c.id !== col.id));
+                    setSelectedColId(null);
+                    markDirty();
+                  }}>Eliminar columna</Button>
+                </div>
+              );
+            })() : activeSection === "detail" && detailLayout === "stacked" && selectedStackedField ? (() => {
               const line = detailLines.find(l => l.id === selectedStackedField.lineId);
               const field = line?.fields[selectedStackedField.fieldIdx];
               if (!line || !field) return null;
