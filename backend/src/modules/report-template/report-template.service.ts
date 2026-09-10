@@ -58,6 +58,7 @@ export class ReportTemplateService {
         description: data.description ?? null,
         config: toInputJson(data.config as unknown),
         isDefault: data.isDefault ?? false,
+        active: true,
       },
     });
   }
@@ -116,7 +117,10 @@ export class ReportTemplateService {
     });
   }
 
-  static async getDefaultByType(tenantId: number, documentType: 'sale' | 'quotation') {
+  static async getDefaultByType(
+    tenantId: number,
+    documentType: 'sale' | 'quotation' | 'remission' | 'receivable_payment',
+  ) {
     const template = await prisma.reportTemplate.findFirst({
       where: {
         tenantId,
@@ -125,9 +129,21 @@ export class ReportTemplateService {
         config: { path: ['documentType'], equals: documentType },
       },
     });
-    // Si no hay default específico para el tipo, devuelve el default general
-    if (!template) return ReportTemplateService.getDefault(tenantId);
-    return template;
+    
+    if (template) return template;
+
+    const mostRecentOfType = await prisma.reportTemplate.findFirst({
+      where: {
+        tenantId,
+        active: true,
+        config: { path: ['documentType'], equals: documentType },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    if (mostRecentOfType) return mostRecentOfType;
+
+    if (documentType === 'sale') return ReportTemplateService.getDefault(tenantId);
+    return null;
   }
 
   static async duplicate(id: number, tenantId: number, newName: string) {

@@ -8,7 +8,7 @@ import {
   StarFilled, StarOutlined, BoldOutlined, ItalicOutlined, UnderlineOutlined,
   AlignLeftOutlined, AlignCenterOutlined, AlignRightOutlined,
   ZoomInOutlined, ZoomOutOutlined, EyeOutlined, EyeInvisibleOutlined, FontSizeOutlined, 
-  ExportOutlined, ImportOutlined, FileAddOutlined,
+  ExportOutlined, ImportOutlined, FileAddOutlined, MinusOutlined,
 } from "@ant-design/icons";
 import html2canvas from "html2canvas";
 import { exportTemplateToPdf, importTemplateFromPdf } from "../utils/templatePdf";
@@ -46,7 +46,6 @@ const FIELD_GROUPS = [
   ]},
   { id: "vendedor", label: "Vendedor", fields: [
     { token: "[NombreVendedor]",   label: "Vendedor" },
-    { token: "[Cajero]",           label: "Cajero" },
     { token: "[ComisionVendedor]", label: "Comisión" },
   ]},
   { id: "partidas", label: "Partidas", fields: [
@@ -92,8 +91,17 @@ const FIELD_GROUPS = [
     { token: "[Estatus]",        label: "Estatus"        },
     { token: "[NombreCliente]",  label: "Cliente"        },
     { token: "[Almacen]",        label: "Almacén"        },
-    { token: "[Cajero]",         label: "Creado por"     },
     { token: "[Observaciones]",  label: "Nota"           },
+  ]},
+  { id: "abono", label: "Abono a Cliente", fields: [
+    { token: "[NumeroAbono]",   label: "# Abono / recibo" },
+    { token: "[Fecha]",         label: "Fecha" },
+    { token: "[NombreCliente]", label: "Cliente" },
+    { token: "[SaldoAnterior]", label: "Saldo anterior" },
+    { token: "[MontoAbono]",    label: "Monto abonado" },
+    { token: "[SaldoActual]",   label: "Saldo actual" },
+    { token: "[Banco]",         label: "Cuenta bancaria" },
+    { token: "[Nota]",          label: "Nota" },
   ]},
 ];
 
@@ -106,7 +114,6 @@ const DEFAULT_ELEMENTS: ReportFieldElement[] = [
   { id: "e6", type: "field",  token: "[NombreVendedor]", label: "Vendedor",        x: 290, y: 80,  fontSize: 11, fontWeight: "normal", align: "left", section: "header" },
   { id: "e7", type: "field",  token: "[RTN]",            label: "RTN Cliente",     x: 8,   y: 108, fontSize: 11, fontWeight: "normal", align: "left", section: "header" },
   { id: "e8", type: "field",  token: "[MetodoPago]",     label: "Método de pago",  x: 290, y: 108, fontSize: 11, fontWeight: "normal", align: "left", section: "header" },
-  { id: "t1", type: "field",  token: "[Cajero]",         label: "Cajero",          x: 8,   y: 12,  fontSize: 11, fontWeight: "normal", align: "left", section: "totals" },
   { id: "t2", type: "field",  token: "[MetodoPago]",     label: "M. Pago",         x: 8,   y: 36,  fontSize: 11, fontWeight: "normal", align: "left", section: "totals" },
   { id: "t3", type: "field",  token: "[Subtotal]",       label: "Subtotal",        x: 350, y: 12,  fontSize: 11, fontWeight: "normal", align: "left", section: "totals" },
   { id: "t4", type: "field",  token: "[DescTotal]",      label: "Descuento",       x: 350, y: 36,  fontSize: 11, fontWeight: "normal", align: "left", section: "totals" },
@@ -170,7 +177,7 @@ const SAMPLE_VALUES: Record<string, string> = {
   "[Monto]": "L. 850.00", "[Cambio]": "L. 0.00", "[Observaciones]": "Cliente frecuente",
   "[NombreCliente]": "Juan Pérez", "[DireccionCliente]": "Col. Trejo, SPS", "[CiudadCliente]": "San Pedro Sula",
   "[RTN]": "0501-1990-01234", "[TelefonoCliente]": "9988-7766",
-  "[NombreVendedor]": "María López", "[Cajero]": "María López", "[ComisionVendedor]": "L. 25.50",
+  "[NombreVendedor]": "María López", "[ComisionVendedor]": "L. 25.50",
   "[RTNEmisor]": "08019999012345",
   "[Subtotal]": "L. 758.93", "[DescTotal]": "L. 0.00", "[ImpTotal]": "L. 91.07", "[Total]": "L. 850.00",
   "[TotalComision]": "L. 42.50", "[PuntosUsados]": "0", "[PuntosGanados]": "17",
@@ -424,6 +431,20 @@ function PropsPanel({ selectedEl, onUpdate, onDelete, docW }: PropsPanelProps) {
           </div>
         </div>
       </div>
+      {selectedEl.type === "divider" && (
+        <div>
+          <div style={propLabel}>Largo de la línea (px)</div>
+          <Input size="small" type="number" value={selectedEl.width ?? 200}
+            onChange={e => onUpdate({ width: parseInt(e.target.value) || 0 })} />
+          <div style={{ ...propLabel, marginTop: 8 }}>Estilo</div>
+          <Select size="small" style={{ width: "100%" }} value={selectedEl.dividerStyle ?? "dashed"}
+            onChange={v => onUpdate({ dividerStyle: v } as any)}>
+            <Option value="solid">Sólida</Option>
+            <Option value="dashed">Punteada</Option>
+            <Option value="double">Doble</Option>
+          </Select>
+        </div>
+      )}
       <div>
         <div style={propLabel}>Tamaño de fuente</div>
         <Select size="small" style={{ width: "100%" }} value={selectedEl.fontSize ?? 11} onChange={v => onUpdate({ fontSize: v })}>
@@ -516,7 +537,7 @@ export default function ReportDesigner() {
   const exportOverlayRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const draggingLogoRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
-  const [documentType, setDocumentType] = useState<'sale' | 'quotation' | 'remission'>('sale');
+  const [documentType, setDocumentType] = useState<'sale' | 'quotation' | 'remission' | 'receivable_payment'>('sale');
 
   const DOC_W = resolveDesignerWidth(pageSize, customPageWidth);
 
@@ -567,7 +588,7 @@ export default function ReportDesigner() {
   type DesignSnapshot = {
     elements: CanvasElement[]; detailColumns: DetailColumn[];
     detailLayout: "table" | "stacked"; detailLines: DetailLine[];
-    pageSize: PageSize; customPageWidth: number, documentType: 'sale' | 'quotation';
+    pageSize: PageSize; customPageWidth: number, documentType: 'sale' | 'quotation' | 'remission' | 'receivable_payment';
     headerHeight: number; detailHeight: number; totalsHeight: number; footerHeight: number;
     logo: string | null; logoX: number; logoY: number; logoWidth: number; logoHeight: number, logoBg: string;
   };
@@ -805,6 +826,17 @@ export default function ReportDesigner() {
     if (!selectedId) return;
     setElements(prev => prev.filter(el => el.id !== selectedId));
     setSelectedId(null);
+    markDirty();
+  }
+
+  function addDivider() {
+    const el: CanvasElement = {
+      id: genId(), type: "divider", token: "", label: "Línea divisoria",
+      x: 20, y: 20, width: 200, dividerStyle: "dashed", color: "#999999",
+      align: "left", section: activeSection,
+    };
+    setElements(prev => [...prev, el]);
+    setSelectedId(el.id);
     markDirty();
   }
 
@@ -1046,7 +1078,13 @@ export default function ReportDesigner() {
             textAlign: "center", zIndex: 20, pointerEvents: "none",
           }}>!</div>
         )}
-        {el.type === "field" ? (
+        {el.type === "divider" ? (
+          <div style={{
+            width: elWidth ?? 200, height: 0,
+            borderTop: `${el.dividerStyle === "double" ? 3 : 1}px ${el.dividerStyle ?? "dashed"} ${el.color ?? "#999"}`,
+            pointerEvents: "none",
+          }} />
+        ) : el.type === "field" ? (
           previewMode ? (
             <div style={{ fontSize: el.fontSize ?? 11, fontWeight: el.fontWeight ?? "normal", color: el.color ?? "#222", pointerEvents: "none" }}>
               {resolveTokens(el.token)}
@@ -1168,6 +1206,7 @@ export default function ReportDesigner() {
     { type: "divider" },
     { key: "docSale", label: "Tipo: Venta / Factura", onClick: () => { setDocumentType("sale"); markDirty(); } },
     { key: "docQuotation", label: "Tipo: Cotización", onClick: () => { setDocumentType("quotation"); markDirty(); } },
+    { key: "docReceivablePayment", label: "Tipo: Abono a Cliente", onClick: () => { setDocumentType("receivable_payment"); markDirty(); } },
     { type: "divider" },
     { key: "logo", label: logo ? "Cambiar logo" : "Agregar logo", onClick: () => logoInputRef.current?.click() },
     { key: "removeLogo", label: "Quitar logo", danger: true, disabled: !logo, onClick: () => { setLogo(null); markDirty(); } },
@@ -1225,6 +1264,9 @@ export default function ReportDesigner() {
 
         <Tooltip title="Agregar texto (doble clic para editar en el canvas)">
           <Button size="small" icon={<FontSizeOutlined />} onClick={addStaticText}>+ Texto</Button>
+        </Tooltip>
+        <Tooltip title="Agregar línea divisoria (opcional, útil en tickets)">
+          <Button size="small" icon={<MinusOutlined />} onClick={addDivider}>+ Línea</Button>
         </Tooltip>
 
         <div style={{ width: 1, height: 20, background: "#c0bbb0", margin: "0 2px" }} />
@@ -1297,11 +1339,12 @@ export default function ReportDesigner() {
           size="small"
           style={{ width: 130 }}
           value={documentType}
-          onChange={(v: 'sale' | 'quotation' | 'remission') => { setDocumentType(v); markDirty(); }}
+          onChange={(v: 'sale' | 'quotation' | 'remission' | 'receivable_payment') => { setDocumentType(v); markDirty(); }}
           options={[
             { value: "sale",      label: "Venta / Factura" },
             { value: "quotation", label: "Cotización"      },
             { value: "remission", label: "Remisión"        },
+            { value: "receivable_payment", label: "Abono a Cliente" },
           ]}
         />
 

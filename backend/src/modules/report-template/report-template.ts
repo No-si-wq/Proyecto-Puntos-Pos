@@ -43,6 +43,7 @@ export interface ReportTemplateConfig {
   filters: ReportFilter[];
   header: ReportHeader;
   groupBy?: "seller" | "customer" | "paymentMethod" | "date" | "product" | "";
+  documentType?: 'sale' | 'quotation' | 'remission' | 'receivable_payment';
   totals: {
     showSubtotal: boolean;
     showDiscount: boolean;

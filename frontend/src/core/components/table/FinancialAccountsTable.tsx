@@ -1,4 +1,5 @@
-import { Table, Tag, Button, Card } from "antd";
+import { Table, Tag, Button, Card, Dropdown, type MenuProps } from "antd";
+import { PrinterOutlined, DownOutlined } from "@ant-design/icons"
 import { formatCurrency } from "../../utils/formatters";
 import { useDeviceType } from "../../hooks/useDeviceType";
 import dayjs from "dayjs"
@@ -10,6 +11,8 @@ interface Props {
   loading?: boolean;
   type: AccountType;
   onPay: (record: any) => void;
+  onPrint?: (record: any, templateId?: number) => void;
+  printTemplates?: { id: number; name: string; isDefault?: boolean }[];
 }
 
 export default function FinancialAccountsTable({
@@ -17,6 +20,8 @@ export default function FinancialAccountsTable({
   loading,
   type,
   onPay,
+  onPrint,
+  printTemplates,
 }: Props) {
   const { isMobile } = useDeviceType();
   const isReceivable = type === "receivable";
@@ -25,6 +30,24 @@ export default function FinancialAccountsTable({
     record.status !== "PAID" &&
     record.dueDate &&
     new Date(record.dueDate) < new Date();
+
+  function buildPrintMenuItems(r: any): MenuProps["items"] {
+    if (!printTemplates?.length) return [];
+    return [
+      { key: "default", label: "Plantilla por defecto", onClick: () => onPrint?.(r) },
+      { type: "divider" as const },
+      ...printTemplates.map((t) => ({
+        key: String(t.id),
+        label: (
+          <span>
+            {t.name}
+            {t.isDefault && <Tag color="blue" style={{ marginLeft: 6, fontSize: 10 }}>Default</Tag>}
+          </span>
+        ),
+        onClick: () => onPrint?.(r, t.id),
+      })),
+    ];
+  }
 
   if (isMobile) {
     return (
@@ -153,6 +176,26 @@ export default function FinancialAccountsTable({
                   Registrar Pago
                 </Button>
               )}
+              {isReceivable && onPrint && (
+                printTemplates?.length ? (
+                  <Dropdown menu={{ items: buildPrintMenuItems(r) }} trigger={["click"]} disabled={!r.payments?.length}>
+                    <Button block size="small" style={{ marginTop: 6 }} icon={<PrinterOutlined />} disabled={!r.payments?.length}>
+                      Imprimir último abono <DownOutlined style={{ fontSize: 10 }} />
+                    </Button>
+                  </Dropdown>
+                ) : (
+                  <Button
+                    block
+                    size="small"
+                    style={{ marginTop: 6 }}
+                    icon={<PrinterOutlined />}
+                    disabled={!r.payments?.length}
+                    onClick={() => onPrint(r)}
+                  >
+                    Imprimir último abono
+                  </Button>
+                )
+              )}
             </Card>
           );
         })}
@@ -223,16 +266,28 @@ export default function FinancialAccountsTable({
       title: "",
       align: "center" as const,
       render: (_: any, r: any) =>
-        r.status !== "PAID" && (
-          <Button
-            type="primary"
-            size="small"
-            onClick={() =>
-              onPay(r)
-            }
-          >
-            Pagar
-          </Button>
+        (
+          <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+            {r.status !== "PAID" && (
+              <Button type="primary" size="small" onClick={() => onPay(r)}>
+                Pagar
+              </Button>
+            )}
+            {isReceivable && onPrint && (
+              printTemplates?.length ? (
+                <Dropdown menu={{ items: buildPrintMenuItems(r) }} trigger={["click"]} disabled={!r.payments?.length}>
+                  <Button size="small" icon={<PrinterOutlined />} disabled={!r.payments?.length} />
+                </Dropdown>
+              ) : (
+                <Button
+                  size="small"
+                  icon={<PrinterOutlined />}
+                  disabled={!r.payments?.length}
+                  onClick={() => onPrint(r)}
+                />
+              )
+            )}
+          </div>
         ),
     },
   ];

@@ -49,6 +49,10 @@ class AccountReceivableService {
       include: {
         customer: true,
         sale: true,
+        payments: {
+          orderBy: { paymentDate: "desc" },
+          take: 1,
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -65,7 +69,7 @@ class AccountReceivableService {
     });
   }
 
-  async registerPayment(
+async registerPayment(
     tenantId: number,
     accountId: number,
     amount: Prisma.Decimal,
@@ -76,11 +80,14 @@ class AccountReceivableService {
     return prisma.$transaction(async (tx) => {
       const account = await tx.accountReceivable.findUnique({
         where: { id: accountId, tenantId },
+        include: { customer: true }, // <-- agregado
       });
 
       if (!account) throw new Error("Cuenta no encontrada");
       if (account.balance.lte(0))
         throw new Error("Cuenta ya pagada");
+
+      const previousBalance = account.balance; // <-- agregado
 
       const newBalance = account.balance.minus(amount);
       const newPaid = account.paidAmount.plus(amount);
@@ -93,6 +100,7 @@ class AccountReceivableService {
           accountId,
           amount,
           note,
+          bankId,
         },
       });
 
@@ -109,7 +117,7 @@ class AccountReceivableService {
         });
       }
 
-      return tx.accountReceivable.update({
+      const updated = await tx.accountReceivable.update({
         where: { id: accountId },
         data: {
           balance: newBalance.lte(0) ? new Prisma.Decimal(0) : newBalance,
@@ -117,6 +125,16 @@ class AccountReceivableService {
           status,
         },
       });
+
+      // <-- cambia el return: antes solo se devolvía "updated"
+      return {
+        account: updated,
+        payment,
+        customer: account.customer,
+        previousBalance,
+        amountPaid: amount,
+        currentBalance: updated.balance,
+      };
     });
   }
 

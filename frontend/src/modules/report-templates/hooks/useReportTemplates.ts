@@ -67,7 +67,9 @@ export function useReportTemplates() {
     }
   }
 
-  async function getDefaultByType(documentType: 'sale' | 'quotation' | 'remission'): Promise<ReportTemplate | null> {
+  async function getDefaultByType(
+    documentType: 'sale' | 'quotation' | 'remission' | 'receivable_payment',
+  ): Promise<ReportTemplate | null> {
     setLoadingDetail(true);
     try {
       const { data } = await http.get<ReportTemplate>('/report-templates/default-by-type', {

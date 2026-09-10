@@ -143,6 +143,14 @@ const detailLines = config.detailLines?.length ? config.detailLines : DEFAULT_RE
       .sort((a, b) => a.y - b.y || a.x - b.x);
 
   const renderEl = (el: ReportFieldElement, tokens: Record<string, string>) => {
+    if (el.type === "divider") {
+      const scaledX = Math.round(el.x * scale);
+      const scaledY = Math.round(el.y * scale);
+      const scaledW = Math.round((el.width ?? 200) * scale);
+      const style = el.dividerStyle ?? "dashed";
+      const thickness = style === "double" ? 3 : 1;
+      return `<div style="position:absolute;left:${scaledX}px;top:${scaledY}px;width:${scaledW}px;border-top:${thickness}px ${style} ${el.color ?? "#999"};"></div>`;
+    }
     const text = el.type === "field"
       ? resolveToken(el.token, tokens)
       : el.label.replace(/\[\w+\]/g, t => tokens[t] ?? t);

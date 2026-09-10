@@ -1,14 +1,17 @@
-export interface ReportFieldElement {
+ export interface ReportFieldElement {
   id: string;
-  type: "field" | "static";
+  type: "field" | "static" | "divider";
   token: string;        
   label: string;        
   x: number;
   y: number;
   fontSize?: number;
   fontWeight?: "normal" | "bold";
+  color?: string;
   align?: "left" | "center" | "right";
   section: "header" | "detail" | "totals" | "footer";
+  width?: number;                 // largo de la línea (también usado por el canvas para el ancho de texto)
+  dividerStyle?: "solid" | "dashed" | "double";
 }
 
 export type PageSize =
@@ -85,7 +88,7 @@ export interface ReportTemplateConfig {
   logoWidth?: number;
   logoHeight?: number;
   logoBackground?: string;  
-  documentType?: 'sale' | 'quotation' | 'remission';
+  documentType?: 'sale' | 'quotation' | 'remission' | 'receivable_payment';
   groupBy?: "seller" | "customer" | "paymentMethod" | "date" | "product" | "";
   detailLayout?: "table" | "stacked";  // "table" = comportamiento actual, "stacked" = ticket
   detailLines?: DetailLine[];    
@@ -95,20 +98,6 @@ export interface ReportTemplateConfig {
     showTotal: boolean;
     showCommission: boolean;
   };
-}
-
-export interface ReportFieldElement {
-  id: string;
-  type: "field" | "static";
-  token: string;        
-  label: string;        
-  x: number;
-  y: number;
-  fontSize?: number;
-  fontWeight?: "normal" | "bold";
-  color?: string;        // NUEVO — color de texto en hex (#rrggbb)
-  align?: "left" | "center" | "right";
-  section: "header" | "detail" | "totals" | "footer";
 }
 
 export interface ReportTemplateMeta {

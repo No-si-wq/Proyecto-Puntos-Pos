@@ -16,7 +16,7 @@ export const getDefault = asyncHandler(async (req: Request, res: Response) => {
 
 export const getDefaultByType = asyncHandler(async (req: Request, res: Response) => {
   const { tenantId } = req.user!;
-  const documentType = req.query.type as 'sale' | 'quotation';
+  const documentType = req.query.type as 'sale' | 'quotation' | 'remission' | 'receivable_payment';
   const data = await ReportTemplateService.getDefaultByType(tenantId, documentType ?? 'sale');
   res.json(data);
 });

@@ -25,12 +25,13 @@ export function useAccountReceivable() {
     note?: string,
     bankId?: number
   ) {
-    await http.post(`/account-receivable/${id}/payments`, {
+    const res = await http.post(`/account-receivable/${id}/payments`, {
       amount,
       note,
       bankId,
     });
     await load(currentFilters);
+    return res.data; // <-- agregado
   }
 
   useEffect(() => {
