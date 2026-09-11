@@ -22,7 +22,8 @@ export class SaleService {
         customer: { select: { id: true, name: true } },
         user: { select: { id: true, name: true } },
         priceList: { select: { id: true, name: true, active: true } },
-        items: { select: { discountAmount: true } }
+        items: { select: { discountAmount: true } },
+        payments: { select: { method: true, amount: true } },
       },
       orderBy: { createdAt: "desc" },
     });

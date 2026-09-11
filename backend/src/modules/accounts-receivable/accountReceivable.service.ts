@@ -87,6 +87,12 @@ async registerPayment(
       if (account.balance.lte(0))
         throw new Error("Cuenta ya pagada");
 
+      if (amount.lte(0))
+        throw new Error("El monto del pago debe ser mayor a cero");
+
+      if (amount.gt(account.balance))
+        throw new Error("El monto del pago no puede ser mayor al saldo pendiente");
+
       const previousBalance = account.balance; // <-- agregado
 
       const newBalance = account.balance.minus(amount);

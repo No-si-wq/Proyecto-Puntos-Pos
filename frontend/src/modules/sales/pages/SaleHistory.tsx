@@ -7,7 +7,7 @@ import dayjs from "dayjs";
 import { useSales } from "../hooks/useSales";
 import SalesTable from "../components/SalesTable";
 import { formatDate, formatCurrency } from "../../../core/utils/formatters";
-import type { Sale } from "../types/sale";
+import type { Sale, SalePaymentMethod } from "../types/sale";
 import ResponsiveRangePicker from "../../../core/components/common/ResponsiveRangePicker";
 import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
 import { exportToPdf } from "../../../core/utils/exportPDF";
@@ -22,9 +22,19 @@ type ExportRow = {
   Descuento_total: string;
   Impuesto_Total: string;
   Total: string;
+  Efectivo: string;     
+  Tarjeta: string;       
+  Transferencia: string;
+  Credito: string;
   Puntos_obtenidos: number | string;
   Puntos_usados: number | string;
 };
+
+function sumByMethod(sale: Sale, method: SalePaymentMethod) {
+  return (sale.payments ?? [])
+    .filter((p) => p.method === method)
+    .reduce((sum, p) => sum + Number(p.amount), 0);
+}
 
 export default function SaleHistory() {
   const { sales, loadingList, reload } = useSales();
@@ -57,6 +67,10 @@ export default function SaleHistory() {
         acc.pointsUsed += Number(s.pointsUsed);
         acc.discount += Number(s.discount) + itemDiscount;
         acc.taxTotal += Number(s.taxTotal);
+        acc.cash += sumByMethod(s, "CASH");
+        acc.card += sumByMethod(s, "CARD");
+        acc.transfer += sumByMethod(s, "TRANSFER");
+        acc.credit += sumByMethod(s, "CREDIT");
 
         return acc;
       },
@@ -66,7 +80,11 @@ export default function SaleHistory() {
         pointsEarned: 0,
         pointsUsed: 0,
         discount: 0,
-        taxTotal: 0
+        taxTotal: 0,
+        cash: 0,
+        card: 0,
+        transfer: 0,
+        credit: 0,
       }
     );
 
@@ -89,6 +107,10 @@ export default function SaleHistory() {
         Descuento_total:  formatCurrency(totalDiscount),
         Impuesto_Total:   formatCurrency(s.taxTotal),
         Total:            formatCurrency(s.total),
+        Efectivo:         formatCurrency(sumByMethod(s, "CASH")),
+        Tarjeta:          formatCurrency(sumByMethod(s, "CARD")),
+        Transferencia:    formatCurrency(sumByMethod(s, "TRANSFER")),
+        Credito:          formatCurrency(sumByMethod(s, "CREDIT")),
         Puntos_obtenidos: s.pointsEarned,
         Puntos_usados:    s.pointsUsed,
       };
@@ -110,6 +132,10 @@ export default function SaleHistory() {
       Descuento_total: formatCurrency(totals.discount),
       Impuesto_Total: formatCurrency(totals.taxTotal),
       Total: formatCurrency(totals.total),
+      Efectivo: formatCurrency(totals.cash),
+      Tarjeta: formatCurrency(totals.card),
+      Transferencia: formatCurrency(totals.transfer),
+      Credito: formatCurrency(totals.credit),
       Puntos_usados: formatCurrency(totals.pointsUsed),
       Puntos_obtenidos: formatCurrency(totals.pointsEarned),
     });
@@ -123,6 +149,10 @@ export default function SaleHistory() {
         { header: "Total Descuento",  dataKey: "Descuento_total"  },
         { header: "Total Impuestos",  dataKey: "Impuesto_Total"   },
         { header: "Total",            dataKey: "Total"            },
+        { header: "Efectivo",         dataKey: "Efectivo"         },
+        { header: "Tarjeta",          dataKey: "Tarjeta"          },
+        { header: "Transferencia",    dataKey: "Transferencia"    },
+        { header: "Credito",          dataKey: "Credito"          },
         { header: "Puntos usados",    dataKey: "Puntos_usados"    },
         { header: "Puntos obtenidos", dataKey: "Puntos_obtenidos" },
       ],

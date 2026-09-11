@@ -80,20 +80,26 @@ export default function AccountsReceivable() {
   }
 
   async function handlePayment() {
-    if (!amount || amount <= 0) {
-      message.error("Monto inválido");
-      return;
-    }
+      if (!amount || amount <= 0) {
+        message.error("Monto inválido");
+        return;
+      }
 
-    const result = await pay(selected.id, amount, note, bankId);
-    message.success("Pago registrado");
-    result.bankName = banks.find(b => b.id === bankId)?.name ?? null;
-    setSelected(null);
-    setAmount(0);
-    setNote(undefined);
-    setBankId(undefined);
-    await fetchPaymentTemplate();
-    setTicketResult(result); // <-- abre el modal de previsualización en vez de imprimir directo
+      try {
+        const result = await pay(selected.id, amount, note, bankId);
+        message.success("Pago registrado");
+        result.bankName = banks.find(b => b.id === bankId)?.name ?? null;
+        setSelected(null);
+        setAmount(0);
+        setNote(undefined);
+        setBankId(undefined);
+        await fetchPaymentTemplate();
+        setTicketResult(result);
+      } catch (err: any) {
+        message.error(
+          err?.response?.data?.message ?? "No se pudo registrar el pago"
+        );
+      }
   }
 
   async function printReceivableTicket(result: PaymentForPrint, templateId?: number) {
