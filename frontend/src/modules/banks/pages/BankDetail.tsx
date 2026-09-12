@@ -1,4 +1,6 @@
 import { useState } from "react";
+import dayjs, { Dayjs } from "dayjs";
+import { FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, Descriptions, Button, Space, Tag, message } from "antd";
 import {
@@ -7,6 +9,8 @@ import {
   DollarOutlined,
 } from "@ant-design/icons";
 import PageHeader from "../../../core/components/common/PageHeader";
+import ResponsiveRangePicker from "../../../core/components/common/ResponsiveRangePicker";
+import { useDeviceType } from "../../../core/hooks/useDeviceType";
 import ProtectedButton from "../../../core/components/common/ProtectedButton";
 import { Role } from "../../../core/auth/roles";
 import { formatCurrency } from "../../../core/utils/formatters";
@@ -15,6 +19,10 @@ import { useBanks } from "../hooks/useBanks";
 import BankTransactionsTable from "../components/BankTransactionsTable";
 import BankMovementModal from "../components/BankMovementModal";
 import BankTransferModal from "../components/BankTransferModal";
+import {
+  exportBankStatementToExcel,
+  exportBankStatementToPdf,
+} from "../utils/exportBankStatement";
 import type { BankMovementInput, BankTransferInput } from "../types/bank";
 
 export default function BankDetail() {
@@ -22,12 +30,18 @@ export default function BankDetail() {
   const navigate = useNavigate();
   const bankId = Number(id);
 
-  const { bank, transactions, loading, registerMovement, reconcile } =
+  const { bank, transactions, loading, registerMovement, reconcile, fetchStatement } =
     useBankDetail(bankId);
   const { data: allBanks, transfer } = useBanks();
+  const { isMobile } = useDeviceType();
 
   const [movementOpen, setMovementOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [statementRange, setStatementRange] = useState<[Dayjs, Dayjs]>([
+    dayjs().startOf("month"),
+    dayjs().endOf("day"),
+  ]);
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
 
   async function handleMovement(data: BankMovementInput) {
     await registerMovement(data);
@@ -44,6 +58,42 @@ export default function BankDetail() {
     message.success(
       ids.length > 1 ? "Movimientos conciliados" : "Movimiento conciliado"
     );
+  }
+
+  async function handleExportExcel() {
+    setExporting("excel");
+    try {
+      const statement = await fetchStatement({
+        from: statementRange[0].toISOString(),
+        to: statementRange[1].toISOString(),
+      });
+      if (!statement) return;
+      exportBankStatementToExcel(
+        statement,
+        statementRange[0].format("DD/MM/YYYY"),
+        statementRange[1].format("DD/MM/YYYY")
+      );
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function handleExportPdf() {
+    setExporting("pdf");
+    try {
+      const statement = await fetchStatement({
+        from: statementRange[0].toISOString(),
+        to: statementRange[1].toISOString(),
+      });
+      if (!statement) return;
+      exportBankStatementToPdf(
+        statement,
+        statementRange[0].format("DD/MM/YYYY"),
+        statementRange[1].format("DD/MM/YYYY")
+      );
+    } finally {
+      setExporting(null);
+    }
   }
 
   if (!bank) return null;
@@ -109,13 +159,37 @@ export default function BankDetail() {
         </div>
       </Card>
 
-      <Card title="Movimientos">
-        <BankTransactionsTable
-          data={transactions}
-          loading={loading}
-          onReconcile={handleReconcile}
-        />
-      </Card>
+      <Card
+        title="Movimientos"
+        extra={
+          <Space direction={isMobile ? "vertical" : "horizontal"}>
+            <ResponsiveRangePicker
+              value={statementRange}
+              onChange={(val) => val && setStatementRange(val as [Dayjs, Dayjs])}
+            />
+            <Button
+              icon={<FileExcelOutlined />}
+              loading={exporting === "excel"}
+              onClick={handleExportExcel}
+            >
+              {!isMobile && "Excel"}
+            </Button>
+            <Button
+              icon={<FilePdfOutlined />}
+              loading={exporting === "pdf"}
+              onClick={handleExportPdf}
+            >
+              {!isMobile && "PDF"}
+            </Button>
+          </Space>
+        }
+      >
+         <BankTransactionsTable
+           data={transactions}
+           loading={loading}
+           onReconcile={handleReconcile}
+         />
+       </Card>
 
       <BankMovementModal
         bank={movementOpen ? bank : null}

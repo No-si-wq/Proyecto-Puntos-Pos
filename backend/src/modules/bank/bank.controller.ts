@@ -93,3 +93,18 @@ export const bankSummary = async (req: Request, res: Response) => {
   const data = await bankService.summary(tenantId);
   res.json(data);
 };
+
+export const getBankStatement = async (req: Request, res: Response) => {
+  const { tenantId } = req.user!;
+  const bankId = Number(req.params.id);
+  const { from, to } = req.query;
+
+  const data = await bankService.getBankStatement(
+    tenantId,
+    bankId,
+    new Date(from as string),
+    new Date(to as string)
+  );
+
+  res.json(data);
+};

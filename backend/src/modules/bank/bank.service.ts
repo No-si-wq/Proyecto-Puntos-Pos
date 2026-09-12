@@ -1,5 +1,6 @@
 import prisma from "../../core/prisma";
 import { Prisma, BankTransactionType } from "@prisma/client";
+import { BankStatement } from "./bank";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -277,6 +278,79 @@ class BankService {
     );
 
     return { totalBalance, banks };
+  }
+
+  async getBankStatement(
+    tenantId: number,
+    bankId: number,
+    from: Date,
+    to: Date
+  ): Promise<BankStatement> {
+    const bank = await prisma.bank.findFirst({
+      where: { id: bankId, tenantId },
+    });
+
+    if (!bank) {
+      throw new Error("Banco no encontrado");
+    }
+
+    const priorMovements = await prisma.bankTransaction.findMany({
+      where: { tenantId, bankId, createdAt: { lt: from } },
+      select: { type: true, amount: true },
+    });
+
+    const isCredit = (type: string) =>
+      type === "DEPOSIT" || type === "TRANSFER_IN";
+
+    const initialBalance = priorMovements.reduce((acc, m) => {
+      const credit = isCredit(m.type);
+      return acc + (credit ? Number(m.amount) : -Number(m.amount));
+    }, 0);
+
+    const movements = await prisma.bankTransaction.findMany({
+      where: { tenantId, bankId, createdAt: { gte: from, lt: to } },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+
+    const codeMap: Record<string, string> = {
+      DEPOSIT: "DEP",
+      WITHDRAWAL: "RET",
+      TRANSFER_IN: "TFE",
+      TRANSFER_OUT: "TFS",
+    };
+
+    let running = initialBalance;
+    const rows = movements.map((m) => {
+      const credit = isCredit(m.type);
+      const debit = credit ? 0 : Number(m.amount);
+      const creditAmount = credit ? Number(m.amount) : 0;
+      running += creditAmount - debit;
+
+      return {
+        id: m.id,
+        date: m.createdAt,
+        reference: m.referenceId ?? null,
+        code: codeMap[m.type] ?? m.type,
+        description: m.description ?? "",
+        debit,
+        credit: creditAmount,
+        balance: running,
+      };
+    });
+
+    return {
+      bank: {
+        id: bank.id,
+        name: bank.name,
+        bankName: bank.bankName,
+        accountNumber: bank.accountNumber,
+        currency: bank.currency,
+      },
+      initialBalance,
+      finalBalance: running,
+      currentBalance: Number(bank.balance),
+      rows,
+    };
   }
 }
 

@@ -44,6 +44,31 @@ export interface BankSummary {
   }[];
 }
 
+export interface BankStatementRow {
+  id: number;
+  date: Date;
+  reference: number | null;
+  code: string;
+  description: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+export interface BankStatement {
+  bank: {
+    id: number;
+    name: string;
+    bankName: string | null;
+    accountNumber: string | null;
+    currency: string;
+  };
+  initialBalance: number;
+  finalBalance: number;
+  currentBalance: number;
+  rows: BankStatementRow[];
+}
+
 export enum BankError {
   DUPLICATE_BANK = "DUPLICATE_BANK",
   BANK_NOT_FOUND = "BANK_NOT_FOUND",

@@ -57,6 +57,7 @@ export interface SalePaymentInput {
   method: SalePaymentMethod;
   amount: number;
   reference?: string;
+  bankId?: number;
 }
 
 export interface SalePayment {
@@ -64,6 +65,7 @@ export interface SalePayment {
   method: SalePaymentMethod;
   amount: number;
   reference?: string | null;
+  bankId?: number | null;
 }
 
 export interface CreateSaleDTO {

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { message } from "antd";
 import http from "../../../core/http/http";
-import type { Bank, BankTransaction, BankMovementInput } from "../types/bank";
+import type { Bank, BankTransaction, BankMovementInput, BankStatement } from "../types/bank";
 
 export function useBankDetail(bankId?: number) {
   const [bank, setBank] = useState<Bank | null>(null);
@@ -44,6 +45,26 @@ export function useBankDetail(bankId?: number) {
     loadTransactions();
   }, [bankId]);
 
+  const fetchStatement = useCallback(
+    async (params: { from: string; to: string }) => {
+      if (!bankId) return null;
+      setLoading(true);
+      try {
+        const { data } = await http.get<BankStatement>(
+          `/banks/${bankId}/statement`,
+          { params }
+        );
+        return data;
+      } catch {
+        message.error("Error cargando el reporte de movimientos");
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [bankId]
+  );
+
   return {
     bank,
     transactions,
@@ -51,5 +72,6 @@ export function useBankDetail(bankId?: number) {
     reload: loadTransactions,
     registerMovement,
     reconcile,
+    fetchStatement,
   };
 }

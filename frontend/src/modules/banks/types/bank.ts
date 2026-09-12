@@ -56,3 +56,28 @@ export interface BankTransferInput {
   amount: number;
   description?: string;
 }
+
+export interface BankStatementRow {
+  id: number;
+  date: string;
+  reference: number | null;
+  code: string;
+  description: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+export interface BankStatement {
+  bank: {
+    id: number;
+    name: string;
+    bankName?: string | null;
+    accountNumber?: string | null;
+    currency: string;
+  };
+  initialBalance: number;
+  finalBalance: number;
+  currentBalance: number;
+  rows: BankStatementRow[];
+}

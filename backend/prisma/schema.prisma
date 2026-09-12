@@ -67,6 +67,7 @@ model Bank {
   transactions       BankTransaction[]
   payablePayments    PayablePayment[]
   receivablePayments ReceivablePayment[]
+  salePayments       SalePayment[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -529,6 +530,8 @@ model SalePayment {
   amount    Decimal       @db.Decimal(10, 2)
   reference String?
   tenantId  Int
+  bankId    Int?
+  bank      Bank?         @relation(fields: [bankId], references: [id])
   sale      Sale          @relation(fields: [saleId], references: [id])
 
   @@index([saleId])

@@ -34,6 +34,7 @@ import type { SalePaymentMethod, Sale } from "../types/sale";
 import { saleCartStore } from "../types/saleCart.store";
 import { Role } from "../../../core/auth/roles";
 import { useReportTemplates } from "../../report-templates/hooks/useReportTemplates";
+import { useBanks } from "../../banks/hooks/useBanks";
 import { buildSaleHtml, resolveWindowSize } from "../../report-templates/utils/resolveTemplate";
 import { useSettings } from "../../settings/hooks/useSettings";
 
@@ -51,7 +52,7 @@ export default function Sales() {
   const { priceLists = [] } = usePriceLists();
 
   const [payments, setPayments] = useState<
-    { method: SalePaymentMethod; amount: number | null; reference?: string }[]
+    { method: SalePaymentMethod; amount: number | null; reference?: string; bankId?: number }[]
   >([{ method: "CASH", amount: null }]);
   const [dueDate, setDueDate] = useState<string>();
 
@@ -67,6 +68,7 @@ export default function Sales() {
   const sizes = useResponsiveSizes();
 
   const { create, creating, getSaleById, creditStatus, loadingCredit, fetchCreditStatus, clearCreditStatus } = useSales();
+  const { data: banks } = useBanks();
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const selectRef = useRef<any>(null);
   const cart = saleCartStore();
@@ -266,6 +268,7 @@ export default function Sales() {
               method: p.method,
               amount: p.amount!,
               reference: p.reference || undefined,
+              bankId: p.bankId,
             })),
           ...(hasCredit ? [{ method: "CREDIT" as const, amount: creditAmount }] : []),
         ],
@@ -489,6 +492,7 @@ export default function Sales() {
                           method: value,
                           amount: null,
                           reference: undefined,
+                          bankId: undefined,
                         };
                         return updated;
                       });
@@ -537,6 +541,28 @@ export default function Sales() {
                   )}
                 </Col>
               </Row>
+
+              {(p.method === "CASH" || p.method === "TRANSFER") && (
+                <Select
+                  allowClear
+                  style={{ width: "100%", marginTop: 8 }}
+                  placeholder="Cuenta bancaria (opcional)"
+                  value={p.bankId}
+                  onChange={(bankId) => {
+                    setPayments((prev) => {
+                      const updated = [...prev];
+                      updated[idx] = { ...updated[idx], bankId: bankId ?? undefined };
+                      return updated;
+                    });
+                  }}
+                  options={banks
+                    .filter((b) => b.active)
+                    .map((b) => ({
+                      label: `${b.name} (${formatCurrency(b.balance)})`,
+                      value: b.id,
+                    }))}
+                />
+              )}
 
               {p.method === "CREDIT" && (
                 <>

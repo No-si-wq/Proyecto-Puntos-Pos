@@ -2,6 +2,7 @@ export interface SalePaymentInput {
   method: "CASH" | "CARD" | "TRANSFER" | "CREDIT";
   amount: number;
   reference?: string;
+  bankId?: number;
 }
 
 export interface SaleItemInput {

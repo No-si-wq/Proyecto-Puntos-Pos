@@ -11,6 +11,7 @@ import {
   createBankMovementSchema,
   createBankTransferSchema,
   reconcileBankTransactionsSchema,
+  bankStatementQuerySchema,
 } from "./bank.schema";
 
 const router = Router();
@@ -33,6 +34,12 @@ router.post(
 
 router.post("/", validate(createBankSchema), asyncHandler(controller.createBank));
 router.get("/", asyncHandler(controller.listBanks));
+router.get(
+  "/:id/statement",
+  validate(bankIdParamSchema),
+  validate(bankStatementQuerySchema),
+  asyncHandler(controller.getBankStatement)
+);
 router.get(
   "/:id",
   validate(bankIdParamSchema),

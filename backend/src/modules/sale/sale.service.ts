@@ -5,6 +5,7 @@ import { CommissionType, InventoryMovementType, SaleStatus } from "@prisma/clien
 import { InventoryService } from "../inventory/inventory.service";
 import { LoyaltyService } from "../loyalty/loyalty.service";
 import { CreateSaleInput, SaleError, ReturnSaleInput } from "./sale";
+import { bankService } from "../bank/bank.service";
 
 export class SaleService {
   static async list(warehouseId: number, tenantId: number, params?: { from?: Date; to?: Date }) {
@@ -349,15 +350,31 @@ export class SaleService {
         },
       });
 
-      await tx.salePayment.createMany({
-        data: data.payments.map(p => ({
-          saleId: sale.id,
-          method: p.method,
-          amount: new Prisma.Decimal(p.amount),
-          reference: p.reference ?? null,
-          tenantId,
-        })),
-      });
+      for (const p of data.payments) {
+        const salePayment = await tx.salePayment.create({
+          data: {
+            saleId: sale.id,
+            method: p.method,
+            amount: new Prisma.Decimal(p.amount),
+            reference: p.reference ?? null,
+            bankId: p.bankId ?? null,
+            tenantId,
+          },
+        });
+
+        if (p.bankId && (p.method === "CASH" || p.method === "TRANSFER")) {
+          await bankService.registerMovementInTransaction(tx, {
+            tenantId,
+            bankId: p.bankId,
+            type: "DEPOSIT",
+            amount: new Prisma.Decimal(p.amount),
+            description: `Venta ${saleNumber}`,
+            referenceType: "SALE_PAYMENT",
+            referenceId: salePayment.id,
+            createdBy: userId,
+          });
+        }
+      }
  
       let globalDiscount = new Prisma.Decimal(0);
  

@@ -16,6 +16,7 @@ export const createSaleSchema = z.object({
         method: z.enum(["CASH", "CARD", "TRANSFER", "CREDIT"]),
         amount: z.number().positive(),
         reference: z.string().max(100).optional(),
+        bankId: z.number().int().positive().optional(),
       })
     ).min(1),
 

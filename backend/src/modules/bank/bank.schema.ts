@@ -57,3 +57,10 @@ export const reconcileBankTransactionsSchema = z.object({
       .min(1, "Debe seleccionar al menos un movimiento"),
   }),
 });
+
+export const bankStatementQuerySchema = z.object({
+  query: z.object({
+    from: z.string().min(1, "Fecha inicial requerida"),
+    to: z.string().min(1, "Fecha final requerida"),
+  }),
+});
