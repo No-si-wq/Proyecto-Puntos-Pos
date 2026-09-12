@@ -107,12 +107,16 @@ export default function Banks() {
         title="Bancos"
         subtitle="Cuentas bancarias, movimientos y transferencias"
         extra={
-          <Space>
+          <Space
+            direction={isMobile ? "vertical" : "horizontal"}
+            style={isMobile ? { width: "100%" } : undefined}
+          >
             <ProtectedButton
               roles={[Role.ADMIN]}
               icon={<SwapOutlined />}
               onClick={() => setTransferOpen(true)}
               disabled={data.length < 2}
+              block={isMobile}
             >
               Transferir
             </ProtectedButton>
@@ -121,6 +125,7 @@ export default function Banks() {
               type="primary"
               icon={<PlusOutlined />}
               onClick={openCreate}
+              block={isMobile}
             >
               Nueva cuenta
             </ProtectedButton>
@@ -129,14 +134,48 @@ export default function Banks() {
       />
 
       <Card style={{ marginTop: 16 }}>
-        <Table
-          rowKey="id"
-          loading={loading}
-          dataSource={data}
-          columns={columns}
-          pagination={{ pageSize: 10 }}
-          scroll={isMobile ? { x: true } : undefined}
-        />
+        {isMobile ? (
+          <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            {data.map((bank) => (
+              <Card
+                key={bank.id}
+                size="small"
+                title={bank.name}
+                extra={
+                  <Switch
+                    checked={bank.active}
+                    onChange={(checked) => handleToggle(bank, checked)}
+                    size="small"
+                  />
+                }
+              >
+                <div style={{ fontSize: 12, color: "#888" }}>
+                  {bank.bankName || "-"}
+                  {bank.accountNumber ? ` · ${bank.accountNumber}` : ""} · {bank.currency}
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 700, margin: "8px 0" }}>
+                  {formatCurrency(bank.balance)}
+                </div>
+                <Space wrap>
+                  <Button size="small" onClick={() => navigate(`/banks/${bank.id}`)}>
+                    Ver movimientos
+                  </Button>
+                  <Button size="small" onClick={() => openEdit(bank)}>
+                    Editar
+                  </Button>
+                </Space>
+              </Card>
+            ))}
+          </Space>
+        ) : (
+          <Table
+            rowKey="id"
+            loading={loading}
+            dataSource={data}
+            columns={columns}
+            pagination={{ pageSize: 10 }}
+          />
+        )}
       </Card>
 
       <FormModal

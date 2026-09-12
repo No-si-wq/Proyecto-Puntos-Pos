@@ -228,6 +228,7 @@ export default function ProfitReport() {
             Consultar
           </Button>
           <Button
+            block
             size={sizes.button}
             onClick={clearFilter}
           >

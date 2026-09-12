@@ -105,10 +105,14 @@ export default function BankDetail() {
         subtitle={bank.bankName || undefined}
         breadcrumb={[{ title: "Bancos" }, { title: bank.name }]}
         extra={
-          <Space>
+          <Space
+            direction={isMobile ? "vertical" : "horizontal"}
+            style={isMobile ? { width: "100%" } : undefined}
+          >
             <Button
               icon={<ArrowLeftOutlined />}
               onClick={() => navigate("/banks")}
+              block={isMobile}
             >
               Volver
             </Button>
@@ -116,6 +120,7 @@ export default function BankDetail() {
               roles={[Role.ADMIN]}
               icon={<SwapOutlined />}
               onClick={() => setTransferOpen(true)}
+              block={isMobile}
             >
               Transferir
             </ProtectedButton>
@@ -124,6 +129,7 @@ export default function BankDetail() {
               type="primary"
               icon={<DollarOutlined />}
               onClick={() => setMovementOpen(true)}
+              block={isMobile}
             >
               Registrar Movimiento
             </ProtectedButton>
@@ -162,25 +168,41 @@ export default function BankDetail() {
       <Card
         title="Movimientos"
         extra={
-          <Space direction={isMobile ? "vertical" : "horizontal"}>
+          <Space
+            direction={isMobile ? "vertical" : "horizontal"}
+            style={isMobile ? { width: "100%" } : undefined}
+          >
             <ResponsiveRangePicker
               value={statementRange}
               onChange={(val) => val && setStatementRange(val as [Dayjs, Dayjs])}
             />
-            <Button
-              icon={<FileExcelOutlined />}
-              loading={exporting === "excel"}
-              onClick={handleExportExcel}
-            >
-              {!isMobile && "Excel"}
-            </Button>
-            <Button
-              icon={<FilePdfOutlined />}
-              loading={exporting === "pdf"}
-              onClick={handleExportPdf}
-            >
-              {!isMobile && "PDF"}
-            </Button>
+            {isMobile ? (
+              <div style={{ display: "flex", gap: 8, width: "100%" }}>
+                <Button
+                  icon={<FileExcelOutlined />}
+                  loading={exporting === "excel"}
+                  onClick={handleExportExcel}
+                  block
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  icon={<FilePdfOutlined />}
+                  loading={exporting === "pdf"}
+                  onClick={handleExportPdf}
+                  block
+                  style={{ flex: 1 }}
+                />
+              </div>
+            ) : (
+              <Space>
+                <Button icon={<FileExcelOutlined />} loading={exporting === "excel"} onClick={handleExportExcel}>
+                  Excel
+                </Button>
+                <Button icon={<FilePdfOutlined />} loading={exporting === "pdf"} onClick={handleExportPdf}>
+                  PDF
+                </Button>
+              </Space>
+            )}
           </Space>
         }
       >
