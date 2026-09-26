@@ -149,7 +149,7 @@ export class TenantService {
 
   static async listFiscalConfigs(tenantId: number) {
     return prisma.fiscalConfig.findMany({
-      where: { tenantId, active: true },
+      where: { tenantId },
       include: { user: { select: { id: true, username: true, name: true } } },
       orderBy: { createdAt: "desc" },
     });
@@ -167,14 +167,25 @@ export class TenantService {
   }) {
     const scopeUserId = data.userId ?? null;
 
-    // Desactivar solo el CAI anterior del mismo alcance (mismo usuario o el general)
-    await prisma.fiscalConfig.updateMany({
-      where: { tenantId, userId: scopeUserId, active: true },
-      data: { active: false },
-    });
+    return prisma.$transaction(async (tx) => {
+      await tx.fiscalConfig.updateMany({
+        where: { tenantId, userId: scopeUserId, active: true },
+        data: { active: false },
+      });
 
-    return prisma.fiscalConfig.create({
-      data: { ...data, userId: scopeUserId, tenantId, active: true },
+      return tx.fiscalConfig.create({
+        data: { ...data, userId: scopeUserId, tenantId, active: true },
+      });
+    });
+  }
+
+  static async deactivateFiscalConfig(tenantId: number, id: number) {
+    const config = await prisma.fiscalConfig.findFirst({ where: { id, tenantId } });
+    if (!config) throw new Error(TenantError.FISCAL_CONFIG_NOT_FOUND);
+
+    return prisma.fiscalConfig.update({
+      where: { id },
+      data: { active: false },
     });
   }
 }

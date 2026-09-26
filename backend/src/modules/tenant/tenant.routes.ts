@@ -21,4 +21,6 @@ router.post(
   asyncHandler(TenantController.register),
 );
 
+router.delete("/fiscal-config/:id", authMiddleware, requireAdmin, asyncHandler(TenantController.deactivateFiscalConfig));
+
 export default router;

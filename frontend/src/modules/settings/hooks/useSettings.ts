@@ -89,6 +89,16 @@ export function useSettings() {
     }
   }
 
+  async function deactivateFiscalConfig(id: number) {
+    setSavingFiscal(true);
+    try {
+      const res = await http.delete<FiscalConfig>(`/tenants/fiscal-config/${id}`);
+      setFiscalConfigs(prev => prev.map(f => f.id === id ? res.data : f));
+    } finally {
+      setSavingFiscal(false);
+    }
+  }
+
   return { 
     priceMode, 
     loading, 
@@ -102,6 +112,7 @@ export function useSettings() {
     fiscalConfigs,
     loadingFiscal,
     savingFiscal,
-    saveFiscalConfig
+    saveFiscalConfig,
+    deactivateFiscalConfig,
   };
 }

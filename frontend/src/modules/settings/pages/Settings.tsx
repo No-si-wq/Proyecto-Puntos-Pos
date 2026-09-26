@@ -26,6 +26,7 @@ export default function Settings() {
     fiscalConfigs,
     savingFiscal,
     saveFiscalConfig,
+    deactivateFiscalConfig,
   } = useSettings();
 
   const { users } = useUsers();
@@ -54,6 +55,23 @@ export default function Settings() {
         <Tag color={dayjs(r.expiresAt).isAfter(dayjs()) ? "green" : "red"}>
           {dayjs(r.expiresAt).format("DD/MM/YYYY")}
         </Tag>
+      ),
+    },
+    {
+      title: "Estado",
+      render: (_, r) => r.active ? <Tag color="green">Activo</Tag> : <Tag>Desactivado</Tag>,
+    },
+    {
+      title: "",
+      render: (_, r) => r.active && (
+        <Button
+          danger size="small"
+          onClick={() => deactivateFiscalConfig(r.id).catch((err) =>
+            message.error(err?.response?.data?.message || "No se pudo desactivar")
+          )}
+        >
+          Desactivar
+        </Button>
       ),
     },
   ];
@@ -218,8 +236,8 @@ export default function Settings() {
                       });
                       message.success("Configuración fiscal guardada");
                       fiscalForm.resetFields();
-                    } catch {
-                      message.error("Error al guardar la configuración fiscal");
+                    } catch (err: any) {
+                      message.error(err?.response?.data?.message || "Error al guardar la configuración fiscal");
                     }
                   }}
                   >

@@ -106,4 +106,19 @@ export class TenantController {
     });
     return res.status(201).json(config);
   }
+  
+  static async deactivateFiscalConfig(req: Request, res: Response) {
+    const { tenantId } = req.user!;
+    const id = Number(req.params.id);
+
+    try {
+      const config = await TenantService.deactivateFiscalConfig(tenantId, id);
+      return res.status(200).json(config);
+    } catch (err: any) {
+      if (err.message === TenantError.FISCAL_CONFIG_NOT_FOUND) {
+        return res.status(404).json({ message: "CAI no encontrado" });
+      }
+      throw err;
+    }
+  }
 }
