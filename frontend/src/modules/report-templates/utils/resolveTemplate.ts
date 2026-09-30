@@ -58,6 +58,10 @@ export const DEFAULT_SALE_DETAIL_LINES: DetailLine[] = [
 
 export function resolveSaleTokens(sale: Sale): Record<string, string> {
   const now = new Date();
+  const lineDiscount = (sale.items ?? []).reduce(
+    (s, i) => s + Number(i.discountAmount ?? 0), 0
+  );
+  const pointsDiscount = Number(sale.discount ?? 0);
   return {
     "[Factura]":          sale.saleNumber ?? "",
     "[Fecha]":            formatDate(sale.createdAt),
@@ -87,7 +91,9 @@ export function resolveSaleTokens(sale: Sale): Record<string, string> {
     "[Cambio]":           String(sale.changeAmount ?? ""),
 
     "[Subtotal]":         formatCurrency(sale.subtotal ?? 0),
-    "[DescTotal]":        formatCurrency(sale.discount ?? 0),
+    "[DescLineas]":       formatCurrency(lineDiscount),
+    "[DescPuntos]":       formatCurrency(pointsDiscount),
+    "[DescTotal]":        formatCurrency(lineDiscount + pointsDiscount),
     "[ImpTotal]":         formatCurrency(sale.taxTotal ?? 0),
     "[Total]":            formatCurrency(sale.total ?? 0),
     "[MontoEnLetras]":    numberToWords(Number(sale.total ?? 0)),

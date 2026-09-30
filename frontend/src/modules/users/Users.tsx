@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import { message, Tag, Dropdown, Typography, Space, Button, Input, Switch } from "antd";
-import { PlusOutlined, MoreOutlined, EditOutlined, StopOutlined, CheckCircleOutlined, LogoutOutlined, FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
+import { PlusOutlined, MoreOutlined, EditOutlined, StopOutlined, 
+  CheckCircleOutlined, LogoutOutlined, FileExcelOutlined, FilePdfOutlined, LockOutlined
+} from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { MenuProps } from "antd";
 import FormModal from "../../core/components/forms/FormModal";
 
 import type { User } from "./user";
+import ChangePasswordForm from "./components/ChangePasswordForm";
 import { useUsers } from "./useUsers";
 import { exportToPdf } from "../../core/utils/exportPDF";
 import { exportToExcel } from "../../core/utils/exportExcel";
@@ -22,7 +25,7 @@ import { usePermissions } from "../../core/hooks/usePermissions";
 const { Text } = Typography;
 
 export default function Users() {
-  const { users, loading, create, update, toggleActive, logoutAll, filters, setFilters } = useUsers();
+  const { users, loading, create, update, toggleActive, logoutAll, changePassword, filters, setFilters } = useUsers();
   const sizes      = useResponsiveSizes();
   const { isMobile } = useDeviceType();
   const { canAccess } = usePermissions();
@@ -30,6 +33,18 @@ export default function Users() {
   const [open, setOpen]       = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [searchValue, setSearchValue] = useState("");
+  const [passwordUser, setPasswordUser] = useState<User | null>(null);
+
+  async function submitPassword(values: { password: string }) {
+    if (!passwordUser) return;
+    try {
+      await changePassword(passwordUser.id, values.password);
+      message.success("Contraseña actualizada");
+      setPasswordUser(null);
+    } catch {
+      message.error("Error cambiando contraseña");
+    }
+  }
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -99,6 +114,15 @@ export default function Users() {
       items.push({ key: "edit", label: "Editar", icon: <EditOutlined />, onClick: () => openEdit(r) })
     }
 
+    if (canAccess(...getAllowedRoles("users", "edit"))) {
+      items.push({
+        key: "password",
+        label: "Cambiar contraseña",
+        icon: <LockOutlined />,
+        onClick: () => setPasswordUser(r),
+      });
+    }
+
     if (canAccess(...getAllowedRoles("users", "delete"))) {
       items.push({
         key: "toggle", danger: r.active,
@@ -132,6 +156,9 @@ export default function Users() {
       render: (_, r) => (
         <>
           <ProtectedButton roles={getAllowedRoles("users", "edit")} onClick={() => openEdit(r)}>Editar</ProtectedButton>
+          <ProtectedButton roles={getAllowedRoles("users", "edit")} onClick={() => setPasswordUser(r)}>
+            Contraseña
+          </ProtectedButton>
           <ProtectedButton roles={getAllowedRoles("users", "delete")} danger onClick={() => confirmToggle(r)}>
             {r.active ? "Desactivar" : "Activar"}
           </ProtectedButton>
@@ -231,7 +258,20 @@ export default function Users() {
       <SimpleTable<User> data={users} columns={desktopColumns} mobileColumns={mobileColumns} loading={loading} />
 
       <FormModal open={open} title={editing ? "Editar usuario" : "Nuevo usuario"} onClose={() => setOpen(false)}>
-        <UserForm isEdit={!!editing} initialValues={editing ?? undefined} onSubmit={submit} onCancel={() => setOpen(false)} />
+        <UserForm 
+          isEdit={!!editing} 
+          initialValues={editing ?? undefined} 
+          onSubmit={submit} 
+          onCancel={() => setOpen(false)} 
+        />
+      </FormModal>
+
+      <FormModal
+        open={!!passwordUser}
+        title={`Cambiar contraseña${passwordUser ? ` - ${passwordUser.name}` : ""}`}
+        onClose={() => setPasswordUser(null)}
+      >
+        <ChangePasswordForm onSubmit={submitPassword} onCancel={() => setPasswordUser(null)} />
       </FormModal>
     </>
   );

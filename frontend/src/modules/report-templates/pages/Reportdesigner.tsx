@@ -63,6 +63,8 @@ const FIELD_GROUPS = [
   ]},
   { id: "totales", label: "Totales", fields: [
     { token: "[Subtotal]",      label: "Subtotal" },
+    { token: "[DescLineas]",    label: "Desc. por partidas" },
+    { token: "[DescPuntos]",    label: "Desc. por puntos" },
     { token: "[DescTotal]",     label: "Descuento total" },
     { token: "[ImpTotal]",      label: "Impuestos" },
     { token: "[Total]",         label: "Total" },
@@ -179,7 +181,7 @@ const SAMPLE_VALUES: Record<string, string> = {
   "[RTN]": "0501-1990-01234", "[TelefonoCliente]": "9988-7766",
   "[NombreVendedor]": "María López", "[ComisionVendedor]": "L. 25.50",
   "[RTNEmisor]": "08019999012345",
-  "[Subtotal]": "L. 758.93", "[DescTotal]": "L. 0.00", "[ImpTotal]": "L. 91.07", "[Total]": "L. 850.00",
+  "[Subtotal]": "L. 758.93", "[DescLineas]": "L. 4.50", "[DescPuntos]": "L. 0.00", "[DescTotal]": "L. 4.50", "[ImpTotal]": "L. 91.07", "[Total]": "L. 850.00",
   "[TotalComision]": "L. 42.50", "[PuntosUsados]": "0", "[PuntosGanados]": "17",
   "[CAI]": "A1B2C3-D4E5F6-A1B2C3-D4E5F6-A1B2C3-DE",
   "[RangoAutorizado]": "001-001-01-00000001 a 001-001-01-00050000",

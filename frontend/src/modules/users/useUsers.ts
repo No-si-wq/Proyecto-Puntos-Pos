@@ -30,6 +30,10 @@ export function useUsers() {
     load();
   }, [load]);
 
+  async function changePassword(id: number, password: string) {
+    await http.patch(`/users/${id}/password`, { password });
+  }
+
   async function create(payload: CreateUserDTO) {
     await http.post<User>("/users", payload);
     await load();
@@ -61,5 +65,6 @@ export function useUsers() {
     update,
     toggleActive,
     logoutAll,
+    changePassword,
   };
 }

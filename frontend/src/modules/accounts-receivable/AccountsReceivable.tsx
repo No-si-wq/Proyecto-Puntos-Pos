@@ -12,9 +12,12 @@ import {
   Dropdown,
   Tag,
   type MenuProps,
+  Table,
 } from "antd";
 import { DownOutlined } from "@ant-design/icons"
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDeviceType } from "../../core/hooks/useDeviceType";
 import { useDebouncedCallback } from "use-debounce";
 import { useAccountReceivable } from "./useAccountReceivable";
 import { formatCurrency } from "../../core/utils/formatters";
@@ -26,8 +29,9 @@ import { useReportTemplates } from "../report-templates/hooks/useReportTemplates
 import { resolvePaymentTemplate, type PaymentForPrint } from "../report-templates/utils/resolvePaymentTemplate";
 
 export default function AccountsReceivable() {
-  const { data, loading, pay, reload } =
-    useAccountReceivable();
+  const { data, loading, pay, reload, getById } = useAccountReceivable();
+  const { isMobile } = useDeviceType();
+  const navigate = useNavigate();
 
   const { customers, loading: loadingCustomers, setFilters: setFiltersCustomer } = useCustomers();
 
@@ -36,6 +40,9 @@ export default function AccountsReceivable() {
     customerId?: number;
     overdue?: boolean;
   }>({});
+
+  const [saleDetail, setSaleDetail] = useState<any>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const [selected, setSelected] =
     useState<any>(null);
@@ -77,6 +84,17 @@ export default function AccountsReceivable() {
   function handleFilterChange(newFilters: typeof filters) {
     setFilters(newFilters);
     reload(newFilters);
+  }
+
+  async function handleViewSale(record: any) {
+    setLoadingDetail(true);
+    try {
+      setSaleDetail(await getById(record.id));
+    } catch (err: any) {
+      message.error(err?.response?.data?.message ?? "No se pudo cargar el detalle");
+    } finally {
+      setLoadingDetail(false);
+    }
   }
 
   async function handlePayment() {
@@ -238,6 +256,7 @@ export default function AccountsReceivable() {
           onPay={(record) => setSelected(record)}
           onPrint={handleReprintFromRow}
           printTemplates={templates}
+          onViewSale={handleViewSale}
         />
       </Card>
 
@@ -291,6 +310,37 @@ export default function AccountsReceivable() {
               label: `${b.name} (${formatCurrency(b.balance)})`,
               value: b.id,
             }))}
+        />
+      </Modal>
+      <Modal
+        open={!!saleDetail}
+        title={`Factura ${saleDetail?.sale?.saleNumber ?? ""}`}
+        width={isMobile ? "100%" : 640}
+        onCancel={() => setSaleDetail(null)}
+        footer={[
+          <Button key="close" onClick={() => setSaleDetail(null)}>Cerrar</Button>,
+          <Button
+            key="go"
+            type="primary"
+            onClick={() => navigate(`/sales/${saleDetail.sale.id}`)}
+          >
+            Ver factura completa
+          </Button>,
+        ]}
+      >
+        <Table
+          size="small"
+          pagination={false}
+          rowKey="id"
+          loading={loadingDetail}
+          dataSource={saleDetail?.sale?.items ?? []}
+          scroll={{ x: true }}
+          columns={[
+            { title: "Producto", render: (_, i: any) => i.product.name },
+            { title: "Cant.", dataIndex: "quantity", width: 70 },
+            { title: "Precio", dataIndex: "price", render: (v) => formatCurrency(v) },
+            { title: "Total", dataIndex: "lineTotal", render: (v) => formatCurrency(v) },
+          ]}
         />
       </Modal>
       <Modal

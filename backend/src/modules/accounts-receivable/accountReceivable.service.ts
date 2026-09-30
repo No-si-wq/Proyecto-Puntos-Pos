@@ -48,7 +48,7 @@ class AccountReceivableService {
       where: { ...where, tenantId },
       include: {
         customer: true,
-        sale: true,
+        sale: { select: { id: true, saleNumber: true, createdAt: true } },
         payments: {
           orderBy: { paymentDate: "desc" },
           take: 1,
@@ -63,8 +63,14 @@ class AccountReceivableService {
       where: { id, tenantId },
       include: {
         customer: true,
-        sale: true,
-        payments: true,
+        sale: {
+          include: {
+            items: {
+              include: { product: { select: { name: true, sku: true } } },
+            },
+          },
+        },
+        payments: { orderBy: { paymentDate: "desc" } },
       },
     });
   }

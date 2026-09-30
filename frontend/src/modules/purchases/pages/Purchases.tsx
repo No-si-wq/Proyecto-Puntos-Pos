@@ -77,6 +77,7 @@ export default function Purchases() {
           productId: i.productId,
           quantity: Number(i.quantity),
           cost: Number(i.cost),
+          newPrice: i.price !== i.originalPrice ? Number(i.price) : undefined,
           lotNumber: i.lotNumber ?? undefined,
           expiresAt: i.expiresAt ? i.expiresAt.toISOString() : undefined,
         })),
@@ -321,6 +322,7 @@ export default function Purchases() {
               onLotChange={cart.updateLot}
               onExpirationChange={cart.updateExpiration}
               onRemove={cart.removeProduct}
+              onPriceChange={cart.updatePrice}
             />
           </Card>
 

@@ -21,6 +21,12 @@ export const updateUserSchema = z.object({
   }),
 });
 
+export const changePasswordSchema = z.object({
+  body: z.object({
+    password: z.string().min(6, "Password mínimo 6 caracteres"),
+  }),
+});
+
 export const toggleUserSchema = z.object({
   body: z.object({
     active: z.boolean(),

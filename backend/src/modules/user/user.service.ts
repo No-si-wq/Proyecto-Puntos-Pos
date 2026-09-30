@@ -77,6 +77,23 @@ export class UserService {
     });
   }
 
+  static async changePassword(id: number, tenantId: number, password: string) {
+    const hashedPassword = await hashPassword(password);
+
+    await prisma.user.update({
+      where: { id, tenantId },
+      data: {
+        password: hashedPassword,
+        tokenVersionAt: new Date(), // invalida los access tokens actuales
+      },
+    });
+
+    await prisma.refreshToken.updateMany({
+      where: { userId: id },
+      data: { revoked: true },
+    });
+  }
+
   static async create(data: CreateUserInput, tenantId: number) {
     const hashedPassword = await hashPassword(data.password);
 

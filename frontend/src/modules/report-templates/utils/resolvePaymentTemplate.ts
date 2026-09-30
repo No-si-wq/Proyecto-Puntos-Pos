@@ -22,6 +22,7 @@ function resolvePaymentTokens(p: PaymentForPrint, now: Date): Record<string, str
     "[NumeroAbono]":   p.payment.id ? `Recibo: ${p.payment.id}` : "",
     "[Fecha]":         `Fecha: ${fmtDatetime(p.payment.paymentDate ?? now)}`,
     "[Hora]":          now.toLocaleTimeString("es-HN"),
+    "[DescLineas]": "", "[DescPuntos]": "",
     "[NombreCliente]": `Cliente: ${p.customer.name}`,
     "[SaldoAnterior]": `Saldo anterior: ${formatCurrency(Number(p.previousBalance))}`,
     "[MontoAbono]":    `Abono: ${formatCurrency(Number(p.amountPaid))}`,

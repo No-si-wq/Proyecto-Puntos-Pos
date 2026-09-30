@@ -31,6 +31,16 @@ export async function getUser(req: Request, res: Response) {
   res.json(user);
 }
 
+export async function changeUserPassword(req: Request, res: Response) {
+  const id = Number(req.params.id);
+  const { tenantId } = req.user!;
+  const { password } = req.body;
+
+  await UserService.changePassword(id, tenantId, password);
+
+  res.json({ message: "Contraseña actualizada" });
+}
+
 export async function createUser(req: Request, res: Response) {
   const { tenantId } = req.user!;
 

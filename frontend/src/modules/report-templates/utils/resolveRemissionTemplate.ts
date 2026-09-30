@@ -68,6 +68,7 @@ function resolveRemissionItemTokens(item: RemissionItem): Record<string, string>
     "[Producto]":  item.product.name,
     "[SKU]":       item.product.sku,
     "[Cantidad]":  String(item.quantity),
+    "[DescLineas]": "", "[DescPuntos]": "",
     "[NotaLinea]": item.note ?? "—",
     // Tokens de partida que no aplican
     "[PrecioUnit]": "", "[Descuento]": "", "[Impuesto]": "", "[Importe]": "",

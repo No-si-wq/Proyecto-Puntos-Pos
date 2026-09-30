@@ -9,6 +9,7 @@ export interface PurchaseItemCreateDTO {
   cost: number;
   lotNumber?: string | null;
   expiresAt?: string | null;
+  newPrice?: number;
 }
 
 export interface PurchaseItems {

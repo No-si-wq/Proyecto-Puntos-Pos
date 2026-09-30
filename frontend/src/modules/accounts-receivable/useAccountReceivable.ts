@@ -19,6 +19,11 @@ export function useAccountReceivable() {
     }
   }
 
+  async function getById(id: number) {
+    const res = await http.get(`/account-receivable/${id}`);
+    return res.data;
+  }
+
   async function pay(
     id: number,
     amount: number,
@@ -38,5 +43,5 @@ export function useAccountReceivable() {
     load();
   }, []);
 
-  return { data, loading, reload: load, pay };
+  return { data, loading, reload: load, pay, getById };
 }

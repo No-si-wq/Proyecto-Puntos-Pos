@@ -7,6 +7,9 @@ const purchaseItemSchema = z.object({
   quantity: z.number().int().positive({
     message: "Cantidad debe ser mayor a 0",
   }),
+  newPrice: z.number().nonnegative({
+    message: "Precio de venta debe ser igual o mayor a 0",
+  }).optional(),
   cost: z.number().nonnegative({
     message: "Costo debe ser igual o mayor a 0",
   }),

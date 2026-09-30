@@ -5,6 +5,7 @@ export interface PurchaseItemInput {
   unit: string;
   lotNumber: string;
   expiresAt?: Date | null,
+  newPrice?: number;
 }
 
 interface BasePurchaseInput {

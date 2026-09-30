@@ -8,6 +8,8 @@ export interface PurchaseCartItem {
   cost: number;
   lotNumber?: string | null;
   expiresAt?: Date | null;
+  price: number;        
+  originalPrice: number;
 }
 
 interface PurchaseCartState {
@@ -33,6 +35,11 @@ interface PurchaseCartState {
   updateQuantity: (
     productId: number,
     quantity: number
+  ) => void;
+
+  updatePrice: (
+    productId: number, 
+    price: number
   ) => void;
 
   updateCost: (
@@ -87,6 +94,8 @@ export const purchaseCartStore =
             {
               productId: product.id,
               name: product.name,
+              price: Number(product.price),
+              originalPrice: Number(product.price),
               quantity: 1,
               cost:
                 costOverride ??
@@ -128,6 +137,8 @@ export const purchaseCartStore =
             {
               productId: product.id,
               name: product.name,
+              price: Number(product.price),
+              originalPrice: Number(product.price),
               quantity,
               cost,
               lotNumber,
@@ -149,6 +160,13 @@ export const purchaseCartStore =
                     : 1,
               }
             : i
+        ),
+      })),
+
+    updatePrice: (productId, price) =>
+      set((state) => ({
+        items: state.items.map((i) =>
+          i.productId === productId ? { ...i, price } : i
         ),
       })),
 

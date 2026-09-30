@@ -47,4 +47,11 @@ router.post(
   asyncHandler(controller.logoutUserAll)
 );
 
+router.patch(
+  "/:id/password",
+  validate(schema.userIdParamSchema.merge(schema.changePasswordSchema)),
+  roleMiddleware(Role.ADMIN),
+  asyncHandler(controller.changeUserPassword)
+);
+
 export default router;

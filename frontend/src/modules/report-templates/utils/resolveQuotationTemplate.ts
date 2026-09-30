@@ -47,6 +47,7 @@ function fmtDatetime(d: string | Date) {
 }
 
 function resolveQuotationTokens(q: QuotationForPrint, now: Date): Record<string, string> {
+  const lineDiscount = q.items.reduce((s, i) => s + Number(i.discountAmount ?? 0), 0);
   return {
     "[QuotationNumber]":  `Cotización: ${q.quotationNumber}`,
     "[Factura]":          q.convertedSale ? `Venta: ${q.convertedSale.saleNumber}` : "",
@@ -64,7 +65,9 @@ function resolveQuotationTokens(q: QuotationForPrint, now: Date): Record<string,
     "[ListaPrecios]":     q.priceList ? `Lista: ${q.priceList.name}` : "",
     "[Observaciones]":    q.observations ? `Obs: ${q.observations}` : "",
     "[Subtotal]":         `Subtotal: ${formatCurrency(q.subtotal)}`,
-    "[DescTotal]":        `Descuento: ${formatCurrency(0)}`,
+    "[DescTotal]":  `Descuento: ${formatCurrency(lineDiscount)}`,
+    "[DescLineas]": `Descuento: ${formatCurrency(lineDiscount)}`,
+    "[DescPuntos]": "",
     "[ImpTotal]":         `Impuestos: ${formatCurrency(q.taxTotal)}`,
     "[Total]":            `Total: ${formatCurrency(q.total)}`,
     "[MetodoPago]": "", "[Monto]": "", "[Cambio]": "", "[TotalComision]": "",

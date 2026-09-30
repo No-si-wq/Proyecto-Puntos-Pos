@@ -13,6 +13,7 @@ interface Props {
   onPay: (record: any) => void;
   onPrint?: (record: any, templateId?: number) => void;
   printTemplates?: { id: number; name: string; isDefault?: boolean }[];
+  onViewSale?: (record: any) => void;
 }
 
 export default function FinancialAccountsTable({
@@ -22,6 +23,7 @@ export default function FinancialAccountsTable({
   onPay,
   onPrint,
   printTemplates,
+  onViewSale,
 }: Props) {
   const { isMobile } = useDeviceType();
   const isReceivable = type === "receivable";
@@ -166,6 +168,27 @@ export default function FinancialAccountsTable({
                 </div>
               )}
 
+              {isReceivable && (
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, color: "#888" }}>Último abono</div>
+                  <div style={{ fontWeight: 600 }}>
+                    {r.payments?.[0]
+                      ? `${formatCurrency(r.payments[0].amount)} · ${dayjs(r.payments[0].paymentDate).format("DD/MM/YYYY")}`
+                      : "Sin abonos"}
+                  </div>
+                  {onViewSale && (
+                    <Button
+                      type="link"
+                      size="small"
+                      style={{ padding: 0, marginTop: 4 }}
+                      onClick={() => onViewSale(r)}
+                    >
+                      Factura {r.sale?.saleNumber} · ver productos
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {r.status !== "PAID" && (
                 <Button
                   type="primary"
@@ -225,6 +248,39 @@ export default function FinancialAccountsTable({
       render: (_: any, r: any) =>
         formatCurrency(r.balance),
     },
+...(isReceivable
+  ? [
+      {
+        title: "Factura",
+        render: (_: any, r: any) => (
+          <Button
+            type="link"
+            size="small"
+            style={{ padding: 0 }}
+            onClick={() => onViewSale?.(r)}
+          >
+            {r.sale?.saleNumber ?? "Ver"}
+          </Button>
+        ),
+      },
+      {
+        title: "Último abono",
+        render: (_: any, r: any) => {
+          const p = r.payments?.[0];
+          return p ? (
+            <div>
+              <div>{formatCurrency(p.amount)}</div>
+              <div style={{ fontSize: 12, color: "#888" }}>
+                {dayjs(p.paymentDate).format("DD/MM/YYYY")}
+              </div>
+            </div>
+          ) : (
+            <span style={{ color: "#aaa" }}>Sin abonos</span>
+          );
+        },
+      },
+    ]
+  : []),
     {
       title: "Vence",
       dataIndex: "dueDate",

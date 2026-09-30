@@ -204,6 +204,12 @@ export class PurchaseService {
           referenceId: purchase.id,
           note: `Compra #${purchase.purchaseNumber}`,
         });
+        if (item.newPrice !== undefined) {
+          await tx.product.updateMany({
+            where: { id: item.productId, tenantId },
+            data: { price: item.newPrice },
+          });
+        }
       }
 
     if (data.paymentMethod === "CREDIT") {

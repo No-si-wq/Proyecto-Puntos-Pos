@@ -14,6 +14,7 @@ interface Props {
   onLotChange: (id: number, lot: string) => void;
   onExpirationChange: (id: number, date: Date | null) => void;
   onRemove: (id: number) => void;
+  onPriceChange: (id: number, price: number) => void;
 }
 
 export function PurchaseCartTable({
@@ -23,6 +24,7 @@ export function PurchaseCartTable({
   onExpirationChange,
   onRemove,
   onLotChange,
+  onPriceChange,
 }: Props) {
   const sizes = useResponsiveSizes();
   const { isMobile } = useDeviceType();
@@ -82,6 +84,20 @@ export function PurchaseCartTable({
                   onChange={(v) => onQuantityChange(i.productId, Number(v ?? 1))}
                 />
               </div>
+            </div>
+
+            <div style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 2 }}>
+                Precio de venta
+              </label>
+              <InputNumber
+                min={0}
+                precision={2}
+                style={{ width: "100%" }}
+                value={i.price}
+                status={i.price < i.cost ? "warning" : undefined}
+                onChange={(v) => onPriceChange(i.productId, Number(v ?? 0))}
+              />
             </div>
 
             <div style={{ marginBottom: 8 }}>
@@ -147,6 +163,21 @@ export function PurchaseCartTable({
           formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
           parser={(v) => parseFloat(v?.replace(/,/g, "") ?? "0")}
           onChange={(v) => onCostChange(i.productId, Number(v ?? 0))}
+        />
+      ),
+    },
+    {
+      title: "Precio venta",
+      width: 140,
+      align: "right",
+      render: (_, i) => (
+        <InputNumber
+          min={0}
+          precision={2}
+          style={{ width: "100%" }}
+          value={i.price}
+          status={i.price < i.cost ? "warning" : undefined}
+          onChange={(v) => onPriceChange(i.productId, Number(v ?? 0))}
         />
       ),
     },
