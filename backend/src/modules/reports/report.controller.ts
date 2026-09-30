@@ -109,3 +109,18 @@ export const getGeneralInventoryReport = asyncHandler(async (req: Request, res: 
   const data = await ReportService.getGeneralInventoryReport(tenantId);
   res.json(data);
 });
+
+export const getCustomerStatement = asyncHandler(async (req: Request, res: Response) => {
+  const { tenantId } = req.user!;
+
+  const customerId = req.query.customerId
+    ? Number(req.query.customerId)
+    : undefined;
+
+  if (customerId !== undefined && !Number.isInteger(customerId)) {
+    return res.status(400).json({ message: "Cliente inválido" });
+  }
+
+  const data = await ReportService.getCustomerStatement(tenantId, { customerId });
+  res.json(data);
+});

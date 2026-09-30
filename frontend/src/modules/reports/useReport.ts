@@ -10,6 +10,7 @@ import type {
   SoldProductRow,
   ProductOutputRow,
   GeneralInventoryRow,
+  CustomerStatementResult
 } from "./report";
 
 export function useReports() {
@@ -20,6 +21,10 @@ export function useReports() {
   const [soldProducts, setSoldProducts] = useState<SoldProductRow[]>([]);
   const [productOutputs, setProductOutputs] = useState<ProductOutputRow[]>([]);
   const [generalInventory, setGeneralInventory] = useState<GeneralInventoryRow[]>([]);
+  const [customerStatement, setCustomerStatement] = useState<CustomerStatementResult>({
+    summary: [],
+    invoices: [],
+  });
 
   const fetchPurchaseLots = useCallback(
     async (filters?: { product?: string }) => {
@@ -189,12 +194,29 @@ export function useReports() {
     }
   }, []);
 
+  const fetchCustomerStatement = useCallback(
+    async (params?: { customerId?: number }) => {
+      setLoading(true);
+      try {
+        const { data } = await http.get<CustomerStatementResult>(
+          "/reports/customer-statement",
+          { params }
+        );
+        setCustomerStatement(data);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
   return {
     purchaseLots,
     loading,
     soldProducts,
     generalInventory,
     productOutputs,
+    customerStatement,
 
     fetchPurchaseLots,
     fetchKardex,
@@ -202,9 +224,11 @@ export function useReports() {
     fetchSoldProducts,
     fetchGeneralInventory,
     fetchProductOutputs,
+    fetchCustomerStatement,
 
     clearSoldProducts: () => setSoldProducts([]),
     clearProductOutputs: () => setProductOutputs([]),
     clearGeneralInventory: () => setGeneralInventory([]),
+    clearCustomerStatement: () => setCustomerStatement({ summary: [], invoices: [] }),
   };
 }

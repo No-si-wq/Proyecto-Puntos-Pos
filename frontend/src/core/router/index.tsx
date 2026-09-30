@@ -43,6 +43,7 @@ import ProductOutputsReport from "../../modules/reports/ProductOutputsReport";
 import GeneralInventoryReport from "../../modules/reports/GeneralInventoryReport";
 import Banks from "../../modules/banks/pages/Banks";
 import BankDetail from "../../modules/banks/pages/BankDetail";
+import CustomerStatementReport from "../../modules/reports/CustomerStatementReport";
 
 import Unauthorized from "../../modules/Unauthorized";
 
@@ -298,6 +299,15 @@ export default function AppRouter() {
             element={
               <ProtectedRoute module="reports">
                 <GeneralInventoryReport />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/reports/customer-statement"
+            element={
+              <ProtectedRoute module="reports">
+                <CustomerStatementReport />
               </ProtectedRoute>
             }
           />

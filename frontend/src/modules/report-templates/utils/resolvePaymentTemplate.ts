@@ -164,7 +164,6 @@ export function resolvePaymentTemplate(
           <div class="section section-footer">${footerEls}</div>
         </div>
       </div>
-      <script>window.onload=()=>{window.print();}<\/script>
     </body>
     </html>
   `;

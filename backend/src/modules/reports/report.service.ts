@@ -1,5 +1,10 @@
 import prisma from "../../core/prisma";
-import { ProfitSummaryRow, ProfitDetailRow } from "./report";
+import { 
+  ProfitSummaryRow, 
+  ProfitDetailRow,
+  CustomerStatementSummaryRow,
+  CustomerStatementInvoiceRow,
+} from "./report";
 import { Prisma } from "@prisma/client";
 
 export class ReportService {
@@ -492,5 +497,105 @@ export class ReportService {
         belowReorder: stock <= reorder,
       };
     });
-  }  
+  }
+
+  static async getCustomerStatement(
+    tenantId: number,
+    params: { customerId?: number }
+  ) {
+    const { customerId } = params;
+
+    const accounts = await prisma.accountReceivable.findMany({
+      where: {
+        tenantId,
+        balance: { gt: 0 },
+        sale: { status: "COMPLETED" },
+        ...(customerId ? { customerId } : {}),
+      },
+      select: {
+        id: true,
+        total: true,
+        paidAmount: true,
+        balance: true,
+        dueDate: true,
+        status: true,
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            dni: true,
+            phone: true,
+            creditLimit: true,
+          },
+        },
+        sale: { select: { saleNumber: true, createdAt: true } },
+        payments: {
+          select: { paymentDate: true },
+          orderBy: { paymentDate: "desc" },
+          take: 1,
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const now = new Date();
+    const DAY = 1000 * 60 * 60 * 24;
+
+    const summaryMap = new Map<number, CustomerStatementSummaryRow>();
+    const invoices: CustomerStatementInvoiceRow[] = [];
+
+    for (const a of accounts) {
+      const balance = Number(a.balance);
+      const isOverdue = !!a.dueDate && a.dueDate < now;
+      const daysOverdue = isOverdue
+        ? Math.floor((now.getTime() - a.dueDate!.getTime()) / DAY)
+        : 0;
+
+      let row = summaryMap.get(a.customer.id);
+      if (!row) {
+        row = {
+          customerId: a.customer.id,
+          name: a.customer.name,
+          dni: a.customer.dni,
+          phone: a.customer.phone,
+          creditLimit: a.customer.creditLimit
+            ? Number(a.customer.creditLimit)
+            : null,
+          openInvoices: 0,
+          totalCredit: 0,
+          totalPaid: 0,
+          balance: 0,
+          overdueBalance: 0,
+        };
+        summaryMap.set(a.customer.id, row);
+      }
+
+      row.openInvoices += 1;
+      row.totalCredit += Number(a.total);
+      row.totalPaid += Number(a.paidAmount);
+      row.balance += balance;
+      if (isOverdue) row.overdueBalance += balance;
+
+      if (customerId) {
+        invoices.push({
+          id: a.id,
+          saleNumber: a.sale.saleNumber,
+          saleDate: a.sale.createdAt,
+          dueDate: a.dueDate,
+          total: Number(a.total),
+          paidAmount: Number(a.paidAmount),
+          balance,
+          status: isOverdue ? "OVERDUE" : a.status,
+          daysOverdue,
+          lastPaymentDate: a.payments[0]?.paymentDate ?? null,
+        });
+      }
+    }
+
+    const summary = Array.from(summaryMap.values()).sort(
+      (x, y) => y.balance - x.balance
+    );
+
+    return { summary, invoices };
+  }
 }

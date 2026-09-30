@@ -93,3 +93,34 @@ export interface GeneralInventoryRow {
   reorderPoint: number;
   belowReorder: boolean;
 }
+
+export interface CustomerStatementSummaryRow {
+  customerId: number;
+  name: string;
+  dni: string | null;
+  phone: string | null;
+  creditLimit: number | null;
+  openInvoices: number;
+  totalCredit: number;
+  totalPaid: number;
+  balance: number;
+  overdueBalance: number;
+}
+
+export interface CustomerStatementInvoiceRow {
+  id: number;
+  saleNumber: string;
+  saleDate: string;
+  dueDate: string | null;
+  total: number;
+  paidAmount: number;
+  balance: number;
+  status: "PENDING" | "PARTIAL" | "PAID" | "OVERDUE";
+  daysOverdue: number;
+  lastPaymentDate: string | null;
+}
+
+export interface CustomerStatementResult {
+  summary: CustomerStatementSummaryRow[];
+  invoices: CustomerStatementInvoiceRow[];
+}

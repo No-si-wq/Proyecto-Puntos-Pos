@@ -9,6 +9,7 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get("/general-inventory", asyncHandler(controller.getGeneralInventoryReport));
+router.get("/customer-statement", asyncHandler(controller.getCustomerStatement));
 
 router.use(requireWarehouse);
 

@@ -39,6 +39,7 @@ import {
   TruckFilled,
   SolutionOutlined,
   ExportOutlined,
+  AccountBookOutlined,
 } from "@ant-design/icons";
 import { useWarehouses } from "../../modules/warehouses/hooks/useWarehouse";
 import { Outlet, useNavigate } from "react-router-dom";
@@ -310,6 +311,13 @@ export default function MainLayout() {
             label: "Kardex",
             icon: <DollarOutlined />,
             onClick: () => navigate("/reports/kardex"),
+            visible: can("reports"),
+          },
+          {
+            key: "/reports/customer-statement",
+            label: "Estado de Cuenta",
+            icon: <AccountBookOutlined />,
+            onClick: () => navigate("/reports/customer-statement"),
             visible: can("reports"),
           },
           {

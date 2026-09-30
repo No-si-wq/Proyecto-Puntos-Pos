@@ -21,3 +21,29 @@ export type ProfitSummaryRow = {
   totalProfit: number | null;
   margin: number | null;
 };
+
+export type CustomerStatementSummaryRow = {
+  customerId: number;
+  name: string;
+  dni: string | null;
+  phone: string | null;
+  creditLimit: number | null;
+  openInvoices: number;
+  totalCredit: number;
+  totalPaid: number;
+  balance: number;
+  overdueBalance: number;
+};
+
+export type CustomerStatementInvoiceRow = {
+  id: number;
+  saleNumber: string;
+  saleDate: Date;
+  dueDate: Date | null;
+  total: number;
+  paidAmount: number;
+  balance: number;
+  status: string;
+  daysOverdue: number;
+  lastPaymentDate: Date | null;
+};
