@@ -43,6 +43,7 @@ const FIELD_GROUPS = [
     { token: "[DireccionCliente]", label: "Dirección" },
     { token: "[CiudadCliente]",    label: "Ciudad" },
     { token: "[TelefonoCliente]",  label: "Telefono" },
+    { token: "[RTN]",              label: "RTN" },
   ]},
   { id: "vendedor", label: "Vendedor", fields: [
     { token: "[NombreVendedor]",   label: "Vendedor" },
@@ -119,9 +120,9 @@ const DEFAULT_ELEMENTS: ReportFieldElement[] = [
   { id: "t2", type: "field",  token: "[MetodoPago]",     label: "M. Pago",         x: 8,   y: 36,  fontSize: 11, fontWeight: "normal", align: "left", section: "totals" },
   { id: "t3", type: "field",  token: "[Subtotal]",       label: "Subtotal",        x: 350, y: 12,  fontSize: 11, fontWeight: "normal", align: "left", section: "totals" },
   { id: "t4", type: "field",  token: "[DescTotal]",      label: "Descuento",       x: 350, y: 36,  fontSize: 11, fontWeight: "normal", align: "left", section: "totals" },
-  { id: "t6", type: "field",  token: "[ImpTotal]",  label: "Impuesto", x: 350, y: 60, fontSize: 11, fontWeight: "normal", align: "left", section: "totals" },
+  { id: "t6", type: "field",  token: "[ImpTotal]",       label: "Impuesto", x: 350, y: 60, fontSize: 11, fontWeight: "normal", align: "left", section: "totals" },
   { id: "t5", type: "field",  token: "[Total]",          label: "Total",           x: 350, y: 60,  fontSize: 13, fontWeight: "bold",   align: "left", section: "totals" },
-  { id: "f1", type: "static", token: "", label: "Documento generado por el sistema — [Fecha] [Hora]", x: 130, y: 14, fontSize: 10, fontWeight: "normal", align: "left", section: "footer" },
+  { id: "f1", type: "static", token: "",                 label: "Documento generado por el sistema — [Fecha] [Hora]", x: 130, y: 14, fontSize: 10, fontWeight: "normal", align: "left", section: "footer" },
 ];
 
 const DEFAULT_CONFIG: ReportTemplateConfig = {
@@ -212,12 +213,12 @@ const DEFAULT_DETAIL_COLUMNS: DetailColumn[] = [
   // Defaults específicos para pageSize "ticket" (canvas de 300px, ver resolveDesignerWidth).
   // Se usan solo al cambiar el selector de tamaño en una plantilla NUEVA (sin currentTemplate).
   const TICKET_ELEMENTS: ReportFieldElement[] = [
-    { id: "tk1",  type: "static", token: "", label: "MI EMPRESA S.A. DE C.V.", x: 0, y: 4,   fontSize: 11, fontWeight: "bold",   align: "center", section: "header" },
+    { id: "tk1",  type: "static", token: "",                 label: "MI EMPRESA S.A. DE C.V.", x: 0, y: 4,   fontSize: 11, fontWeight: "bold",   align: "center", section: "header" },
     { id: "tk2",  type: "field",  token: "[RTNEmisor]",      label: "RTN Emisor",      x: 0, y: 20,  fontSize: 8,  fontWeight: "normal", align: "center", section: "header" },
     { id: "tk3",  type: "field",  token: "[Factura]",        label: "# Factura",       x: 0, y: 36,  fontSize: 9,  fontWeight: "bold",   align: "center", section: "header" },
     { id: "tk4",  type: "field",  token: "[Fecha]",          label: "Fecha",           x: 0, y: 52,  fontSize: 8,  fontWeight: "normal", align: "center", section: "header" },
     { id: "tk5",  type: "field",  token: "[NombreCliente]",  label: "Cliente",         x: 4, y: 68,  fontSize: 8,  fontWeight: "normal", align: "left",   section: "header" },
-    { id: "tk6",  type: "field",  token: "[RTN]",             label: "RTN Cliente",     x: 4, y: 82,  fontSize: 8,  fontWeight: "normal", align: "left",   section: "header" },
+    { id: "tk6",  type: "field",  token: "[RTN]",            label: "RTN Cliente",     x: 4, y: 82,  fontSize: 8,  fontWeight: "normal", align: "left",   section: "header" },
     { id: "tk7",  type: "field",  token: "[NombreVendedor]", label: "Vendedor",        x: 4, y: 96,  fontSize: 8,  fontWeight: "normal", align: "left",   section: "header" },
     { id: "tk8",  type: "field",  token: "[MetodoPago]",     label: "Método de pago",  x: 4, y: 110, fontSize: 8,  fontWeight: "normal", align: "left",   section: "header" },
     { id: "tk9",  type: "field",  token: "[Subtotal]",       label: "Subtotal",        x: 4, y: 4,   fontSize: 8,  fontWeight: "normal", align: "left",   section: "totals" },
