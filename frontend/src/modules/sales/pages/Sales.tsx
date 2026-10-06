@@ -30,13 +30,14 @@ import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
 import { useRequiredWarehouse } from "../../warehouses/hooks/useRequiredWarehouse";
 import { useWarehouseProducts } from "../../warehouses/hooks/useWarehouseProducts";
 import { usePriceLists } from "../../priceLists/hooks/usePriceList";
-import type { SalePaymentMethod, Sale } from "../types/sale";
+import type { SalePaymentMethod, Sale, DiscountType } from "../types/sale";
 import { saleCartStore } from "../types/saleCart.store";
 import { Role } from "../../../core/auth/roles";
 import { useReportTemplates } from "../../report-templates/hooks/useReportTemplates";
 import { useBanks } from "../../banks/hooks/useBanks";
 import { buildSaleHtml, resolveWindowSize } from "../../report-templates/utils/resolveTemplate";
 import { useSettings } from "../../settings/hooks/useSettings";
+import { validateSaleLine } from "../utils/saleRules";
 
 import PageHeader from "../../../core/components/common/PageHeader";
 
@@ -82,6 +83,47 @@ export default function Sales() {
   async function openPrintForSale(sale: Sale) {
     setPendingPrintSale(sale);
     setPrintModalOpen(true);
+  }
+
+  function checkLine(
+    productId: number,
+    patch: Partial<{ price: number; discountType: DiscountType; discountValue: number }>
+  ): boolean {
+    const item = cart.items.find((i) => i.productId === productId);
+    if (!item) return true;
+    const product = products.find((p) => p.id === productId);
+
+    const err = validateSaleLine({
+      price: patch.price ?? item.price,
+      quantity: item.quantity,
+      tax: item.tax,
+      cost: Number(product?.cost ?? 0),
+      discountType: patch.discountType ?? item.discountType,
+      discountValue: patch.discountValue ?? item.discountValue,
+      priceMode: cart.priceMode,
+    });
+
+    if (err) {
+      message.error(`${item.name}: ${err}`);
+      return false;
+    }
+    return true;
+  }
+
+  function handleDiscountChange(id: number, type: DiscountType, value: number) {
+    if (!checkLine(id, { discountType: type, discountValue: value })) return;
+    cart.updateDiscount(id, type, value);
+  }
+
+  function handlePriceChange(id: number, price: number) {
+    if (!checkLine(id, { price })) return;
+    cart.updatePrice(id, price);
+  }
+
+  function handlePriceListChange(id: number, priceListId: number | undefined, resolvedPrice: number) {
+    if (!checkLine(id, { price: resolvedPrice })) return;
+    cart.updatePriceList(id, priceListId, resolvedPrice);
+    cart.updatePrice(id, resolvedPrice);
   }
 
   async function handleConfirmPrint() {
@@ -192,6 +234,9 @@ export default function Sales() {
   async function submitSale() {
     if (cart.items.length === 0) {
       message.warning("El carrito está vacío");
+      for (const i of cart.items) {
+        if (!checkLine(i.productId, {})) return;
+      }
       return;
     }
 
@@ -735,13 +780,10 @@ export default function Sales() {
               items={cart.items}
               onQuantityChange={cart.updateQuantity}
               onRemove={cart.removeProduct}
-              onDiscountChange={cart.updateDiscount}
+              onDiscountChange={handleDiscountChange}
               onObservationsChange={cart.updateObservations}
-              onPriceChange={(productId, price) => cart.updatePrice(productId, price)}
-              onPriceListChange={(productId, priceListId, resolvedPrice) => {
-                cart.updatePriceList(productId, priceListId, resolvedPrice);
-                cart.updatePrice(productId, resolvedPrice);
-              }}
+              onPriceChange={handlePriceChange}
+              onPriceListChange={handlePriceListChange}
               priceLists={priceLists}
               products={products}
             />
@@ -849,13 +891,10 @@ export default function Sales() {
               items={cart.items}
               onQuantityChange={cart.updateQuantity}
               onRemove={cart.removeProduct}
-              onDiscountChange={cart.updateDiscount}
+              onDiscountChange={handleDiscountChange}
               onObservationsChange={cart.updateObservations}
-              onPriceListChange={(productId, priceListId, resolvedPrice) => {
-                cart.updatePriceList(productId, priceListId, resolvedPrice);
-                cart.updatePrice(productId, resolvedPrice);
-              }}
-              onPriceChange={(productId, price) => cart.updatePrice(productId, price)}
+              onPriceListChange={handlePriceListChange}
+              onPriceChange={handlePriceChange}
               priceLists={priceLists}
               products={products}
             />

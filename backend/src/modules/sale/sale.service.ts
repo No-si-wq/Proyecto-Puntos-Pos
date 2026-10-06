@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import { CommissionType, InventoryMovementType, SaleStatus } from "@prisma/client";
 import { InventoryService } from "../inventory/inventory.service";
 import { LoyaltyService } from "../loyalty/loyalty.service";
-import { CreateSaleInput, SaleError, ReturnSaleInput } from "./sale";
+import { CreateSaleInput, SaleError, ReturnSaleInput, MAX_DISCOUNT_PERCENT } from "./sale";
 import { bankService } from "../bank/bank.service";
 
 export class SaleService {
@@ -260,6 +260,13 @@ export class SaleService {
         const grossAfterDiscount = grossLine.sub(discountAmount);
         if (grossAfterDiscount.lt(0)) throw new Error("Subtotal negativo en línea");
 
+        const maxDiscount = grossLine.mul(MAX_DISCOUNT_PERCENT).div(100);
+        if (discountAmount.gt(maxDiscount.add(0.005))) {
+          throw new Error(
+            `El descuento en "${product.name}" no puede superar el ${MAX_DISCOUNT_PERCENT}%`
+          );
+        }
+
         let lineSubtotal: Prisma.Decimal; // siempre = base sin impuesto
         let taxAmount: Prisma.Decimal;
         let lineTotal: Prisma.Decimal;
@@ -273,6 +280,13 @@ export class SaleService {
           lineSubtotal = grossAfterDiscount;
           taxAmount    = lineSubtotal.mul(tax).toDecimalPlaces(6);
           lineTotal    = lineSubtotal.add(taxAmount);
+        }
+
+        const minBase = new Prisma.Decimal(product.cost).mul(quantity);
+        if (lineSubtotal.toDecimalPlaces(2).lt(minBase)) {
+          throw new Error(
+            `No se puede vender "${product.name}" por debajo del costo`
+          );
         }
  
         const commissionPercent = resolveCommissionPercent(item.priceListId);

@@ -1,3 +1,5 @@
+export const MAX_DISCOUNT_PERCENT = 25;
+
 export interface SalePaymentInput {
   method: "CASH" | "CARD" | "TRANSFER" | "CREDIT";
   amount: number;
