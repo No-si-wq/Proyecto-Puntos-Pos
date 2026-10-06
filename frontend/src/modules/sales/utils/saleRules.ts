@@ -4,6 +4,7 @@ export const MAX_DISCOUNT_PERCENT = 25;
 
 interface LineInput {
   price: number;
+  listPrice: number; // precio normal (lista o producto), no el manual
   quantity: number;
   tax: number; // fracción: 0.15
   cost: number;
@@ -11,6 +12,8 @@ interface LineInput {
   discountValue: number;
   priceMode: PriceMode;
 }
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export function validateSaleLine(l: LineInput): string | null {
   const gross = l.price * l.quantity;
@@ -23,14 +26,21 @@ export function validateSaleLine(l: LineInput): string | null {
     return `El descuento máximo permitido es ${MAX_DISCOUNT_PERCENT}%`;
   }
 
-  // Si no hay costo cargado, no se valida aquí (el backend sigue validando)
   if (l.cost > 0) {
-    const afterDiscount = gross - discount;
-    const base =
-      l.priceMode === "TAX_INCLUDED" ? afterDiscount / (1 + l.tax) : afterDiscount;
+    const toBase = (p: number) =>
+      l.priceMode === "TAX_INCLUDED" ? p / (1 + l.tax) : p;
 
-    if (Math.round(base * 100) / 100 < l.cost * l.quantity) {
-      return "No se puede vender por debajo del costo";
+    // El costo incluye impuesto → lo pasamos a base para comparar en la misma unidad
+    const costBase = l.cost / (1 + l.tax);
+
+    const base = toBase(gross - discount);
+    const unitFloor = Math.min(costBase, toBase(l.listPrice));
+    const minLine = round2(unitFloor * l.quantity);
+
+    if (round2(base) < minLine) {
+      const minClient =
+        l.priceMode === "TAX_INCLUDED" ? minLine * (1 + l.tax) : minLine;
+      return `Por debajo del costo o precio de lista. Mínimo permitido en la línea: L ${minClient.toFixed(2)}`;
     }
   }
 

@@ -85,9 +85,22 @@ export default function Sales() {
     setPrintModalOpen(true);
   }
 
+  function getListPrice(productId: number, priceListId?: number): number {
+    const product = products.find((p) => p.id === productId);
+    const custom = priceListId
+      ? product?.prices?.find((pp) => pp.priceListId === priceListId && pp.active)?.price
+      : undefined;
+    return Number(custom ?? product?.price ?? 0);
+  }
+
   function checkLine(
     productId: number,
-    patch: Partial<{ price: number; discountType: DiscountType; discountValue: number }>
+    patch: Partial<{
+      price: number;
+      listPrice: number;
+      discountType: DiscountType;
+      discountValue: number;
+    }>
   ): boolean {
     const item = cart.items.find((i) => i.productId === productId);
     if (!item) return true;
@@ -95,6 +108,7 @@ export default function Sales() {
 
     const err = validateSaleLine({
       price: patch.price ?? item.price,
+      listPrice: patch.listPrice ?? getListPrice(productId, item.priceListId),
       quantity: item.quantity,
       tax: item.tax,
       cost: Number(product?.cost ?? 0),
@@ -121,7 +135,7 @@ export default function Sales() {
   }
 
   function handlePriceListChange(id: number, priceListId: number | undefined, resolvedPrice: number) {
-    if (!checkLine(id, { price: resolvedPrice })) return;
+    if (!checkLine(id, { price: resolvedPrice, listPrice: resolvedPrice })) return;
     cart.updatePriceList(id, priceListId, resolvedPrice);
     cart.updatePrice(id, resolvedPrice);
   }

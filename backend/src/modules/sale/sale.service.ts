@@ -222,6 +222,14 @@ export class SaleService {
           throw new Error(SaleError.PRODUCT_NOT_AVAILABLE);
         }
 
+        const customPrice = item.priceListId
+          ? product.prices?.find((pp) => pp.priceListId === item.priceListId)?.price
+          : undefined;
+
+        const listPrice = customPrice !== undefined
+          ? new Prisma.Decimal(customPrice)
+          : product.price;
+
         let price: Prisma.Decimal;
 
         if (item.unitPrice !== undefined) {
@@ -230,12 +238,7 @@ export class SaleService {
           }
           price = new Prisma.Decimal(item.unitPrice);
         } else {
-          const customPrice = item.priceListId
-            ? product.prices?.find((pp) => pp.priceListId === item.priceListId)?.price
-            : undefined;
-          price = customPrice !== undefined
-            ? new Prisma.Decimal(customPrice)
-            : product.price;
+          price = listPrice;
         }
 
         const tax = product.tax;
@@ -282,10 +285,17 @@ export class SaleService {
           lineTotal    = lineSubtotal.add(taxAmount);
         }
 
-        const minBase = new Prisma.Decimal(product.cost).mul(quantity);
+        const listBase = (!data.priceMode || data.priceMode === "TAX_INCLUDED")
+          ? listPrice.div(new Prisma.Decimal(1).add(tax))
+          : listPrice;
+
+        const costBase = new Prisma.Decimal(product.cost).div(new Prisma.Decimal(1).add(tax));
+        const unitFloor = Prisma.Decimal.min(costBase, listBase);
+        const minBase = unitFloor.mul(quantity).toDecimalPlaces(2);
+
         if (lineSubtotal.toDecimalPlaces(2).lt(minBase)) {
           throw new Error(
-            `No se puede vender "${product.name}" por debajo del costo`
+            `No se puede vender "${product.name}" por debajo del costo o de su precio de lista`
           );
         }
  
