@@ -16,10 +16,15 @@ export async function listSales(req: Request, res: Response) {
       ? new Date(req.query.to)
       : undefined;
 
+  const userId =
+    typeof req.query.userId === "string" && req.query.userId
+      ? Number(req.query.userId)
+      : undefined;
+
   const sales = await SaleService.list(
     warehouseId,
     tenantId,
-    { from, to }
+    { from, to, userId }
   );
 
   res.json(sales);

@@ -8,7 +8,11 @@ import { CreateSaleInput, SaleError, ReturnSaleInput, MAX_DISCOUNT_PERCENT } fro
 import { bankService } from "../bank/bank.service";
 
 export class SaleService {
-  static async list(warehouseId: number, tenantId: number, params?: { from?: Date; to?: Date }) {
+  static async list(
+    warehouseId: number,
+    tenantId: number,
+    params?: { from?: Date; to?: Date; userId?: number }
+  ) {
     let dataFilter = {};
 
     if (params?.from && params?.to) {
@@ -17,8 +21,10 @@ export class SaleService {
       };
     }
 
+    const userFilter = params?.userId ? { userId: params.userId } : {};
+
     return prisma.sale.findMany({
-      where: { warehouseId, tenantId, ...dataFilter },
+      where: { warehouseId, tenantId, ...dataFilter, ...userFilter },
       include: {
         customer: { select: { id: true, name: true } },
         user: { select: { id: true, name: true } },

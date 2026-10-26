@@ -1,4 +1,4 @@
-import { Button, Space, Drawer, Dropdown } from "antd";
+import { Button, Space, Drawer, Dropdown, Select } from "antd";
 import { FilterOutlined, MoreOutlined, FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { useState } from "react";
@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import { useSales } from "../hooks/useSales";
 import SalesTable from "../components/SalesTable";
 import { formatDate, formatCurrency } from "../../../core/utils/formatters";
+import { useUsers } from "../../users/useUsers";
 import type { Sale, SalePaymentMethod } from "../types/sale";
 import ResponsiveRangePicker from "../../../core/components/common/ResponsiveRangePicker";
 import { useResponsiveSizes } from "../../../core/hooks/useResponsiveSizes";
@@ -44,6 +45,9 @@ export default function SaleHistory() {
 
   const [range, setRange]         = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+
+  const { users } = useUsers(); // asumo { users }
+  const [userId, setUserId] = useState<number | undefined>();
 
   const isExportable = (s: Sale) => s.status === "COMPLETED";
 
@@ -161,17 +165,40 @@ export default function SaleHistory() {
     );
   }
 
+  const userSelect = (width?: string | number) => (
+    <Select
+      allowClear
+      showSearch
+      placeholder="Usuario"
+      optionFilterProp="label"
+      value={userId}
+      onChange={(v) => setUserId(v)}
+      size={sizes.input}
+      style={{ width: width ?? 180 }}
+      options={(users ?? []).map((u) => ({
+        value: u.id,
+        label: u.name || u.username,
+      }))}
+    />
+  );
+
   function applyFilter() {
-    if (!range || !range[0] || !range[1]) { reload(); return; }
+    const hasRange = range && range[0] && range[1];
+    if (!hasRange && !userId) { reload(); return; }
+
     reload({
-      from: range[0].startOf("day").toISOString(),
-      to:   range[1].endOf("day").toISOString(),
+      ...(hasRange && {
+        from: range![0].startOf("day").toISOString(),
+        to:   range![1].endOf("day").toISOString(),
+      }),
+      ...(userId && { userId }),
     });
     if (isMobile) setFilterOpen(false);
   }
 
   function clearFilter() {
     setRange(null);
+    setUserId(undefined);
     reload();
     if (isMobile) setFilterOpen(false);
   }
@@ -210,6 +237,7 @@ export default function SaleHistory() {
                 onChange={(v) => setRange(v as any)}
                 size={sizes.input}
               />
+              {userSelect()}
               <Button type="primary" size={sizes.button} onClick={applyFilter}>
                 Aplicar
               </Button>
@@ -244,6 +272,7 @@ export default function SaleHistory() {
             size={sizes.input}
             style={{ width: "100%" }}
           />
+          {userSelect("100%")}
           <Button type="primary" block size={sizes.button} onClick={applyFilter}>
             Aplicar
           </Button>

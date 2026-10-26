@@ -21,6 +21,11 @@ export default function SalesTable({ data, loading, onView }: Props) {
       render: (v) => formatDate(v),
     },
     {
+      title: "Usuario",
+      dataIndex: ["user", "name"],
+      render: (v) => v ?? "—",
+    },
+    {
       title: "Total",
       dataIndex: "total",
       render: (v) => formatCurrency(v),
@@ -77,6 +82,9 @@ export default function SalesTable({ data, loading, onView }: Props) {
             </Text>
             <Text type="secondary" style={{ fontSize: 11 }}>
               {formatDate(r.createdAt)}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+              {r.user?.name}
             </Text>
             <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
               {isCancelled

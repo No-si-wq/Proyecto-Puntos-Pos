@@ -17,6 +17,7 @@ export function useSales() {
   const load = useCallback(async (filters?: {
     from?: string;
     to?: string;
+    userId?: number;
   }) => {
     if (!warehouseId) return;
 
