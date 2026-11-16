@@ -48,3 +48,19 @@ export const customerSummary = async ( req: Request, res: Response) => {
     );
   res.json(data);
 };
+
+export const updateReceivablePayment = async (req: Request, res: Response) => {
+  const { amount, note, bankId } = req.body;
+  const { tenantId, id: userId } = req.user!;
+
+  const data = await accountReceivableService.updatePayment(
+    tenantId,
+    Number(req.params.paymentId),
+    new Prisma.Decimal(amount),
+    note,
+    bankId,
+    userId
+  );
+
+  res.json(data);
+};

@@ -39,9 +39,24 @@ export function useAccountReceivable() {
     return res.data; // <-- agregado
   }
 
+  async function updatePayment(
+    paymentId: number,
+    amount: number,
+    note?: string | null,
+    bankId?: number | null
+  ) {
+    const res = await http.patch(`/account-receivable/payments/${paymentId}`, {
+      amount,
+      note,
+      bankId,
+    });
+    await load(currentFilters);
+    return res.data;
+  }
+
   useEffect(() => {
     load();
   }, []);
 
-  return { data, loading, reload: load, pay, getById };
+  return { data, loading, reload: load, pay, getById, updatePayment };
 }

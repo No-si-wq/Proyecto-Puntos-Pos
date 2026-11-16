@@ -29,9 +29,11 @@ import { useReportTemplates } from "../report-templates/hooks/useReportTemplates
 import { resolvePaymentTemplate, type PaymentForPrint } from "../report-templates/utils/resolvePaymentTemplate";
 
 export default function AccountsReceivable() {
-  const { data, loading, pay, reload, getById } = useAccountReceivable();
+  const { data, loading, pay, reload, getById, updatePayment } = useAccountReceivable();
   const { isMobile } = useDeviceType();
   const navigate = useNavigate();
+
+  const [editing, setEditing] = useState<any>(null);
 
   const { customers, loading: loadingCustomers, setFilters: setFiltersCustomer } = useCustomers();
 
@@ -118,6 +120,43 @@ export default function AccountsReceivable() {
           err?.response?.data?.message ?? "No se pudo registrar el pago"
         );
       }
+  }
+
+function handleEditFromRow(record: any) {
+  const lastPayment = record.payments?.[0];
+  if (!lastPayment) {
+    message.info("Este cliente no tiene abonos registrados aún.");
+    return;
+  }
+  setEditing({ account: record, payment: lastPayment });
+  setAmount(Number(lastPayment.amount));
+  setNote(lastPayment.note ?? undefined);
+  setBankId(lastPayment.bankId ?? undefined);
+}
+
+  async function handleUpdatePayment() {
+    if (!amount || amount <= 0) {
+      message.error("Monto inválido");
+      return;
+    }
+    try {
+      const result = await updatePayment(
+        editing.payment.id,
+        amount,
+        note ?? null,
+        bankId ?? null
+      );
+      message.success("Abono actualizado");
+      result.bankName = banks.find((b) => b.id === bankId)?.name ?? null;
+      setEditing(null);
+      setAmount(0);
+      setNote(undefined);
+      setBankId(undefined);
+      await fetchPaymentTemplate();
+      setTicketResult(result);
+    } catch (err: any) {
+      message.error(err?.response?.data?.message ?? "No se pudo actualizar el abono");
+    }
   }
 
   async function printReceivableTicket(result: PaymentForPrint, templateId?: number) {
@@ -257,6 +296,7 @@ export default function AccountsReceivable() {
           onPrint={handleReprintFromRow}
           printTemplates={templates}
           onViewSale={handleViewSale}
+          onEditPayment={handleEditFromRow}
         />
       </Card>
 
@@ -310,6 +350,50 @@ export default function AccountsReceivable() {
               label: `${b.name} (${formatCurrency(b.balance)})`,
               value: b.id,
             }))}
+        />
+      </Modal>
+      <Modal
+        open={!!editing}
+        title="Editar abono"
+        width={isMobile ? "100%" : 520}
+        onCancel={() => {
+          setEditing(null);
+          setAmount(0);
+          setNote(undefined);
+          setBankId(undefined);
+        }}
+        onOk={handleUpdatePayment}
+      >
+        <div style={{ marginBottom: 12 }}>
+          Saldo actual: <strong>{formatCurrency(editing?.account.balance ?? 0)}</strong>
+        </div>
+
+        <InputNumber
+          style={{ width: "100%" }}
+          min={0}
+          max={editing ? Number(editing.account.balance) + Number(editing.payment.amount) : undefined}
+          value={amount}
+          onChange={(v) => setAmount(Number(v))}
+          placeholder="Monto"
+        />
+
+        <Input
+          style={{ marginTop: 12 }}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Nota (opcional)"
+        />
+
+        <Select
+          allowClear
+          style={{ width: "100%", marginTop: 12 }}
+          placeholder="Cuenta bancaria (opcional)"
+          value={bankId}
+          onChange={setBankId}
+          options={banks.filter((b) => b.active).map((b) => ({
+            label: `${b.name} (${formatCurrency(b.balance)})`,
+            value: b.id,
+          }))}
         />
       </Modal>
       <Modal

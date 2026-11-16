@@ -171,6 +171,90 @@ async registerPayment(
 
     return { totalDebt, totalPaid, openAccounts };
   }
+
+  async updatePayment(
+    tenantId: number,
+    paymentId: number,
+    amount: Prisma.Decimal,
+    note?: string | null,
+    bankId?: number | null,
+    userId?: number
+  ) {
+    return prisma.$transaction(async (tx) => {
+      const payment = await tx.receivablePayment.findFirst({
+        where: { id: paymentId, account: { tenantId } },
+        include: { account: { include: { customer: true } } },
+      });
+
+      if (!payment) throw new Error("Abono no encontrado");
+      if (amount.lte(0))
+        throw new Error("El monto del pago debe ser mayor a cero");
+
+      const account = payment.account;
+      const delta = amount.minus(payment.amount);
+      const newBalance = account.balance.minus(delta);
+
+      if (newBalance.lt(0))
+        throw new Error("El nuevo monto excede el saldo pendiente de la cuenta");
+
+      const newPaid = account.paidAmount.plus(delta);
+
+      let status: any = "PARTIAL";
+      if (newBalance.lte(0)) status = "PAID";
+      else if (newPaid.lte(0)) status = "PENDING";
+
+      const newBankId = bankId ?? null;
+      const bankChanged = (payment.bankId ?? null) !== newBankId;
+
+      if (bankChanged || !delta.isZero()) {
+        // Reverso del movimiento original
+        if (payment.bankId) {
+          await bankService.registerMovementInTransaction(tx, {
+            tenantId,
+            bankId: payment.bankId,
+            type: "WITHDRAWAL",
+            amount: payment.amount,
+            description: `Reverso por edición de abono #${payment.id}`,
+            referenceType: "RECEIVABLE_PAYMENT",
+            referenceId: payment.id,
+            createdBy: userId,
+          });
+        }
+        // Nuevo movimiento
+        if (newBankId) {
+          await bankService.registerMovementInTransaction(tx, {
+            tenantId,
+            bankId: newBankId,
+            type: "DEPOSIT",
+            amount,
+            description: note ?? `Cobro a cliente - cuenta #${account.id} (editado)`,
+            referenceType: "RECEIVABLE_PAYMENT",
+            referenceId: payment.id,
+            createdBy: userId,
+          });
+        }
+      }
+
+      const updatedPayment = await tx.receivablePayment.update({
+        where: { id: paymentId },
+        data: { amount, note: note ?? null, bankId: newBankId },
+      });
+
+      const updatedAccount = await tx.accountReceivable.update({
+        where: { id: account.id },
+        data: { balance: newBalance, paidAmount: newPaid, status },
+      });
+
+      return {
+        account: updatedAccount,
+        payment: updatedPayment,
+        customer: account.customer,
+        previousBalance: newBalance.plus(amount),
+        amountPaid: amount,
+        currentBalance: updatedAccount.balance,
+      };
+    });
+  }
 }
 
 export const accountReceivableService =

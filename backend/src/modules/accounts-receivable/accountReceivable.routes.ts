@@ -9,6 +9,7 @@ router.use(authMiddleware);
 
 router.post("/", asyncHandler(controller.createReceivable));
 router.get("/", asyncHandler(controller.listReceivables));
+router.patch("/payments/:paymentId", asyncHandler(controller.updateReceivablePayment));
 router.get("/:id", asyncHandler(controller.getReceivable));
 router.post("/:id/payments", asyncHandler(controller.registerReceivablePayment));
 router.get(

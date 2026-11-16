@@ -1,5 +1,5 @@
 import { Table, Tag, Button, Card, Dropdown, type MenuProps } from "antd";
-import { PrinterOutlined, DownOutlined } from "@ant-design/icons"
+import { PrinterOutlined, DownOutlined, EditOutlined } from "@ant-design/icons"
 import { formatCurrency } from "../../utils/formatters";
 import { useDeviceType } from "../../hooks/useDeviceType";
 import dayjs from "dayjs"
@@ -14,6 +14,7 @@ interface Props {
   onPrint?: (record: any, templateId?: number) => void;
   printTemplates?: { id: number; name: string; isDefault?: boolean }[];
   onViewSale?: (record: any) => void;
+  onEditPayment?: (record: any) => void;
 }
 
 export default function FinancialAccountsTable({
@@ -24,6 +25,7 @@ export default function FinancialAccountsTable({
   onPrint,
   printTemplates,
   onViewSale,
+  onEditPayment,
 }: Props) {
   const { isMobile } = useDeviceType();
   const isReceivable = type === "receivable";
@@ -219,6 +221,18 @@ export default function FinancialAccountsTable({
                   </Button>
                 )
               )}
+              {isReceivable && onEditPayment && (
+                <Button
+                  block
+                  size="small"
+                  style={{ marginTop: 6 }}
+                  icon={<EditOutlined />}
+                  disabled={!r.payments?.length}
+                  onClick={() => onEditPayment(r)}
+                >
+                  Editar último abono
+                </Button>
+              )}
             </Card>
           );
         })}
@@ -342,6 +356,15 @@ export default function FinancialAccountsTable({
                   onClick={() => onPrint(r)}
                 />
               )
+            )}
+            {isReceivable && onEditPayment && (
+              <Button
+                size="small"
+                icon={<EditOutlined />}
+                title="Editar último abono"
+                disabled={!r.payments?.length}
+                onClick={() => onEditPayment(r)}
+              />
             )}
           </div>
         ),
